@@ -1,11 +1,11 @@
 /* =====================================================================
    NUANZA — Mirzə Məclisi (meclis.js)
-   The council of five elder scribes that gathers for big jobs.
+   The council of five elder editors that gathers for big jobs.
    window.Meclis.run({title, durations?, verdict:{score?, text, seal?, errors?}}) -> Promise (resolves on close)
    window.Meclis.elders — the five elders (data). Meclis.portrait(i) / Meclis.figure(i) -> SVG strings.
-   Overlay: rug unrolls, elders gather in an arc, Nuanza carries the scroll in, each elder works in turn,
-   verdict with an animated score ring and a wax seal stamp. «Bağla» button and Escape close it.
-   CSS prefix: mc- (injected once). Reduced motion: fades only.
+   Overlay: a modern studio — the kilim unrolls on the wall, the elders take their seats behind the desk,
+   Nuanza brings the document in, each elder works in turn, verdict with an animated score ring and a stamp.
+   «Bağla» button and Escape close it. CSS prefix: mc- (injected once). Reduced motion: fades only.
    ===================================================================== */
 (function () {
   'use strict';
@@ -18,28 +18,11 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function r2(n) { return Math.round(n * 100) / 100; }
   function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-  function starPts(cx, cy, R) {
-    var o = [], k, a, rr;
-    for (k = 0; k < 16; k++) {
-      a = (k * 22.5 - 90) * Math.PI / 180; rr = k % 2 ? R * 0.765 : R;
-      o.push(r2(cx + rr * Math.cos(a)) + ',' + r2(cy + rr * Math.sin(a)));
-    }
-    return o.join(' ');
-  }
-  function blobPath(R, ph) {
-    var n = 22, pts = [], k, a, r, d = '';
-    for (k = 0; k < n; k++) {
-      a = k / n * Math.PI * 2;
-      r = R * (1 + 0.05 * Math.sin(a * 5 + ph) + 0.028 * Math.cos(a * 3 + ph * 2));
-      pts.push([r * Math.cos(a), r * Math.sin(a)]);
-    }
-    for (k = 0; k < n; k++) {
-      var p = pts[k], q = pts[(k + 1) % n];
-      if (k === 0) { var z = pts[n - 1]; d += 'M' + r2((z[0] + p[0]) / 2) + ' ' + r2((z[1] + p[1]) / 2); }
-      d += ' Q' + r2(p[0]) + ' ' + r2(p[1]) + ' ' + r2((p[0] + q[0]) / 2) + ' ' + r2((p[1] + q[1]) / 2);
-    }
-    return d + 'Z';
-  }
+  /* göl — the stepped carpet diamond (same outline as the logo and --m-star), radius R */
+  var GUL = [[50, 0], [61.11, 11.11], [61.11, 19.44], [69.44, 19.44], [80.56, 30.56], [80.56, 38.89], [88.89, 38.89], [100, 50], [88.89, 61.11], [80.56, 61.11], [80.56, 69.44], [69.44, 80.56], [61.11, 80.56], [61.11, 88.89],
+    [50, 100], [38.89, 88.89], [38.89, 80.56], [30.56, 80.56], [19.44, 69.44], [19.44, 61.11], [11.11, 61.11], [0, 50], [11.11, 38.89], [19.44, 38.89], [19.44, 30.56], [30.56, 19.44], [38.89, 19.44], [38.89, 11.11]];
+  function gulPts(cx, cy, R) { return GUL.map(function (p) { return r2(cx + (p[0] - 50) / 50 * R) + ',' + r2(cy + (p[1] - 50) / 50 * R); }).join(' '); }
+  function diaPts(cx, cy, R) { return r2(cx) + ',' + r2(cy - R) + ' ' + r2(cx + R) + ',' + r2(cy) + ' ' + r2(cx) + ',' + r2(cy + R) + ' ' + r2(cx - R) + ',' + r2(cy); }
   function reduced() {
     try { if (W.App && typeof W.App.reducedMotion === 'function') return !!W.App.reducedMotion(); } catch (e) { /* ignore */ }
     var dm = D.documentElement.getAttribute('data-motion');
@@ -66,18 +49,13 @@
   }
 
   /* ------------------------------------------------------------------
-     art — five hand-authored elders (viewBox 0 0 120 140, seated on cushions)
+     art — five hand-authored elders (viewBox 0 0 120 140), seated behind the desk:
+     the desk's back edge meets each figure at y≈106; hands and props lie on the desk below it
      ------------------------------------------------------------------ */
-  var BASE =
-    '<ellipse class="k-sh" cx="60" cy="135.6" rx="54" ry="3.6"/>' +
-    '<path class="k-cu" d="M7 126 Q7 116.5 19 116 H101 Q113 116.5 113 126 V128 Q113 136 101 136 H19 Q7 136 7 128Z"/>' +
-    '<path class="k-cu2" d="M13 119.6 Q15 117.6 20 117.6 H100 Q105 117.6 107 119.6"/>' +
-    '<path class="k-pip" d="M10 126.4 H110"/>' +
-    '<circle class="k-ta" cx="8.6" cy="132" r="2.4"/><circle class="k-ta" cx="111.4" cy="132" r="2.4"/>';
-  var LAP =
-    '<path class="k-r2" d="M13 124 Q12 104.5 35 100.5 Q60 96.5 85 100.5 Q108 104.5 107 124 Q107 129.5 99 129.5 H21 Q13 129.5 13 124Z"/>' +
-    '<path class="k-fold" d="M27 119 Q42 112.5 57 116 M63 116 Q78 112.5 93 119"/>';
-  var TORSO = '<path class="k-r1" d="M29 117 Q27 89 41 80 Q60 72 79 80 Q93 89 91 117Z"/>';
+  var CHAIR =
+    '<path class="k-chr" d="M23 110 V70 Q23 56 37 56 H83 Q97 56 97 70 V110Z"/>' +
+    '<path class="k-chr2" d="M29 61.6 Q31 59.6 37 59.6 H83 Q89 59.6 91 61.6"/>';
+  var TORSO = '<path class="k-r1" d="M28.6 109 Q27.6 89 41 80 Q60 72 79 80 Q92.4 89 91.4 109Z"/>';
   function earsFace() {
     return '<rect class="k-sk2" x="53" y="62" width="14" height="15" rx="5"/>' +
       '<circle class="k-sk" cx="36.5" cy="50" r="5.5"/><circle class="k-sk" cx="83.5" cy="50" r="5.5"/>' +
@@ -93,31 +71,28 @@
   var CHEEKS = '<circle class="k-ck" cx="45" cy="57" r="4.6"/><circle class="k-ck" cx="75" cy="57" r="4.6"/>';
   var NOSE = '<ellipse class="k-sk2" cx="60" cy="55.4" rx="4.3" ry="3.6"/><ellipse class="k-nh" cx="58.6" cy="54.1" rx="1.4" ry="1"/>';
   function hand(x, y) { return '<circle class="k-cf" cx="' + x + '" cy="' + r2(y - 2.4) + '" r="5.6"/><circle class="k-sk" cx="' + x + '" cy="' + y + '" r="4.9"/>'; }
-  function curls(rows) {
-    var d = '';
-    rows.forEach(function (row) { row[2].forEach(function (x) { d += 'M' + x + ' ' + row[0] + ' q' + row[1] + ' -2.8 ' + (row[1] * 2) + ' 0 '; }); });
-    return '<path class="k-htc" d="' + d.trim() + '"/>';
-  }
 
-  /* 1 · Lüğətçi Mirzə — grey papaq, white beard, big dictionary (flips pages) */
+  /* 1 · Lüğətçi Mirzə — swept-back white hair, trimmed white beard, rectangular glasses, green cardigan; flips the dictionary */
   function artLugetci() {
-    return BASE + '<g class="mc-fig">' + LAP +
+    return '<g class="mc-fig">' +
       '<g class="mc-body">' + TORSO +
-        '<path class="k-iv" d="M50.5 78.5 Q60 74.5 69.5 78.5 L64 117 H56Z"/>' +
-        '<path class="k-trim" d="M50.5 78.5 L56 117 M69.5 78.5 L64 117"/>' +
-        '<path class="k-sa" d="M30 105 Q60 111 90 105 L90.6 111.5 Q60 117.5 29.4 111.5Z"/>' +
+        '<path class="k-iv" d="M50.5 78.5 Q60 74.5 69.5 78.5 L60 97Z"/>' +
+        '<path class="k-col" d="M51 78.4 L55.8 85.6 L60 79.2Z M69 78.4 L64.2 85.6 L60 79.2Z"/>' +
+        '<path class="k-rib" d="M50.5 78.5 L60 97 L69.5 78.5"/>' +
+        '<path class="k-rib2" d="M70.6 89.4 H80.4"/><rect class="k-clipf" x="73.4" y="84.4" width="1.8" height="5.2" rx=".9"/>' +
       '</g>' +
       '<path class="k-sv" d="M41.5 85 Q29.5 96 31.5 106.5"/><path class="k-sv" d="M78.5 85 Q90.5 96 88.5 106.5"/>' +
-      '<g class="mc-head">' + earsFace() + eyes() +
-        '<path class="k-bwl" d="M44.5 42.6 Q50 38.6 55.6 41.6 M64.4 41.6 Q70 38.6 75.5 42.6"/>' + CROW + CHEEKS +
-        '<path class="k-bw" d="M37 51 Q35.5 70 45 83 Q52 93 60 95.5 Q68 93 75 83 Q84.5 70 83 51 Q79 59.5 71 60.8 Q60 65 49 60.8 Q41 59.5 37 51Z"/>' +
-        '<path class="k-bwd" d="M50 70 Q53 80 58 88 M70 70 Q67 80 62 88 M60 68 V91 M43.5 64 Q45 73 49 79 M76.5 64 Q75 73 71 79"/>' +
+      '<g class="mc-head">' + earsFace() +
+        '<path class="k-hw" d="M36.2 47 Q33.6 30 42 23.4 Q51 17 62 17.6 Q76 18.4 82.4 27 Q86.6 34 83.8 47 Q82 36.6 75 32.6 Q66 28.4 56 30 Q44 31.6 38.6 38.6 Q36.8 42 36.2 47Z"/>' +
+        '<path class="k-hwl" d="M44 27.6 Q54 22.6 66 23.6 M41.4 33.4 Q50 27.4 61 27.6 M70.6 24.8 Q77 27.4 80.6 32.6"/>' +
+        eyes() +
+        '<path class="k-bwl" d="M44.5 41.4 Q50 37.4 55.6 40.4 M64.4 40.4 Q70 37.4 75.5 41.4"/>' + CROW + CHEEKS +
+        '<path class="k-bw" d="M37.6 52 Q36.6 68 44.6 78.4 Q51.6 86.6 60 88 Q68.4 86.6 75.4 78.4 Q83.4 68 82.4 52 Q78.8 60 71 61.2 Q60 65.2 49 61.2 Q41.2 60 37.6 52Z"/>' +
+        '<path class="k-bwd" d="M50 70 Q53 77 57 82 M70 70 Q67 77 63 82 M60 69.6 V85 M44 64 Q45.4 71 48.6 75.6 M76 64 Q74.6 71 71.4 75.6"/>' +
+        '<path class="k-mo" d="M56.6 66.6 Q60 68.4 63.4 66.6"/>' +
         '<path class="k-bw" d="M60 58.6 Q53 55.4 46.6 59.4 Q45.2 62 48.2 62.4 Q54 63.2 60 60.9 Q66 63.2 71.8 62.4 Q74.8 62 73.4 59.4 Q67 55.4 60 58.6Z"/>' +
         '<path class="k-bwd" d="M52 61.4 Q56.5 61.6 60 60.2 Q63.5 61.6 68 61.4"/>' + NOSE +
-        '<path class="k-ht" d="M35.5 35 Q33 19 38 9.5 Q60 2.5 82 9.5 Q87 19 84.5 35 Q60 29.5 35.5 35Z"/>' +
-        curls([[13, 2.6, [40.5, 49.5, 58.5, 67.5, 75.5]], [21, 2.6, [38.5, 47.5, 56.5, 65.5, 74.5]], [28.6, 2.6, [41.5, 51, 60.5, 70]]]) +
-        '<path class="k-ht2" d="M35.5 35 Q60 29.5 84.5 35 L84.9 31 Q60 25.5 35.1 31Z"/>' +
-        '<path class="k-hthl" d="M42 9.4 Q60 4.4 78 9.4"/>' +
+        '<g class="k-gl"><rect x="44.2" y="44.4" width="13.6" height="9.6" rx="3"/><rect x="62.2" y="44.4" width="13.6" height="9.6" rx="3"/><path d="M57.8 48.4 Q60 47 62.2 48.4 M44.2 47.4 L37.4 46 M75.8 47.4 L82.6 46"/></g>' +
       '</g>' +
       '<g class="mc-book">' +
         '<path class="k-bk" d="M29 99 L60 103.5 L91 99 L91 116 L60 121 L29 116Z"/>' +
@@ -132,36 +107,33 @@
     '</g>';
   }
 
-  /* 2 · Mənaçı Mirzə — white çalma, round glasses, magnifier over a scroll */
+  /* 2 · Mənaçı Mirzə — thinning white hair, round glasses, grey moustache, indigo blazer; magnifier over a document */
   function artMenaci() {
-    return BASE + '<g class="mc-fig">' + LAP +
+    return '<g class="mc-fig">' +
       '<g class="mc-body">' + TORSO +
-        '<path class="k-iv" d="M52 78 L60 93 L68 78 Q60 74.8 52 78Z"/>' +
-        '<path class="k-trim" d="M52 78 L60 93 L68 78"/><path class="k-fold" d="M60 93 V117"/>' +
-        '<path class="k-sa" d="M30 104.5 Q60 110.5 90 104.5 L90.6 111 Q60 117 29.4 111Z"/>' +
+        '<path class="k-iv" d="M51 78.4 Q60 74.8 69 78.4 L60 96Z"/>' +
+        '<path class="k-col" d="M51 78.4 L55.6 84.8 L60 79.4Z M69 78.4 L64.4 84.8 L60 79.4Z"/>' +
+        '<path class="k-lap" d="M51 78.4 L46.4 86.2 L57.4 100 M69 78.4 L73.6 86.2 L62.6 100"/>' +
+        '<path class="k-rib2" d="M71 90 H80.6"/><path class="k-psq" d="M71.8 90 L73.8 86.6 L75.8 88.8 L78.2 86.4 L79.8 90Z"/>' +
       '</g>' +
       '<path class="k-sv" d="M41.5 85 Q30 96 29.5 105.5"/>' +
-      '<g class="mc-head">' + earsFace() + eyes() +
+      '<g class="mc-head">' + earsFace() +
+        '<path class="k-hs" d="M35.2 52 Q33 40.6 38.6 33.6 Q41.6 35.4 41.6 38.4 Q38.8 43.6 39.8 50.8Z M84.8 52 Q87 40.6 81.4 33.6 Q78.4 35.4 78.4 38.4 Q81.2 43.6 80.2 50.8Z"/>' +
+        '<path class="k-wisp" d="M56.4 25.2 Q58.2 21.2 62 21.8 M60.8 25.4 Q63.6 22.2 66.8 23.6"/>' +
+        '<path class="k-shine" d="M45.6 31.4 Q52.4 27.4 60.4 27.6"/>' +
+        eyes() +
         '<path class="k-gbr" d="M44 40.4 Q50 36.8 56 39.8 M64 39.8 Q70 36.8 76 40.4"/>' + CROW + CHEEKS +
-        '<path class="k-gb" d="M39 54 Q40 71 49.5 78.5 Q55 83 60 83 Q65 83 70.5 78.5 Q80 71 81 54 Q77 61.5 69 62.6 Q60 66 51 62.6 Q43 61.5 39 54Z"/>' +
-        '<path class="k-gbt" d="M50 70 Q53 76 57 80 M70 70 Q67 76 63 80 M60 68 V81"/>' +
-        '<path class="k-gb" d="M60 58.8 Q54 56.4 48.8 59.8 Q50.6 63.2 55.6 62.2 Q58.6 61.6 60 60.8 Q61.4 61.6 64.4 62.2 Q69.4 63.2 71.2 59.8 Q66 56.4 60 58.8Z"/>' +
-        '<path class="k-mo" d="M56.6 66 Q60 67.8 63.4 66"/>' + NOSE +
+        '<path class="k-mo" d="M56.4 66.4 Q60 68.4 63.6 66.4"/>' +
+        '<path class="k-gb" d="M60 58.8 Q54 56.4 48.8 59.8 Q50.6 63.2 55.6 62.2 Q58.6 61.6 60 60.8 Q61.4 61.6 64.4 62.2 Q69.4 63.2 71.2 59.8 Q66 56.4 60 58.8Z"/>' + NOSE +
         '<g class="k-gl"><circle cx="51" cy="49" r="6.3"/><circle cx="69" cy="49" r="6.3"/><path d="M57.3 48.4 Q60 46.6 62.7 48.4 M44.7 47.6 L37.5 46 M75.3 47.6 L82.5 46"/></g>' +
         '<path class="mc-glint" d="M47.2 46.4 L50.4 43.6 M65.2 46.4 L68.4 43.6"/>' +
-        '<path class="k-tb" d="M33 39 Q27 20 41 11.5 Q60 4 79 11.5 Q93 20 87 39 Q74 32.5 60 32.5 Q46 32.5 33 39Z"/>' +
-        '<path class="k-tbl" d="M35 31 Q50 21 70 23.5 Q80 25 85.5 30.5 M37.5 22.5 Q52 12.5 74 15.5 Q80.5 17 83.5 21.5 M45 12.5 Q58 19 69 29.5"/>' +
-        '<path class="k-tb2" d="M33 39 Q46 32.5 60 32.5 Q74 32.5 87 39 L86.2 35 Q74 29 60 29 Q46 29 33.8 35Z"/>' +
-        '<path class="k-plm" d="M60 28 Q55.4 18.6 60.6 11 Q63.6 19.4 60 28Z"/>' +
-        '<circle class="k-gd" cx="60" cy="30.6" r="3.4"/><circle class="k-nr" cx="60" cy="30.6" r="1.6"/>' +
       '</g>' +
-      '<g class="mc-scroll">' +
-        '<rect class="k-pg" x="30" y="101" width="58" height="13" rx="1.5"/>' +
-        '<path class="k-pl" d="M35 105 H58 M62 105 H83 M35 109.6 H48 M52 109.6 H80"/>' +
-        '<rect class="k-wd" x="26" y="99" width="6" height="17" rx="3"/><rect class="k-wd" x="86" y="99" width="6" height="17" rx="3"/>' +
-        '<rect class="k-gd" x="27" y="97.6" width="4" height="2.4" rx="1"/><rect class="k-gd" x="87" y="97.6" width="4" height="2.4" rx="1"/>' +
+      '<g class="mc-doc">' +
+        '<path class="k-pg" d="M31.4 99.4 L86.6 98.2 L89 117.4 L29 118.6Z"/>' +
+        '<path class="k-fl" d="M36 102.8 H52"/>' +
+        '<path class="k-pl" d="M35.6 106.8 H58 M62 106.6 H83.6 M35.2 110.9 H48 M52 110.7 H84.2 M34.8 115 H70"/>' +
       '</g>' +
-      hand(29, 108) +
+      hand(30.4, 109) +
       '<g class="mc-arm">' +
         '<path class="k-sv" d="M78.5 85 Q90 96 84.5 111.5"/>' +
         '<path class="k-hd" d="M77 112.5 L84.6 120.2"/>' +
@@ -172,70 +144,63 @@
     '</g>';
   }
 
-  /* 3 · Üslubçu Mirzə — red araqçın with gold zigzag, curled moustache, quill flourish */
+  /* 3 · Üslubçu Mirzə — silver side-parted quiff, curled moustache, red bow tie, camel blazer; fountain-pen flourish on the shared document */
   function artUslubcu() {
-    return BASE + '<g class="mc-fig">' + LAP +
+    return '<g class="mc-fig">' +
       '<g class="mc-body">' + TORSO +
-        '<path class="k-vest" d="M42.5 80.5 Q60 74 77.5 80.5 L73 117 H47Z"/>' +
-        '<path class="k-iv" d="M53 78.5 L60 91 L67 78.5 Q60 75.6 53 78.5Z"/>' +
-        '<path class="k-trim" d="M53 78.5 L60 91 L67 78.5 M47 117 L42.5 80.5 M73 117 L77.5 80.5"/>' +
-        '<circle class="k-gd" cx="60" cy="97" r="1.5"/><circle class="k-gd" cx="60" cy="103.5" r="1.5"/><circle class="k-gd" cx="60" cy="110" r="1.5"/>' +
+        '<path class="k-iv" d="M52.4 78.4 Q60 75.2 67.6 78.4 L60 95Z"/>' +
+        '<path class="k-lap" d="M52.4 78.4 L47.6 86.4 L57.6 100 M67.6 78.4 L72.4 86.4 L62.4 100"/>' +
+        '<path class="k-bt" d="M60 80.8 L53 77.2 Q52 80.8 53 84.4Z M60 80.8 L67 77.2 Q68 80.8 67 84.4Z"/><rect class="k-btk" x="58" y="78.8" width="4" height="4" rx="1.2"/>' +
+        '<polygon class="k-zf" points="' + diaPts(74.4, 90, 2.2) + '"/>' +
       '</g>' +
       '<g class="mc-head">' + earsFace() +
         '<path class="k-hr" d="M36.6 36 Q33 44.5 35.6 53 L39.6 51.6 Q37.8 43.5 40.6 36.6Z M83.4 36 Q87 44.5 84.4 53 L80.4 51.6 Q82.2 43.5 79.4 36.6Z"/>' +
+        '<path class="k-hr" d="M36.4 46 Q33 30 42 22.6 Q50 16.6 61 15.8 Q70 15 76.4 18.6 Q83 22.4 84 29 Q86 36 84.2 45.6 Q83 38.4 79 34.6 Q74.4 30.4 66 31.4 Q57 32.6 50.6 30 Q47.6 33.8 43.4 35.8 Q38.6 39 36.4 46Z"/>' +
+        '<path class="k-hrl" d="M52 21.4 Q64 16.8 77 21.8 M54.6 26.6 Q65 22.4 76.6 27.2 M50.6 30 Q48.8 24.4 51.6 18.6"/>' +
         eyes() +
         '<path class="k-dbr" d="M44.5 42.6 Q50 39.6 55.5 42.2 M64.5 40.4 Q70 35.8 75.5 39.4"/>' + CROW + CHEEKS +
         '<path class="k-mo" d="M55.2 66.4 Q60 69.6 64.8 66.4"/>' +
         '<path class="k-ms mc-mst" d="M60 59.2 C55.5 56.6 50 57 46.6 59.6 C44.2 61.4 41.6 61.2 40.6 58.8 C40 57.2 41 55.7 42.6 55.9 C41.7 56.9 42.1 58.3 43.4 58.4 C46.2 58.5 48.6 54.5 54 55.6 C57 56.2 59 57.4 60 58.2 C61 57.4 63 56.2 66 55.6 C71.4 54.5 73.8 58.5 76.6 58.4 C77.9 58.3 78.3 56.9 77.4 55.9 C79 55.7 80 57.2 79.4 58.8 C78.4 61.2 75.8 61.4 73.4 59.6 C70 57 64.5 56.6 60 59.2Z"/>' +
-        '<path class="k-ms" d="M57.6 70.8 Q60 79 62.4 70.8 Q60 72.3 57.6 70.8Z"/>' + NOSE +
-        '<path class="k-ht" d="M37 34.5 Q36.5 15.5 60 13.5 Q83.5 15.5 83 34.5 Q60 30 37 34.5Z"/>' +
-        '<path class="k-ht2" d="M37 34.5 Q60 30 83 34.5 L83.2 30.2 Q60 25.6 36.8 30.2Z"/>' +
-        '<path class="k-zz" d="M39.5 25.5 L43.4 20.6 L47.2 25 L51.2 19.8 L55.4 24.6 L60 19.2 L64.6 24.6 L68.8 19.8 L72.8 25 L76.6 20.6 L80.5 25.5"/>' +
-        '<circle class="k-gd" cx="60" cy="14.8" r="1.8"/>' +
-        '<path class="k-hthl" d="M45 17.6 Q60 13.8 75 17.6"/>' +
+        '<path class="k-ms" d="M58 70.6 Q60 75.4 62 70.6 Q60 71.8 58 70.6Z"/>' + NOSE +
       '</g>' +
-      '<g transform="rotate(-5 57 108)">' +
-        '<rect class="k-wd" x="33" y="99" width="48" height="19" rx="2.5"/>' +
-        '<rect class="k-pg" x="35.5" y="101" width="43" height="15" rx="1"/>' +
-        '<path class="k-pl" d="M39 104.6 H64 M39 108.4 H56"/>' +
-        '<path class="k-ink mc-flo" pathLength="1" d="M39 113 C42.5 108.6 45.6 115.6 49.4 111.4 S56.6 108.4 59.6 112 C62 115 65.6 110.4 69.4 111.6 C72.4 112.6 73.6 110.2 75.4 108.6"/>' +
+      '<g transform="rotate(-4 57 108)">' +
+        '<path class="k-ink mc-flo" pathLength="1" d="M39 113.6 C42.5 109.2 45.6 116.2 49.4 112 S56.6 109 59.6 112.6 C62 115.6 65.6 111 69.4 112.2 C72.4 113.2 73.6 110.8 75.4 109.2"/>' +
       '</g>' +
       '<path class="k-sv" d="M41.5 85 Q31 97 35.5 108.6"/>' + hand(35.5, 111) +
       '<g class="mc-arm">' +
         '<path class="k-sv" d="M78.5 85 Q91 96 77.6 106"/>' +
-        '<path class="k-qf" d="M70.6 112.4 C75.6 102 85.6 88 99 75.6 C91.6 90 82.6 101.6 70.6 112.4Z"/>' +
-        '<path class="k-qs" d="M70.6 112.4 L96.6 78.4"/>' +
-        '<path class="k-qb" d="M80 99.5 L84.5 97 M84 94 L88.8 91.4 M88 88.6 L92.6 86 M78.6 97.8 L77 93.6 M82.6 92.4 L81.4 88.4"/>' +
-        '<path class="k-gd" d="M69.2 115 L70.4 111.4 L72.6 112.8Z"/>' +
+        '<path class="k-fpb" d="M72.6 109.8 L92.4 83.2"/>' +
+        '<path class="k-fpc" d="M87.4 89.8 L89.4 87.1"/>' +
+        '<path class="k-nib" d="M69.8 113.6 L70.6 109.2 L73.8 111.6Z"/>' +
         hand(75.5, 108.4) +
       '</g>' +
     '</g>';
   }
 
-  /* 4 · Dilçi Nənə — white kəlağayı with red dots, red-ink pen marking a correction */
+  /* 4 · Dilçi Nənə — grey hair in a bun, red-framed glasses, pearls, raspberry cardigan; red-pen correction */
   function artDilci() {
-    return BASE + '<g class="mc-fig">' + LAP +
+    var pearls = [[51.2, 81], [53.8, 83.4], [56.8, 85], [60, 85.6], [63.2, 85], [66.2, 83.4], [68.8, 81]].map(function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.25"/>'; }).join('');
+    return '<g class="mc-fig">' +
       '<g class="mc-body">' + TORSO +
-        '<path class="k-kl" d="M31 50 Q27 22 60 17 Q93 22 89 50 Q91 70 99 96 Q86 94.5 77 84 Q70 77 60 77 Q50 77 43 84 Q34 94.5 21 96 Q29 70 31 50Z"/>' +
-        '<g class="k-kd"><circle cx="27" cy="83" r="1.8"/><circle cx="31.5" cy="70" r="1.8"/><circle cx="93" cy="83" r="1.8"/><circle cx="88.5" cy="70" r="1.8"/><circle cx="25" cy="92" r="1.6"/><circle cx="95" cy="92" r="1.6"/><circle cx="35.4" cy="88" r="1.6"/><circle cx="84.6" cy="88" r="1.6"/></g>' +
-        '<path class="k-klb" d="M21 96 Q34 94.5 43 84 M99 96 Q86 94.5 77 84"/>' +
-        '<path class="k-iv" d="M48 80 Q60 75.5 72 80 L68 87 Q60 84.5 52 87Z"/>' +
+        '<path class="k-iv" d="M48.6 78.8 Q60 74.4 71.4 78.8 Q66.4 87.4 60 87.6 Q53.6 87.4 48.6 78.8Z"/>' +
+        '<path class="k-rib" d="M48.6 79 Q52 93 53.6 109 M71.4 79 Q68 93 66.4 109"/>' +
+        '<g class="k-prl">' + pearls + '</g>' +
+        '<polygon class="k-zf" points="' + gulPts(74.2, 92.4, 3) + '"/>' +
       '</g>' +
       '<g class="mc-head">' +
-        '<circle class="k-sk" cx="60" cy="48" r="23.5"/>' +
-        '<path class="k-hg" d="M39.5 40 Q47 33.6 60 34.6 Q73 33.6 80.5 40 Q74 37.6 66 38.6 Q60 36.2 54 38.6 Q46 37.6 39.5 40Z"/>' +
+        '<circle class="k-hgy" cx="60" cy="20.4" r="8.8"/>' +
+        '<path class="k-hgl" d="M54.4 19 Q60 14.8 65.6 19 M55.2 23 Q60 19.8 64.8 23"/>' +
+        earsFace() +
+        '<path class="k-hgy" d="M36 50 Q33.6 31.6 44 25 Q52 20.6 60 21 Q68 20.6 76 25 Q86.4 31.6 84 50 Q82.6 40 76.8 35.4 Q70.4 30.8 63.8 33.2 Q61.6 31.6 60 30.6 Q58.4 31.6 56.2 33.2 Q49.6 30.8 43.2 35.4 Q37.4 40 36 50Z"/>' +
+        '<path class="k-hgl" d="M41.6 31.4 Q48 27.4 55.4 28.4 M64.6 28.4 Q72 27.4 78.4 31.4 M38.6 40.6 Q40.6 36.4 44.4 34"/>' +
+        '<circle class="k-ear" cx="36" cy="55.6" r="1.9"/><circle class="k-ear" cx="84" cy="55.6" r="1.9"/>' +
         eyes() +
-        '<path class="k-gbr" d="M45.5 42.8 Q50.5 40.4 55.5 42.4 M64.5 42.4 Q69.5 40.4 74.5 42.8"/>' + CROW +
+        '<path class="k-gbr" d="M45.5 42.4 Q50.5 40 55.5 42 M64.5 42 Q69.5 40 74.5 42.4"/>' + CROW +
         '<circle class="k-ck" cx="45" cy="57.4" r="5.4"/><circle class="k-ck" cx="75" cy="57.4" r="5.4"/>' +
         '<ellipse class="k-sk2" cx="60" cy="55" rx="3.2" ry="2.7"/><ellipse class="k-nh" cx="59" cy="54.1" rx="1" ry=".7"/>' +
         '<path class="k-mo2" d="M53.4 61.4 Q60 68.6 66.6 61.4 Q60 64.2 53.4 61.4Z"/>' +
         '<path class="k-wr" d="M50.6 60 Q49.6 62.5 51 64.5 M69.4 60 Q70.4 62.5 69 64.5"/>' +
-        '<path class="k-kl" d="M35 50 Q33 25 60 22.5 Q87 25 85 50 Q81.5 36 60 34.4 Q38.5 36 35 50Z"/>' +
-        '<g class="k-kd"><circle cx="42" cy="31" r="1.7"/><circle cx="50.5" cy="26.4" r="1.7"/><circle cx="60" cy="25" r="1.7"/><circle cx="69.5" cy="26.4" r="1.7"/><circle cx="78" cy="31" r="1.7"/><circle cx="37.6" cy="41" r="1.5"/><circle cx="82.4" cy="41" r="1.5"/></g>' +
-        '<path class="k-klb" d="M36.6 47 Q40.5 37.2 60 35.8 Q79.5 37.2 83.4 47"/>' +
-        '<path class="k-hthl" d="M44 24.6 Q60 19.6 76 24.6"/>' +
-        '<path class="k-kl" d="M51.5 73.5 Q60 80 68.5 73.5 L66.5 83 Q60 86.5 53.5 83Z"/>' +
-        '<circle class="k-kd2" cx="57" cy="79" r="1.4"/><circle class="k-kd2" cx="63" cy="79" r="1.4"/>' +
+        '<g class="k-gl k-glr"><circle cx="51" cy="49.2" r="6"/><circle cx="69" cy="49.2" r="6"/><path d="M57 48.6 Q60 46.8 63 48.6 M45 47.8 L37.6 46.4 M75 47.8 L82.4 46.4"/></g>' +
       '</g>' +
       '<path class="k-pg" d="M35 99 L82 96.5 L84 118 L37 120.5Z"/>' +
       '<path class="k-pl" d="M40 104 L77 102 M40 108.6 L58 107.7 M40 113.2 L72 111.5"/>' +
@@ -253,42 +218,42 @@
     '</g>';
   }
 
-  /* 5 · Möhürdar Mirzə — black papaq, thick dark beard, raises and stamps the wax seal */
+  /* 5 · Möhürdar Mirzə — short receding grey hair, trimmed salt-and-pepper beard, black turtleneck, slate jacket; desk stamp */
   function artMohurdar() {
-    return BASE + '<g class="mc-fig">' + LAP +
+    return '<g class="mc-fig">' +
       '<g class="mc-body">' + TORSO +
-        '<path class="k-in2" d="M50 79 Q60 75 70 79 L64.5 117 H55.5Z"/>' +
-        '<path class="k-trim" d="M50 79 L55.5 117 M70 79 L64.5 117 M41 80.4 Q30 88 29.2 116 M79 80.4 Q90 88 90.8 116"/>' +
-        '<path class="k-gdf" d="M30 104.5 Q60 110.5 90 104.5 L90.6 110.8 Q60 116.8 29.4 110.8Z"/>' +
-        '<rect class="k-bkl" x="55.5" y="106.6" width="9" height="6.4" rx="1.4"/>' +
+        '<path class="k-tn" d="M48.6 78.6 Q60 74 71.4 78.6 L66.4 109 H53.6Z"/>' +
+        '<path class="k-lap" d="M48.6 78.6 L44 87 L53.6 109 M71.4 78.6 L76 87 L66.4 109"/>' +
       '</g>' +
       '<path class="k-sv" d="M41.5 85 Q30 95 33 105.5"/>' +
       '<path class="k-pg" d="M70 111 L104 108.6 L105.6 121.4 L71.6 123.6Z"/>' +
-      '<path class="k-pl" d="M74 115 L88 114.1 M74 119 L86 118.2"/>' +
-      '<g class="mc-imp"><circle class="k-wx" cx="94.4" cy="116.2" r="4.8"/><polygon class="k-wx2" points="' + starPts(94.4, 116.2, 2.9) + '"/></g>' +
+      '<path class="k-pl" d="M74 115 L86 114.2 M74 119 L84 118.4"/>' +
+      '<g class="mc-imp"><rect class="k-stmo" x="88.4" y="111.2" width="12.4" height="9.6" rx="1.6" transform="rotate(-4 94.6 116)"/><polygon class="k-stm" points="' + gulPts(94.6, 116, 3.4) + '"/></g>' +
       '<g class="mc-arm">' +
         '<path class="k-sv" d="M78 88 Q91 95 92.6 98.6"/>' +
         '<g class="mc-stp">' +
-          '<circle class="k-wd" cx="94" cy="91.6" r="4.3"/><circle class="k-wdh" cx="92.6" cy="90.2" r="1.3"/>' +
-          '<rect class="k-wd" x="91.8" y="93.6" width="4.4" height="8.6" rx="1.6"/>' +
-          '<path class="k-br" d="M87 102 H101 L102.6 107.6 H85.4Z"/>' +
-          '<rect class="k-wx" x="85.4" y="107.4" width="17.2" height="2.4" rx="1"/>' +
+          '<circle class="k-stk" cx="94" cy="91.4" r="3.8"/><circle class="k-wdh" cx="92.7" cy="90.1" r="1.2"/>' +
+          '<rect class="k-stb" x="92.2" y="93.6" width="3.6" height="6.4" rx="1.2"/>' +
+          '<path class="k-stb" d="M87.6 99.4 H100.4 Q101.6 99.4 101.8 100.6 L102.6 106.4 H85.4 L86.2 100.6 Q86.4 99.4 87.6 99.4Z"/>' +
+          '<rect class="k-zf" x="86" y="102.2" width="16" height="1.6"/>' +
+          '<rect class="k-stm" x="85.4" y="106.4" width="17.2" height="2.6" rx="1"/>' +
         '</g>' +
         hand(93.6, 99.8) +
       '</g>' +
       '<g class="mc-head">' + earsFace() +
+        '<path class="k-tn" d="M50.4 71 Q60 74.4 69.6 71 L70.4 79.4 Q60 83.4 49.6 79.4Z"/>' +
+        '<path class="k-tnl" d="M50.8 75.4 Q60 78.8 69.2 75.4"/>' +
         '<circle class="k-ck" cx="46" cy="55.4" r="3.8"/><circle class="k-ck" cx="74" cy="55.4" r="3.8"/>' +
-        '<path class="k-db" d="M35.5 40 Q33 66 41 84 Q49 99 60 101 Q71 99 79 84 Q87 66 84.5 40 L80.8 41 Q82 54 77.5 59.5 Q69.5 61.6 60 64.6 Q50.5 61.6 42.5 59.5 Q38 54 39.2 41Z"/>' +
-        '<path class="k-dbt" d="M47 71 Q50 83 55 92 M60 69 V97 M73 71 Q70 83 65 92 M42.5 63 Q43.5 73 47.5 82 M77.5 63 Q76.5 73 72.5 82"/>' +
-        '<path class="k-gs" d="M58.6 75 Q60.8 84 59.4 93"/>' +
+        '<path class="k-db" d="M36 44 Q34.6 63 41.4 76 Q48.6 86.4 60 87.6 Q71.4 86.4 78.6 76 Q85.4 63 84 44 L80.6 45 Q81.6 55 77.2 59.6 Q69.4 61.8 60 64.4 Q50.6 61.8 42.8 59.6 Q38.4 55 39.4 45Z"/>' +
+        '<path class="k-dbt" d="M47.6 70 Q50.6 77 55 82.6 M60 68.6 V85 M72.4 70 Q69.4 77 65 82.6 M43 63 Q44 70 47.6 75.6 M77 63 Q76 70 72.4 75.6"/>' +
+        '<path class="k-gs" d="M52.4 68.6 Q54 75 57.4 80 M67.6 68.6 Q66 75 62.6 80"/>' +
         eyes() +
-        '<path class="k-dbr2" d="M43.4 42 L56 44 M64 44 L76.6 42"/>' +
+        '<path class="k-dbr2" d="M43.6 41.8 Q49.6 39.2 56 40.8 M64 40.8 Q70.4 39.2 76.4 41.8"/>' +
+        '<path class="k-mo" d="M56.2 66.8 Q60 69.2 63.8 66.8"/>' +
         '<path class="k-db" d="M60 57.8 Q50.6 53.8 44.4 59.4 Q43.4 63.6 49 63 Q55 62.4 60 60.4 Q65 62.4 71 63 Q76.6 63.6 75.6 59.4 Q69.4 53.8 60 57.8Z"/>' +
         '<path class="k-dbt" d="M50 59.6 Q55 59.4 59 58.8 M61 58.8 Q65 59.4 70 59.6"/>' + NOSE +
-        '<path class="k-ht" d="M34.5 36 Q31 16 36 4 Q60 -1 84 4 Q89 16 85.5 36 Q60 30.5 34.5 36Z"/>' +
-        curls([[10, 2.6, [39, 48, 57.4, 67, 75.6]], [18, 2.6, [37.6, 46.6, 56, 65.6, 75]], [26.4, 2.6, [39, 49, 59, 69, 77.6]]]) +
-        '<path class="k-ht2" d="M34.5 36 Q60 30.5 85.5 36 L85.9 31.6 Q60 26 34.1 31.6Z"/>' +
-        '<path class="k-hthl" d="M40.5 6.2 Q60 1.8 79.5 6.2"/>' +
+        '<path class="k-hc" d="M36 43 Q35 26 47.6 20.6 Q60 16.8 72.4 20.6 Q85 26 84 43 Q82.6 34 77.4 31 Q74 33.4 69.6 31.4 Q60 28.6 50.4 31.4 Q46 33.4 42.6 31 Q37.4 34 36 43Z"/>' +
+        '<path class="k-hct" d="M47 24.6 l1.4 -1.6 M53 22.4 l1.4 -1.6 M59.2 21.6 l1.4 -1.6 M65.4 22.4 l1.4 -1.6 M71.4 24.6 l1.4 -1.6"/>' +
       '</g>' +
       hand(33, 107.6) +
     '</g>';
@@ -306,7 +271,7 @@
       '<g class="k-gd"><path d="M34 114 l2 -2 2 2 -2 2z M42 115 l2 -2 2 2 -2 2z M50 115.4 l2 -2 2 2 -2 2z M58 115 l2 -2 2 2 -2 2z M66 114 l2 -2 2 2 -2 2z"/></g>' +
       '<path class="k-iv" d="M42.5 74 L50 83 L57.5 74 Q50 71 42.5 74Z"/>' +
       '<rect class="k-nr" x="32" y="96" width="36" height="5" rx="2.5"/>' +
-      '<polygon class="k-gd" points="' + starPts(50, 88, 4) + '"/>' +
+      '<polygon class="k-gd" points="' + gulPts(50, 88, 4.4) + '"/>' +
       '<path class="k-nza" d="M38 79 Q31 88 39 96"/><path class="k-nza" d="M62 79 Q69 88 61 96"/>' +
       '<circle class="k-sk" cx="39.5" cy="96.5" r="3.6"/><circle class="k-sk" cx="60.5" cy="96.5" r="3.6"/>' +
       '<rect class="k-sk2" x="46" y="62" width="8" height="11" rx="3"/>' +
@@ -315,51 +280,50 @@
         '<circle class="k-sk" cx="50" cy="42" r="21"/>' +
         '<path class="k-hrn" d="M29 41 Q30.5 20 50 18 Q69.5 20 71 41 Q64 30 56 29 Q50.5 36 40 32.5 Q33.5 35.5 29 41Z"/>' +
         '<path class="k-nzb" d="M31 30.5 Q50 12.5 69 30.5"/>' +
-        '<g class="k-gd"><circle cx="37" cy="24.6" r="1.3"/><circle cx="43.5" cy="20.6" r="1.3"/><circle cx="50" cy="19.3" r="1.3"/><circle cx="56.5" cy="20.6" r="1.3"/><circle cx="63" cy="24.6" r="1.3"/></g>' +
         '<g class="mc-eye"><ellipse class="k-ew" cx="42" cy="44" rx="5" ry="6"/><circle class="k-ir" cx="42.5" cy="44.8" r="3.7"/><circle class="k-ey" cx="42.5" cy="44.8" r="1.9"/><circle class="k-hl" cx="43.9" cy="43.1" r="1.25"/></g>' +
         '<g class="mc-eye"><ellipse class="k-ew" cx="58" cy="44" rx="5" ry="6"/><circle class="k-ir" cx="57.5" cy="44.8" r="3.7"/><circle class="k-ey" cx="57.5" cy="44.8" r="1.9"/><circle class="k-hl" cx="58.9" cy="43.1" r="1.25"/></g>' +
         '<path class="k-lash" d="M37.2 40.4 l-2.2 -1.6 M62.8 40.4 l2.2 -1.6"/>' +
         '<path class="k-nbr" d="M38 35.8 Q42 33.8 46 35.4 M54 35.4 Q58 33.8 62 35.8"/>' +
         '<circle class="k-ck" cx="36" cy="52" r="3.6"/><circle class="k-ck" cx="64" cy="52" r="3.6"/>' +
         '<path class="k-nzm" d="M45.6 54 Q50 58.6 54.4 54 Q50 55.6 45.6 54Z"/>' +
-        '<circle class="k-gd" cx="29.4" cy="50" r="1.8"/><circle class="k-gd" cx="70.6" cy="50" r="1.8"/>' +
       '</g>' +
     '</g>';
-  var NZ_SCROLL = '<svg class="mc-art" viewBox="0 0 60 20" aria-hidden="true"><rect class="k-pg" x="4" y="4" width="52" height="12" rx="6"/><path class="k-pl" d="M9 7.4 H51 M9 12.6 H51"/><circle class="k-wd" cx="4.6" cy="10" r="4.2"/><circle class="k-wd" cx="55.4" cy="10" r="4.2"/><rect class="k-nr" x="27" y="3" width="6" height="14" rx="1.2"/><path class="k-rbn" d="M30 17 l-3.4 3 M30 17 l3.4 3"/></svg>';
+  /* the document Nuanza carries in (a printed page with a clip) */
+  var NZ_DOC = '<svg class="mc-art" viewBox="0 0 60 26" aria-hidden="true"><rect class="k-pg" x="8" y="3.4" width="44" height="21" rx="1.6"/><path class="k-fl" d="M13 8.4 H29"/><path class="k-pl" d="M13 12.8 H47 M13 16.6 H47 M13 20.4 H37"/><rect class="k-bind" x="25" y="1.2" width="10" height="4.4" rx="1.2"/></svg>';
 
   /* ------------------------------------------------------------------
      the five elders (public data)
      ------------------------------------------------------------------ */
   var ELDERS = [
-    { id: 'lugetci', n: 1, name: 'Lüğətçi Mirzə', short: 'Lüğətçi', role: 'Terminologiya', look: 'Boz papaq, ağ saqqal, qalın lüğət',
+    { id: 'lugetci', n: 1, name: 'Lüğətçi Mirzə', short: 'Lüğətçi', role: 'Terminologiya', look: 'Ağ saç, səliqəli ağ saqqal, düzbucaq eynək, yaşıl jaket, qalın lüğət',
       work: 'Lüğəti vərəqləyir',
       doing: 'Lüğəti vərəqləyirəm: hər termin lüğət və tərcümə yaddaşı ilə tutuşdurulur',
       done: 'Terminlər lüğətə uyğundur — hamısı yerindədir.',
       warn: 'Üç termin lüğətdən fərqlidir — qeyd etdim.',
       warnN: function (n) { return n + ' termin lüğətdən fərqlidir'; },
       quip: 'Lüğətsiz tərcümə xəritəsiz səfərə bənzəyir.' },
-    { id: 'menaci', n: 2, name: 'Mənaçı Mirzə', short: 'Mənaçı', role: 'Məna və mənbə', look: 'Ağ çalma, girdə eynək, böyüdücü şüşə',
-      work: 'Böyüdücü ilə tumarı oxuyur',
+    { id: 'menaci', n: 2, name: 'Mənaçı Mirzə', short: 'Mənaçı', role: 'Məna və mənbə', look: 'Seyrək ağ saç, girdə eynək, boz bığ, göy pencək, böyüdücü şüşə',
+      work: 'Böyüdücü ilə sənədi oxuyur',
       doing: 'Hər cümləni mənbə ilə yan-yana oxuyuram',
       done: 'Məna mənbə ilə üst-üstə düşür, heç nə buraxılmayıb.',
       warn: 'Bir cümlədə məna daralıb — mənbəyə qayıdın.',
       warnN: function (n) { return n + ' yerdə məna mənbədən uzaqlaşıb'; },
       quip: 'Sözə yox, mənaya bax, övladım.' },
-    { id: 'uslubcu', n: 3, name: 'Üslubçu Mirzə', short: 'Üslubçu', role: 'Üslub, registr, söz sırası', look: 'Qızılı ziqzaqlı qırmızı araqçın, burma bığ, lələk',
-      work: 'Lələklə naxış vurur',
+    { id: 'uslubcu', n: 3, name: 'Üslubçu Mirzə', short: 'Üslubçu', role: 'Üslub, registr, söz sırası', look: 'Gümüşü saç, burma bığ, qırmızı kəpənək qalstuk, mürəkkəbli qələm',
+      work: 'Mürəkkəbli qələmlə naxış vurur',
       doing: 'Registri və söz sırasını cilalayıram',
       done: 'Üslub ardıcıldır, cümlələr səlis oxunur.',
       warn: 'İki cümlədə söz sırası ingiliscəyə bənzəyir.',
       warnN: function (n) { return n + ' cümlədə üslub və ya söz sırası axsayır'; },
       quip: 'Cümlə də xalça kimidir: hər naxış öz yerində olmalıdır.' },
-    { id: 'dilci', n: 4, name: 'Dilçi Nənə', short: 'Dilçi Nənə', role: 'Orfoqrafiya, türk formaları', look: 'Qırmızı xallı ağ kəlağayı, qırmızı qələm',
+    { id: 'dilci', n: 4, name: 'Dilçi Nənə', short: 'Dilçi Nənə', role: 'Orfoqrafiya, türk formaları', look: 'Topuz edilmiş çal saç, qırmızı çərçivəli eynək, mirvari boyunbağı, qırmızı qələm',
       work: 'Qırmızı qələmlə düzəliş edir',
       doing: 'Yazılışa baxıram — «değil», «şimdi» kimi türk formaları qalmasın',
       done: 'Yazılış ədəbi normaya uyğundur.',
       warn: 'İki türk forması tapdım: «değil» → «deyil», «şimdi» → «indi».',
       warnN: function (n) { return n + ' yazılış səhvi və ya türk forması'; },
       quip: '«Şimdi» yox, «indi», qızım! Dilimizi qoruyaq.' },
-    { id: 'mohurdar', n: 5, name: 'Möhürdar Mirzə', short: 'Möhürdar', role: 'Rəqəm, ad, tarix · möhür', look: 'Qara papaq, qalın tünd saqqal, mum möhür',
+    { id: 'mohurdar', n: 5, name: 'Möhürdar Mirzə', short: 'Möhürdar', role: 'Rəqəm, ad, tarix · möhür', look: 'Qısa çal saç, qalın çal saqqal, qara boğazlı sviter, masa möhürü',
       work: 'Möhürü qaldırıb vurur',
       doing: 'Rəqəmləri, adları və tarixləri sayıram. Sonra möhür',
       done: 'Rəqəmlər, adlar və tarixlər yerindədir. Möhür vuruldu!',
@@ -367,13 +331,13 @@
       warnN: function (n) { return n + ' rəqəm, ad və ya tarix uyğun gəlmir'; },
       quip: 'Rəqəm yalan deməz, amma səhv yazıla bilər.' }
   ];
-  /* seat positions in the arc: x (center %), bottom %, scale, z-index, entrance order */
+  /* seats along the desk: x (center %), bottom % of the figure, scale, z-index, entrance order (center first) */
   var SEATS = [
-    { x: 12, b: 14, s: 1, z: 5, i: 3 },
-    { x: 30, b: 33, s: 0.9, z: 3, i: 1 },
-    { x: 50, b: 41, s: 0.84, z: 2, i: 0 },
-    { x: 70, b: 33, s: 0.9, z: 3, i: 2 },
-    { x: 88, b: 14, s: 1, z: 5, i: 4 }
+    { x: 10, b: 20.8, s: 1, z: 3, i: 3 },
+    { x: 26.5, b: 20.8, s: 1, z: 3, i: 1 },
+    { x: 43, b: 20.8, s: 1, z: 3, i: 0 },
+    { x: 59.5, b: 20.8, s: 1, z: 3, i: 2 },
+    { x: 76, b: 20.8, s: 1, z: 3, i: 4 }
   ];
   var TYPE_TO = {
     'Termin': 0, 'Terminologiya': 0, 'Lüğət': 0, 'Qlossari': 0,
@@ -383,62 +347,116 @@
     'Rəqəm': 4, 'Ad': 4, 'Tarix': 4, 'Say': 4
   };
 
-  function figure(i) { injectCss(); return '<svg class="mc-art e' + (i + 1) + '" viewBox="0 0 120 140" aria-hidden="true" focusable="false">' + ART[i] + '</svg>'; }
-  function portrait(i) { injectCss(); return '<svg class="mc-art e' + (i + 1) + '" viewBox="23 1 74 74" aria-hidden="true" focusable="false">' + ART[i] + '</svg>'; }
+  function figure(i) { injectCss(); return '<svg class="mc-art e' + (i + 1) + '" viewBox="0 0 120 140" aria-hidden="true" focusable="false">' + CHAIR + ART[i] + '</svg>'; }
+  function portrait(i) { injectCss(); return '<svg class="mc-art e' + (i + 1) + '" viewBox="23 8 74 74" aria-hidden="true" focusable="false">' + ART[i] + '</svg>'; }
   function nzPortrait() { return '<svg class="mc-art" viewBox="22 8 56 56" aria-hidden="true" focusable="false">' + NZ_ART + '</svg>'; }
-  function starAvatar() {
-    return '<svg class="mc-star-av" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false"><polygon class="s1" points="' + starPts(0, 0, 13) + '"/><circle class="s2" r="5.4"/><circle class="s3" r="1.8"/></svg>';
+  function gulAvatar() {
+    return '<svg class="mc-gul-av" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false"><polygon class="s1" points="' + gulPts(0, 0, 15) + '"/><polygon class="s2" points="' + diaPts(0, 0, 8) + '"/><polygon class="s3" points="' + diaPts(0, 0, 4) + '"/></svg>';
   }
+  /* the verdict stamp: ring text around a göl, coloured by the verdict tone */
   function sealSvg() {
     var id = 'mcSA' + (++UID);
     return '<svg class="mc-art" viewBox="-50 -50 100 100" aria-hidden="true" focusable="false">' +
-      '<path class="s-blob" d="' + blobPath(46, 0.6) + '"/>' +
-      '<path class="s-pool" d="' + blobPath(39, 2.1) + '"/>' +
-      '<circle class="s-ring" r="31.5"/>' +
+      '<circle class="s-bg" r="47"/>' +
+      '<circle class="s-ring" r="45"/>' +
+      '<circle class="s-ring2" r="30.5"/>' +
       '<defs><path id="' + id + '" d="M -37.5 0 a 37.5 37.5 0 1 1 75 0 a 37.5 37.5 0 1 1 -75 0"/></defs>' +
       '<text class="s-tx"><textPath href="#' + id + '" xlink:href="#' + id + '" textLength="228" lengthAdjust="spacing">MİRZƏ MƏCLİSİ · NUANZA · BAKI ·</textPath></text>' +
-      '<polygon class="s-star" points="' + starPts(0, 0, 22) + '"/>' +
-      '<circle class="s-core" r="8.6"/>' +
-      '<polygon class="s-star2" points="' + starPts(0, 0, 5.6) + '"/>' +
-      '<ellipse class="s-hl" cx="-17" cy="-25" rx="13" ry="5.4" transform="rotate(-32 -17 -25)"/>' +
+      '<polygon class="s-gul" points="' + gulPts(0, 0, 22) + '"/>' +
+      '<polygon class="s-gul2" points="' + gulPts(0, 0, 12.5) + '"/>' +
+      '<polygon class="s-core" points="' + diaPts(0, 0, 6) + '"/>' +
     '</svg>';
   }
+  /* the shared document on the desk (the class names stay "tumar" for the ceremony code) */
   function tumarSvg() {
-    return '<svg class="mc-art mc-tsvg" viewBox="0 0 200 84" aria-hidden="true" focusable="false">' +
-      '<ellipse class="k-sh" cx="100" cy="79" rx="92" ry="4.6"/>' +
+    return '<svg class="mc-art mc-tsvg" viewBox="0 0 200 100" aria-hidden="true" focusable="false">' +
+      '<ellipse class="k-sh" cx="100" cy="94" rx="86" ry="5"/>' +
+      '<g class="t-rl"><rect class="k-pg2" x="20" y="10" width="150" height="80" rx="3" transform="rotate(-4 95 50)"/></g>' +
       '<g class="t-pg">' +
-        '<rect class="k-pg" x="18" y="10" width="164" height="62" rx="2"/>' +
-        '<path class="t-edge" d="M18 13.5 H182 M18 68.5 H182"/>' +
-        '<path class="t-ttl" d="M74 22 H126"/>' +
-        '<path class="k-pl" d="M32 32 H76 M82 32 H120 M126 32 H168 M32 40 H64 M70 40 H146 M32 48 H104 M110 48 H138 M144 48 H168 M32 56 H58 M64 56 H92 M98 56 H146 M32 63 H118"/>' +
-        '<path class="mk mk1" pathLength="1" d="M82 35.6 H120"/>' +
-        '<path class="mk mk2" pathLength="1" d="M151 39.6 l4.4 4.4 l9.4 -10.4"/>' +
-        '<path class="mk mk4" pathLength="1" d="M108 48 H140"/>' +
-        '<path class="mk mk4" pathLength="1" d="M119 44.6 l4.4 -6.4 l4.4 6.4"/>' +
-        '<path class="mk mk3" pathLength="1" d="M60 67 q8 -7 16 0 t16 0 q7 -5 12 1"/>' +
-        '<g class="mk5"><circle class="k-wx" cx="161" cy="60" r="9.4"/><polygon class="k-wx2" points="' + starPts(161, 60, 5.8) + '"/></g>' +
+        '<rect class="k-pg" x="28" y="8" width="150" height="82" rx="3"/>' +
+        '<path class="t-ttl" d="M42 21 H92"/>' +
+        '<path class="k-pl" d="M42 33 H86 M92 33 H130 M136 33 H164 M42 43 H74 M80 43 H146 M42 53 H112 M118 53 H140 M146 53 H164 M42 63 H66 M72 63 H100 M106 63 H146 M42 73 H120"/>' +
+        '<path class="mk mk1" pathLength="1" d="M92 37 H130"/>' +
+        '<path class="mk mk2" pathLength="1" d="M151 42.6 l4.4 4.4 l9.4 -10.4"/>' +
+        '<path class="mk mk4" pathLength="1" d="M117 53 H141"/>' +
+        '<path class="mk mk4" pathLength="1" d="M124.6 49.6 l4.4 -6.4 l4.4 6.4"/>' +
+        '<path class="mk mk3" pathLength="1" d="M58 78 q8 -7 16 0 t16 0 q7 -5 12 1"/>' +
+        '<g class="mk5"><rect class="t-stmo" x="146" y="62" width="24" height="20" rx="3" transform="rotate(-6 158 72)"/><polygon class="t-stm" points="' + gulPts(158, 72, 7) + '"/></g>' +
       '</g>' +
-      '<g class="t-rl"><rect class="k-wd" x="8" y="5" width="14" height="72" rx="7"/><rect class="t-cap" x="10.5" y="1.6" width="9" height="5.4" rx="2"/><rect class="t-cap" x="10.5" y="75" width="9" height="5.4" rx="2"/></g>' +
-      '<g class="t-rr"><rect class="k-wd" x="178" y="5" width="14" height="72" rx="7"/><rect class="t-cap" x="180.5" y="1.6" width="9" height="5.4" rx="2"/><rect class="t-cap" x="180.5" y="75" width="9" height="5.4" rx="2"/></g>' +
+      '<g class="t-rr"><rect class="k-bind" x="91" y="3" width="22" height="9" rx="2.2"/><path class="t-clip" d="M95 7.5 H109"/></g>' +
     '</svg>';
   }
-  function archSvg() {
-    return '<svg class="mc-arch" viewBox="0 0 200 240" aria-hidden="true" focusable="false">' +
-      '<defs><pattern id="mcLattice" width="18" height="18" patternUnits="userSpaceOnUse"><polygon class="a-st" points="' + starPts(9, 9, 6.4) + '"/><path class="a-ln" d="M0 9 H2.6 M15.4 9 H18 M9 0 V2.6 M9 15.4 V18"/></pattern></defs>' +
-      '<path class="a-gl" d="M24 240 V118 Q24 46 100 10 Q176 46 176 118 V240Z"/>' +
-      '<path class="a-lat" fill="url(#mcLattice)" d="M36 240 V122 Q36 60 100 26 Q164 60 164 122 V240Z"/>' +
-      '<path class="a-fr" d="M24 240 V118 Q24 46 100 10 Q176 46 176 118 V240"/>' +
-      '<path class="a-fr2" d="M36 240 V122 Q36 60 100 26 Q164 60 164 122 V240"/>' +
+
+  /* ------------------------------------------------------------------
+     the studio — window, kilim, shelf, plant, desk items (decor; colours from tokens)
+     ------------------------------------------------------------------ */
+  function windowSvg() {
+    var id = 'mcSky' + (++UID);
+    return '<svg class="mc-win" viewBox="0 0 60 110" aria-hidden="true" focusable="false">' +
+      '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1"><stop class="w-s1" offset="0"/><stop class="w-s2" offset="1"/></linearGradient></defs>' +
+      '<rect class="w-fr" x="0" y="0" width="60" height="110" rx="5"/>' +
+      '<rect x="3.5" y="3.5" width="53" height="103" rx="2.5" fill="url(#' + id + ')"/>' +
+      '<path class="w-city" d="M3.5 106.5 V88 H10 V80 H15 V92 H20 V72 H27 V84 H31 V90 H36 V76 H42 V86 H47 V68 H53 V82 H56.5 V106.5Z"/>' +
+      '<path class="w-lit" d="M22.5 76 h1.6 M22.5 80 h1.6 M49 72 h1.6 M49 77 h1.6 M38.4 80 h1.6 M11.6 84 h1.6"/>' +
+      '<path class="w-fr2" d="M30 3.5 V106.5 M3.5 46 H56.5"/>' +
+      '<path class="w-hl" d="M9 12 L20 6 M9 20 L28 10"/>' +
+      '<rect class="w-sill" x="-3" y="106" width="66" height="4" rx="1.6"/>' +
     '</svg>';
   }
-  function lampSvg() {
-    return '<svg viewBox="0 0 30 72" aria-hidden="true" focusable="false">' +
-      '<path class="l-ch" d="M15 0 V22"/>' +
-      '<path class="l-cap" d="M9 22 H21 L19 26.5 H11Z"/>' +
-      '<path class="l-body" d="M8.5 26.5 H21.5 Q25 38.5 21.5 50.5 H8.5 Q5 38.5 8.5 26.5Z"/>' +
-      '<path class="l-fr" d="M15 26.5 V50.5 M8.5 26.5 Q11.6 38.5 8.5 50.5 M21.5 26.5 Q18.4 38.5 21.5 50.5"/>' +
-      '<path class="l-cap" d="M11 50.5 H19 L21 55 H9Z"/>' +
-      '<path class="l-ch" d="M15 55 V60"/><circle class="l-cap" cx="15" cy="62" r="2"/>' +
+  function kilimSvg() {
+    var s = '<svg class="mc-kil" viewBox="0 0 120 72" aria-hidden="true" focusable="false"><rect class="kl-f" width="120" height="72"/>', k, x;
+    for (k = 0; k < 14; k++) {
+      x = 4 + k * 8;
+      s += '<path class="' + (k % 2 ? 'kl-b' : 'kl-a') + '" d="M' + x + ' 9.5 L' + (x + 4) + ' 3.5 L' + (x + 8) + ' 9.5Z M' + x + ' 62.5 L' + (x + 4) + ' 68.5 L' + (x + 8) + ' 62.5Z"/>';
+    }
+    s += '<path class="kl-ln" d="M4 12 H116 M4 60 H116"/>';
+    [[24, 'kl-a', 'kl-c', 'kl-b'], [60, 'kl-b', 'kl-a', 'kl-c'], [96, 'kl-a', 'kl-c', 'kl-b']].forEach(function (g) {
+      s += '<polygon class="' + g[1] + '" points="' + gulPts(g[0], 36, 17) + '"/>' +
+        '<polygon class="kl-f" points="' + gulPts(g[0], 36, 11.6) + '"/>' +
+        '<polygon class="' + g[2] + '" points="' + gulPts(g[0], 36, 7.6) + '"/>' +
+        '<polygon class="' + g[3] + '" points="' + diaPts(g[0], 36, 3) + '"/>';
+    });
+    [[42, 21], [42, 51], [78, 21], [78, 51], [6.6, 21], [6.6, 51], [113.4, 21], [113.4, 51]].forEach(function (p) {
+      s += '<polygon class="kl-c" points="' + diaPts(p[0], p[1], 3.2) + '"/>';
+    });
+    return s + '</svg>';
+  }
+  function shelfSvg() {
+    return '<svg class="mc-shelf" viewBox="0 0 80 30" aria-hidden="true" focusable="false">' +
+      '<rect class="sh-b1" x="6" y="8" width="5" height="18" rx=".8"/><rect class="sh-b2" x="11.6" y="11" width="4.4" height="15" rx=".8"/>' +
+      '<rect class="sh-b3" x="16.6" y="6" width="5.4" height="20" rx=".8"/><rect class="sh-b4" x="22.6" y="10" width="4" height="16" rx=".8"/>' +
+      '<rect class="sh-b5" x="28" y="9" width="4.4" height="17" rx=".8" transform="rotate(16 32.4 26)"/>' +
+      '<path class="sh-v" d="M58 26 Q54.4 26 54.4 21.4 Q54.4 15 61 15 Q67.6 15 67.6 21.4 Q67.6 26 64 26Z"/>' +
+      '<path class="sh-lf" d="M61 15 Q59 9 55 6 M61 15 Q62 8 66 4.4 M61 15 Q64.6 11 69.6 10"/>' +
+      '<rect class="sh-pl" x="0" y="26" width="80" height="3" rx="1.2"/>' +
+    '</svg>';
+  }
+  function plantSvg() {
+    return '<svg class="mc-plnt" viewBox="0 0 60 120" aria-hidden="true" focusable="false">' +
+      '<path class="p-l2" d="M22 92 Q8 68 5 40 Q17 62 28 92Z"/>' +
+      '<path class="p-l1" d="M25 92 Q18 52 22 14 Q29 52 31 92Z"/>' +
+      '<path class="p-l2" d="M30 92 Q28 42 34 2 Q39 46 36 92Z"/>' +
+      '<path class="p-l1" d="M35 92 Q40 56 47 22 Q47 60 41 92Z"/>' +
+      '<path class="p-l2" d="M39 92 Q51 70 56 46 Q53 72 45 92Z"/>' +
+      '<path class="p-ln" d="M22 30 Q24 56 28 88 M34 14 Q33 50 33.6 88 M45 34 Q42 60 38 88"/>' +
+      '<rect class="p-rim" x="12" y="88" width="36" height="6" rx="2"/>' +
+      '<path class="p-pot" d="M14 94 H46 L42.4 117.6 Q42 120 39.6 120 H20.4 Q18 120 17.6 117.6Z"/>' +
+      '<path class="p-band" d="M15.4 102 H44.6"/>' +
+    '</svg>';
+  }
+  function laptopSvg() {
+    return '<svg viewBox="0 0 60 40" aria-hidden="true" focusable="false">' +
+      '<rect class="lp-lid" x="6" y="2" width="48" height="31" rx="3"/>' +
+      '<polygon class="lp-g" points="' + gulPts(30, 17.5, 6) + '"/><polygon class="lp-r" points="' + diaPts(30, 17.5, 3.2) + '"/><polygon class="lp-d" points="' + diaPts(30, 17.5, 1.6) + '"/>' +
+      '<rect class="lp-base" x="1" y="33" width="58" height="4.4" rx="2.2"/>' +
+    '</svg>';
+  }
+  function mugSvg() {
+    return '<svg viewBox="0 0 24 34" aria-hidden="true" focusable="false">' +
+      '<path class="mg-st" d="M8 12 Q5.6 8.6 8 5.6 Q10.4 2.6 8 0 M13.6 12 Q11.2 8.6 13.6 5.6 Q16 2.6 13.6 0"/>' +
+      '<path class="mg-h" d="M17.6 18.4 Q23 18.4 23 22.8 Q23 27.2 17.6 27.2"/>' +
+      '<rect class="mg-c" x="2" y="14" width="17" height="19" rx="3.2"/>' +
+      '<polygon class="mg-g" points="' + diaPts(10.5, 23.5, 3.4) + '"/>' +
     '</svg>';
   }
 
@@ -446,25 +464,26 @@
      CSS (injected once)
      ------------------------------------------------------------------ */
   var CSS = `
-.mc,.mc-art{--mc-skin:#F1C9A5;--mc-skin2:#DCA482;--mc-cheek:#EC8B7E;--mc-eye:#1E1B2E;--mc-beard:#F5F1EA;--mc-beard2:#D2C9BC;
-  --mc-grey:#CEC7BB;--mc-grey2:#A69E92;--mc-paper:#FFF8EA;--mc-paper2:#E4D6BA;--mc-pline:#BBA988;--mc-wood:#8B5A33;--mc-wood2:#6A4226;
-  --mc-red:#C8283F;--mc-wax:#A3253A;--mc-wax2:#78192A;--mc-wax3:#C9405A;--mc-ivory:#FFF9EE;--mc-cush:#761B2E;--mc-cush2:#93283E;
-  --mc-gold:#D9A441;--mc-gold2:#A97A22;--mc-ink:#22336E;--mc-ok:#4CC38A;--mc-okd:#2E8A5E;--mc-navy:#22306B;--mc-hair:#2E1F1A}
-.mc-art{--robe:#2E6A58;--robe2:#22503F;--sash:var(--mc-gold);--hat:#9A9590;--hat2:#7A7571;--hatc:#68635F}
-.mc-art.e1{--robe:#2E6A58;--robe2:#22503F}
-.mc-art.e2{--robe:#7C5434;--robe2:#5E3E25;--sash:#2E6A58}
-.mc-art.e3{--robe:#2A3C7E;--robe2:#1F2D62;--hat:#B3263A;--hat2:#8E1C2E}
-.mc-art.e4{--robe:#6E2C47;--robe2:#552138}
-.mc-art.e5{--robe:#262A44;--robe2:#1A1D30;--hat:#2A2322;--hat2:#1B1615;--hatc:#4E4440}
+.mc,.mc-art{--mc-skin:#F1C9A5;--mc-skin2:#DCA482;--mc-cheek:#EC8B7E;--mc-eye:#1E1B2E;
+  --mc-white:#F4F2EE;--mc-white2:#CEC8BF;--mc-silver:#CAC5BE;--mc-silver2:#A29C94;
+  --mc-paper:#FBFAF7;--mc-paper2:#E1E4E9;--mc-pline:#AEB5C0;--mc-red:#E2334A;--mc-red2:#B3263B;
+  --mc-fir:#1FB5A8;--mc-fir2:#0E8F85;--mc-zaf:#E9A72A;--mc-ind:#3A48A8;--mc-ink:#1A1C23;--mc-steel:#3A3F4B;
+  --mc-ivory:#FBF8F2;--mc-chair:#3B424E;--mc-chair2:#4C5462;--mc-leaf:#3FA77A;--mc-leaf2:#2C8460;--mc-hair:#2E1F1A}
+.mc-art{--robe:#2F7A63;--robe2:#225846;--shirt:var(--mc-ivory)}
+.mc-art.e2{--robe:#3446A0;--robe2:#26357C;--shirt:#DCE8F5}
+.mc-art.e3{--robe:#A8733F;--robe2:#83582E}
+.mc-art.e4{--robe:#B8345A;--robe2:#8E2645}
+.mc-art.e5{--robe:#5A6170;--robe2:#434956}
 .mc-art .k-sh{fill:#000;opacity:.26}
-.mc-art .k-cu{fill:var(--mc-cush)}
-.mc-art .k-cu2{fill:none;stroke:var(--mc-cush2);stroke-width:2;stroke-linecap:round}
-.mc-art .k-pip{fill:none;stroke:var(--mc-gold);stroke-width:1.2;stroke-dasharray:2 2.4;opacity:.9}
-.mc-art .k-ta{fill:var(--mc-gold)}
+.mc-art .k-chr{fill:var(--mc-chair)}
+.mc-art .k-chr2{fill:none;stroke:var(--mc-chair2);stroke-width:2;stroke-linecap:round}
 .mc-art .k-r1{fill:var(--robe)}
-.mc-art .k-r2{fill:var(--robe2)}
 .mc-art .k-sv{fill:none;stroke:var(--robe);stroke-width:12;stroke-linecap:round}
-.mc-art .k-fold{fill:none;stroke:rgba(0,0,0,.24);stroke-width:1.4;stroke-linecap:round}
+.mc-art .k-rib{fill:none;stroke:var(--robe2);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.mc-art .k-rib2{fill:none;stroke:var(--robe2);stroke-width:1.5;stroke-linecap:round}
+.mc-art .k-lap{fill:none;stroke:var(--robe2);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mc-art .k-iv,.mc-art .k-cf{fill:var(--shirt)}
+.mc-art .k-col{fill:var(--shirt);stroke:rgba(0,0,0,.16);stroke-width:.8;stroke-linejoin:round}
 .mc-art .k-sk{fill:var(--mc-skin)}
 .mc-art .k-sk2{fill:var(--mc-skin2)}
 .mc-art .k-ck{fill:var(--mc-cheek);opacity:.5}
@@ -472,87 +491,82 @@
 .mc-art .k-hl{fill:#fff}
 .mc-art .k-nh{fill:#fff;opacity:.42}
 .mc-art .k-wr{fill:none;stroke:var(--mc-skin2);stroke-width:1.1;stroke-linecap:round}
-.mc-art .k-iv,.mc-art .k-cf{fill:var(--mc-ivory)}
-.mc-art .k-in2{fill:#5B1A28}
-.mc-art .k-sa{fill:var(--sash)}
-.mc-art .k-trim{fill:none;stroke:var(--mc-gold);stroke-width:1.3;opacity:.85}
-.mc-art .k-bw{fill:var(--mc-beard)}
-.mc-art .k-bwd{fill:none;stroke:var(--mc-beard2);stroke-width:1.3;stroke-linecap:round}
-.mc-art .k-bwl{fill:none;stroke:var(--mc-beard);stroke-width:3.4;stroke-linecap:round}
-.mc-art .k-gb{fill:var(--mc-grey)}
-.mc-art .k-gbt{fill:none;stroke:var(--mc-grey2);stroke-width:1.2;stroke-linecap:round}
-.mc-art .k-gbr{fill:none;stroke:#B5ADA3;stroke-width:2.6;stroke-linecap:round;transition:transform .3s var(--ease-out,ease)}
+.mc-art .k-hw,.mc-art .k-bw{fill:var(--mc-white)}
+.mc-art .k-hwl,.mc-art .k-bwd{fill:none;stroke:var(--mc-white2);stroke-width:1.3;stroke-linecap:round}
+.mc-art .k-bwl{fill:none;stroke:var(--mc-white);stroke-width:3.4;stroke-linecap:round}
+.mc-art .k-hs,.mc-art .k-hgy,.mc-art .k-gb{fill:var(--mc-silver)}
+.mc-art .k-hgl{fill:none;stroke:var(--mc-silver2);stroke-width:1.2;stroke-linecap:round}
+.mc-art .k-wisp{fill:none;stroke:var(--mc-silver);stroke-width:1.4;stroke-linecap:round}
+.mc-art .k-shine{fill:none;stroke:#fff;stroke-opacity:.34;stroke-width:2.4;stroke-linecap:round}
+.mc-art .k-gbr{fill:none;stroke:#ABA399;stroke-width:2.6;stroke-linecap:round;transition:transform .3s var(--ease-out,ease)}
+.mc-art .k-hr{fill:#A8A29B}
+.mc-art .k-hrl{fill:none;stroke:#C9C3BC;stroke-width:1.3;stroke-linecap:round}
+.mc-art .k-hc{fill:#99928A}
+.mc-art .k-hct{fill:none;stroke:#B4ADA5;stroke-width:1.1;stroke-linecap:round}
+.mc-art .k-ear,.mc-art .k-prl circle{fill:#fff;stroke:#CFC9C0;stroke-width:.5}
 .mc-art .k-mo{fill:none;stroke:#7A3B36;stroke-width:1.8;stroke-linecap:round}
 .mc-art .k-mo2{fill:#A8434F}
-.mc-art .k-ht{fill:var(--hat)}
-.mc-art .k-ht2{fill:var(--hat2)}
-.mc-art .k-htc{fill:none;stroke:var(--hatc);stroke-width:1.4;stroke-linecap:round}
-.mc-art .k-hthl{fill:none;stroke:#fff;stroke-opacity:.24;stroke-width:2;stroke-linecap:round}
+.mc-art .k-gl{fill:rgba(255,255,255,.14);stroke:var(--mc-ink);stroke-width:1.6;stroke-linecap:round}
+.mc-art.e2 .k-gl{stroke:#6B4A2E;stroke-width:1.7}
+.mc-art .k-gl.k-glr{stroke:var(--mc-red)}
+.mc-art .mc-glint{fill:none;stroke:#fff;stroke-width:1.4;stroke-linecap:round;opacity:0}
+.mc-art .k-psq,.mc-art .k-clipf{fill:var(--mc-fir)}
+.mc-art .k-zf{fill:var(--mc-zaf)}
+.mc-art .k-bt{fill:var(--mc-red)}
+.mc-art .k-btk{fill:var(--mc-red2)}
+.mc-art .k-dbr{fill:none;stroke:#4A4440;stroke-width:2.6;stroke-linecap:round}
+.mc-art .k-ms{fill:#5E5853}
+.mc-art .k-tn{fill:var(--mc-ink)}
+.mc-art .k-tnl{fill:none;stroke:#2E313A;stroke-width:1.2;stroke-linecap:round}
+.mc-art .k-db{fill:#857D75}
+.mc-art .k-dbt{fill:none;stroke:#ABA39B;stroke-width:1.3;stroke-linecap:round}
+.mc-art .k-gs{fill:none;stroke:#5E5751;stroke-width:1.3;stroke-linecap:round}
+.mc-art .k-dbr2{fill:none;stroke:#4A433E;stroke-width:3.4;stroke-linecap:round}
 .mc-art .k-pg{fill:var(--mc-paper)}
+.mc-art .k-pg2{fill:var(--mc-paper2)}
 .mc-art .k-pl{fill:none;stroke:var(--mc-pline);stroke-width:1.4;stroke-linecap:round}
 .mc-art .k-pl2{fill:none;stroke:var(--mc-paper2);stroke-width:1.6}
-.mc-art .k-ple{fill:none;stroke:#8E7E62;stroke-width:1.8;stroke-linecap:round}
-.mc-art .k-bk{fill:var(--mc-wax)}
-.mc-art .k-rb,.mc-art .k-gd,.mc-art .k-ta{fill:var(--mc-gold)}
-.mc-art .k-gdf{fill:var(--mc-gold)}
-.mc-art .k-bkl{fill:var(--mc-gold2);stroke:#F2D08A;stroke-width:1}
-.mc-art .k-wd{fill:var(--mc-wood)}
-.mc-art .k-wdh{fill:#fff;opacity:.3}
-.mc-art .k-nr{fill:var(--mc-red)}
-.mc-art .k-tb{fill:#FBF6EC}
-.mc-art .k-tb2{fill:#E9E0CF}
-.mc-art .k-tbl{fill:none;stroke:#D7CBB5;stroke-width:1.6;stroke-linecap:round}
-.mc-art .k-plm{fill:var(--mc-ivory);stroke:var(--mc-gold);stroke-width:.9}
-.mc-art .k-gl{fill:rgba(255,255,255,.14);stroke:#3A2A1A;stroke-width:1.7;stroke-linecap:round}
-.mc-art .mc-glint{fill:none;stroke:#fff;stroke-width:1.4;stroke-linecap:round;opacity:.0}
-.mc-art .k-hd{fill:none;stroke:var(--mc-wood);stroke-width:3.6;stroke-linecap:round}
-.mc-art .k-lens{fill:rgba(190,225,245,.5)}
-.mc-art .k-rim{fill:none;stroke:var(--mc-gold);stroke-width:2.4}
+.mc-art .k-ple{fill:none;stroke:#7D8592;stroke-width:1.8;stroke-linecap:round}
+.mc-art .k-fl{fill:none;stroke:var(--mc-fir);stroke-width:2.2;stroke-linecap:round}
+.mc-art .k-bk{fill:var(--mc-red)}
+.mc-art .k-rb{fill:var(--mc-zaf)}
+.mc-art .k-bind{fill:var(--mc-steel)}
+.mc-art .k-hd{fill:none;stroke:var(--mc-ink);stroke-width:3.6;stroke-linecap:round}
+.mc-art .k-lens{fill:rgba(190,235,240,.5)}
+.mc-art .k-rim{fill:none;stroke:var(--mc-steel);stroke-width:2.4}
 .mc-art .k-lhl{fill:none;stroke:#fff;stroke-width:1.4;stroke-linecap:round;opacity:.85}
-.mc-art .k-vest{fill:var(--mc-wax)}
-.mc-art .k-hr{fill:#5A5552}
-.mc-art .k-dbr{fill:none;stroke:#4A4440;stroke-width:2.6;stroke-linecap:round}
-.mc-art .k-ms{fill:#4E4844}
-.mc-art .k-zz{fill:none;stroke:var(--mc-gold);stroke-width:1.5;stroke-linejoin:round}
-.mc-art .k-ink{fill:none;stroke:var(--mc-ink);stroke-width:1.5;stroke-linecap:round}
-.mc-art .k-qf{fill:var(--mc-ivory);stroke:#CFC3AE;stroke-width:1}
-.mc-art .k-qs{fill:none;stroke:#BDAF96;stroke-width:1.1}
-.mc-art .k-qb{fill:none;stroke:#D8CDB9;stroke-width:.9;stroke-linecap:round}
-.mc-art .k-kl{fill:#FBF7F0}
-.mc-art .k-kd circle{fill:var(--mc-red)}
-.mc-art .k-kd2{fill:var(--mc-red)}
-.mc-art .k-klb{fill:none;stroke:var(--mc-gold);stroke-width:1.2;stroke-dasharray:1.4 1.8;stroke-linecap:round}
-.mc-art .k-hg{fill:#D8D2CA}
+.mc-art .k-ink{fill:none;stroke:var(--mc-ind);stroke-width:1.5;stroke-linecap:round}
+.mc-art .k-fpb{fill:none;stroke:var(--mc-ink);stroke-width:4.4;stroke-linecap:round}
+.mc-art .k-fpc{fill:none;stroke:var(--mc-zaf);stroke-width:4.8}
+.mc-art .k-nib{fill:var(--mc-zaf)}
 .mc-art .k-red{fill:none;stroke:var(--mc-red);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .mc-art .k-pen{fill:none;stroke:var(--mc-red);stroke-width:3.6;stroke-linecap:round}
-.mc-art .k-pnc{fill:none;stroke:var(--mc-gold);stroke-width:3.8}
+.mc-art .k-pnc{fill:none;stroke:#fff;stroke-width:3.8}
 .mc-art .k-pnt{fill:#3A2A2A}
-.mc-art .k-db{fill:#3A2F29}
-.mc-art .k-dbt{fill:none;stroke:#54473F;stroke-width:1.3;stroke-linecap:round}
-.mc-art .k-gs{fill:none;stroke:#A59C93;stroke-width:1.8;stroke-linecap:round}
-.mc-art .k-dbr2{fill:none;stroke:#231C19;stroke-width:3.8;stroke-linecap:round}
-.mc-art .k-br{fill:var(--mc-gold2)}
-.mc-art .k-wx{fill:var(--mc-wax)}
-.mc-art .k-wx2{fill:var(--mc-wax2)}
+.mc-art .k-stk,.mc-art .k-stm{fill:var(--mc-fir)}
+.mc-art .k-stmo{fill:none;stroke:var(--mc-fir);stroke-width:1.4}
+.mc-art .k-stb{fill:var(--mc-steel)}
+.mc-art .k-wdh{fill:#fff;opacity:.3}
 .mc-art .k-hrn{fill:var(--mc-hair)}
-.mc-art .k-nzr{fill:var(--mc-navy)}
-.mc-art .k-nzh{fill:var(--mc-wax)}
-.mc-art .k-nza{fill:none;stroke:var(--mc-navy);stroke-width:7;stroke-linecap:round}
+.mc-art .k-nr{fill:var(--mc-red)}
+.mc-art .k-gd{fill:var(--mc-zaf)}
+.mc-art .k-nzr{fill:#135E59}
+.mc-art .k-nzh{fill:var(--mc-red)}
+.mc-art .k-nza{fill:none;stroke:#135E59;stroke-width:7;stroke-linecap:round}
 .mc-art .k-ew{fill:#fff}
 .mc-art .k-ir{fill:#4A2C1C}
 .mc-art .k-lash{fill:none;stroke:var(--mc-hair);stroke-width:1.4;stroke-linecap:round}
 .mc-art .k-nbr{fill:none;stroke:var(--mc-hair);stroke-width:1.8;stroke-linecap:round}
 .mc-art .k-nzm{fill:#8E3442}
-.mc-art .k-nzb{fill:none;stroke:var(--mc-red);stroke-width:4.6;stroke-linecap:round}
-.mc-art .k-rbn{fill:none;stroke:var(--mc-red);stroke-width:1.6;stroke-linecap:round}
+.mc-art .k-nzb{fill:none;stroke:var(--mc-fir);stroke-width:4.6;stroke-linecap:round}
 .mc-art .mc-eye{transform-box:fill-box;transform-origin:center;transition:transform .07s}
 .mc-art .mc-eyes{transition:transform .5s var(--ease-out,ease)}
 .mc-art .mc-flo,.mc-art .mc-strk,.mc-art .mc-care{stroke-dasharray:1;stroke-dashoffset:1}
 .mc-art .mc-imp{opacity:0;transform-box:fill-box;transform-origin:center}
 .mc-art .mc-flip{transform-box:fill-box;transform-origin:0% 50%}
 .mc-art .mc-mst{transform-box:fill-box;transform-origin:50% 40%}
-.mc-art .mc-fig{transform-box:view-box;transform-origin:60px 136px}
-.mc-art .mc-body{transform-box:view-box;transform-origin:60px 128px}
+.mc-art .mc-fig{transform-box:view-box;transform-origin:60px 108px}
+.mc-art .mc-body{transform-box:view-box;transform-origin:60px 108px}
 .mc-art .mc-head{transform-box:view-box;transform-origin:60px 74px}
 .mc-art .mc-arm{transform-box:view-box;transform-origin:79px 85px}
 .mc-art.e4 .mc-arm{transform-origin:79px 86px}
@@ -562,110 +576,140 @@
 .mc-art .mc-nh{transform-box:view-box;transform-origin:50px 64px;transition:transform .4s var(--ease-out,ease)}
 .mc-art .mc-nb{transform-box:view-box;transform-origin:71px 50px;animation:mc-sway 3.2s ease-in-out infinite}
 
-/* overlay shell */
-.mc{position:fixed;inset:0;z-index:var(--z-meclis,70);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;color:var(--on-deep);
+/* overlay shell — dark in both themes; --mc-acc is firuzə lifted for text on the dark panels */
+.mc{--mc-acc:color-mix(in srgb,var(--firuze) 80%,white);
+  position:fixed;inset:0;z-index:var(--z-meclis,70);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;color:var(--on-deep);
   display:grid;justify-items:center;align-content:start;
   padding:max(14px,env(safe-area-inset-top,0px)) var(--gutter,16px) max(20px,env(safe-area-inset-bottom,0px));
   font-family:var(--f-body);animation:mc-in .3s var(--ease-out) both}
 @media (min-height:700px){.mc{align-content:center}}
 .mc.out{animation:mc-out .28s var(--ease-in-out) forwards;pointer-events:none}
 .mc-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:radial-gradient(70% 48% at 50% 26%,color-mix(in srgb,var(--zafaran) 20%,transparent),transparent 72%),
-    radial-gradient(130% 70% at 50% 120%,var(--deep-2),transparent 70%),linear-gradient(180deg,var(--deep) 0%,var(--deep-2) 100%)}
-.mc-bg::before{content:"";position:absolute;inset:0;background:var(--gold-hi);opacity:.05;-webkit-mask:var(--m-field) 0 0/56px 56px repeat;mask:var(--m-field) 0 0/56px 56px repeat}
+  background:radial-gradient(70% 46% at 50% 22%,color-mix(in srgb,var(--firuze) 12%,transparent),transparent 72%),
+    linear-gradient(180deg,var(--deep) 0%,var(--deep-2) 100%)}
+.mc-bg::before{content:"";position:absolute;inset:0;background:var(--firuze);opacity:.035;-webkit-mask:var(--m-field) 0 0/56px 56px repeat;mask:var(--m-field) 0 0/56px 56px repeat}
 .mc-bg::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 40%,transparent 55%,rgba(0,0,0,.38))}
 .mc-in{position:relative;width:min(760px,100%);min-width:0;display:grid;gap:14px}
 .mc-h{display:flex;align-items:flex-start;gap:12px;min-width:0;animation:mc-rise .45s var(--ease-out) .05s both}
 .mc-ht{flex:1;min-width:0;display:grid;gap:3px}
-.mc-h .eyebrow{color:var(--gold-hi)}
-.mc-h h2{margin:0;font-family:var(--f-display);font-weight:600;font-size:clamp(1.25rem,1.05rem + 1vw,1.75rem);line-height:1.15;letter-spacing:-.01em;color:var(--on-deep);text-wrap:balance;overflow-wrap:anywhere}
+.mc-h .eyebrow{color:var(--mc-acc)}
+.mc-h h2{margin:0;font-family:var(--f-display);font-weight:600;font-style:normal;font-size:clamp(1.25rem,1.05rem + 1vw,1.75rem);line-height:1.15;letter-spacing:-.01em;color:var(--on-deep);text-wrap:balance;overflow-wrap:anywhere}
 .mc .mc-x{flex:none;color:var(--on-deep);background:color-mix(in srgb,var(--on-deep) 8%,transparent);border-color:color-mix(in srgb,var(--on-deep) 18%,transparent)}
 @media (hover:hover){.mc .mc-x:hover{background:color-mix(in srgb,var(--on-deep) 16%,transparent)}}
-.mc :focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px}
+.mc :focus-visible{outline:2px solid var(--mc-acc);outline-offset:2px}
 .mc:focus,.mc:focus-visible{outline:none}
 
-/* stage */
-.mc-stage{--k:.92;--ph:calc(clamp(10.5px,var(--k) * 11.5px,13.5px) * 1.75 + 2px);position:relative;justify-self:center;width:min(100%,max(300px,calc((100vh - 330px) * 1.5)));aspect-ratio:3/2;border-radius:var(--r-xl,24px);overflow:hidden;isolation:isolate;
+/* stage — a modern studio: wall with window, kilim and shelf; the desk across the front */
+.mc-stage{--k:.92;--mc-wallc:color-mix(in srgb,var(--deep) 90%,white);--mc-desk:color-mix(in srgb,var(--deep) 68%,white);
+  position:relative;justify-self:center;width:min(100%,max(300px,calc((100vh - 330px) * 1.5)));aspect-ratio:3/2;border-radius:var(--r-xl,24px);overflow:hidden;isolation:isolate;
   background:
-    linear-gradient(180deg,transparent 54%,color-mix(in srgb,var(--gold-hi) 24%,transparent) 54%,color-mix(in srgb,var(--gold-hi) 24%,transparent) calc(54% + 1px),rgba(0,0,0,.14) calc(54% + 1px),rgba(0,0,0,.34) 100%),
-    radial-gradient(44% 56% at 50% 36%,color-mix(in srgb,var(--zafaran) 30%,transparent),transparent 72%),
-    linear-gradient(180deg,var(--deep-2),var(--deep));
-  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--zafaran) 34%,transparent),0 30px 60px -30px rgba(0,0,0,.6);
+    radial-gradient(30% 44% at 11% 30%,color-mix(in srgb,var(--mc-acc) 16%,transparent),transparent 72%),
+    linear-gradient(180deg,transparent 70%,color-mix(in srgb,var(--on-deep) 12%,transparent) 70%,color-mix(in srgb,var(--on-deep) 12%,transparent) calc(70% + 1px),transparent calc(70% + 1px)),
+    linear-gradient(180deg,var(--mc-wallc) 0%,color-mix(in srgb,var(--mc-wallc) 80%,black) 70%,color-mix(in srgb,var(--deep-2) 86%,black) 70%,var(--deep-2) 100%);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--on-deep) 12%,transparent),0 30px 60px -30px rgba(0,0,0,.6);
   animation:mc-rise .5s var(--ease-out) .08s both}
 @supports (height:100dvh){.mc-stage{width:min(100%,max(300px,calc((100dvh - 330px) * 1.5)))}}
-.mc-stage::before{content:"";position:absolute;inset:0 0 46% 0;z-index:-1;background:var(--gold-hi);opacity:.05;-webkit-mask:var(--m-field) 0 0/44px 44px repeat;mask:var(--m-field) 0 0/44px 44px repeat}
-.mc-stage::after{content:"";position:absolute;inset:0;z-index:8;pointer-events:none;border-radius:inherit;box-shadow:inset 0 0 calc(var(--k) * 60px) rgba(0,0,0,.36)}
-.mc-wall{position:absolute;inset:0 0 46% 0;pointer-events:none}
-.mc-arch{position:absolute;left:50%;bottom:0;width:30%;height:auto;transform:translateX(-50%);opacity:0;transition:opacity .9s var(--ease-out)}
-.mc.is-in .mc-arch{opacity:1}
-.mc-arch .a-gl{fill:var(--gold-hi);opacity:.07}
-.mc-arch .a-st{fill:none;stroke:var(--gold-hi);stroke-width:.9;opacity:.4}
-.mc-arch .a-ln{fill:none;stroke:var(--gold-hi);stroke-width:.9;opacity:.4}
-.mc-arch .a-lat{opacity:.55}
-.mc-arch .a-fr{fill:none;stroke:var(--gold-hi);stroke-width:2.2;opacity:.42}
-.mc-arch .a-fr2{fill:none;stroke:var(--gold-hi);stroke-width:1;opacity:.3}
-.mc-lamp{position:absolute;top:0;width:6.5%;transform-origin:50% 0;animation:mc-swing 4.8s ease-in-out infinite}
-.mc-lamp.l{left:13%}
-.mc-lamp.r{right:13%;animation-delay:-2.4s}
-.mc-lamp svg{display:block;width:100%;height:auto;overflow:visible}
-.mc-lamp::after{content:"";position:absolute;left:50%;top:54%;width:300%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
-  background:radial-gradient(closest-side,color-mix(in srgb,var(--gold-hi) 34%,transparent),transparent);animation:mc-flicker 2.8s ease-in-out infinite}
-.mc-lamp .l-ch{fill:none;stroke:var(--gold-hi);stroke-width:1;opacity:.6}
-.mc-lamp .l-cap{fill:var(--zafaran)}
-.mc-lamp .l-body{fill:var(--gold-hi);opacity:.92}
-.mc-lamp .l-fr{fill:none;stroke:var(--mc-gold2);stroke-width:1.1}
+.mc-stage::after{content:"";position:absolute;inset:0;z-index:8;pointer-events:none;border-radius:inherit;box-shadow:inset 0 0 calc(var(--k) * 56px) rgba(0,0,0,.32)}
+.mc-wall{position:absolute;inset:0;pointer-events:none}
+.mc-win{position:absolute;left:3%;top:8%;z-index:1;width:15%;height:auto;overflow:visible}
+.mc-win .w-fr{fill:color-mix(in srgb,var(--on-deep) 16%,var(--deep))}
+.mc-win .w-s1{stop-color:color-mix(in srgb,var(--mc-acc) 46%,var(--deep))}
+.mc-win .w-s2{stop-color:color-mix(in srgb,var(--mc-acc) 12%,var(--deep))}
+.mc-win .w-city{fill:color-mix(in srgb,var(--deep-2) 84%,var(--mc-acc))}
+.mc-win .w-lit{fill:none;stroke:var(--zafaran);stroke-width:1.6;opacity:.85}
+.mc-win .w-fr2{fill:none;stroke:color-mix(in srgb,var(--on-deep) 16%,var(--deep));stroke-width:3}
+.mc-win .w-hl{fill:none;stroke:#fff;stroke-opacity:.16;stroke-width:2;stroke-linecap:round}
+.mc-win .w-sill{fill:color-mix(in srgb,var(--on-deep) 26%,var(--deep))}
+.mc-shelf{position:absolute;left:63%;top:14%;z-index:1;width:20%;height:auto}
+.mc-shelf .sh-pl{fill:color-mix(in srgb,var(--on-deep) 24%,var(--deep))}
+.mc-shelf .sh-b1{fill:color-mix(in srgb,var(--lacquer) 72%,var(--deep))}
+.mc-shelf .sh-b2{fill:color-mix(in srgb,var(--zafaran) 78%,var(--deep))}
+.mc-shelf .sh-b3{fill:color-mix(in srgb,var(--mc-acc) 58%,var(--deep))}
+.mc-shelf .sh-b4{fill:color-mix(in srgb,var(--nar) 74%,var(--deep))}
+.mc-shelf .sh-b5{fill:color-mix(in srgb,var(--on-deep) 56%,var(--deep))}
+.mc-shelf .sh-v{fill:color-mix(in srgb,var(--on-deep) 72%,var(--deep))}
+.mc-shelf .sh-lf{fill:none;stroke:var(--mc-leaf);stroke-width:1.6;stroke-linecap:round}
+.mc-plant{position:absolute;left:86.5%;bottom:1%;z-index:2;width:13%;pointer-events:none}
+.mc-plnt{display:block;width:100%;height:auto}
+.mc-plnt .p-l1{fill:var(--mc-leaf)}
+.mc-plnt .p-l2{fill:var(--mc-leaf2)}
+.mc-plnt .p-ln{fill:none;stroke:#fff;stroke-opacity:.18;stroke-width:1;stroke-linecap:round}
+.mc-plnt .p-pot{fill:var(--zafaran)}
+.mc-plnt .p-rim{fill:color-mix(in srgb,var(--zafaran) 76%,black)}
+.mc-plnt .p-band{fill:none;stroke:color-mix(in srgb,var(--zafaran) 72%,black);stroke-width:1.4}
 
-/* rug */
-.mc-rug{position:absolute;left:5%;right:5%;bottom:2%;height:120%;z-index:1;pointer-events:none;transform-origin:50% 100%;transform:perspective(var(--mc-p,600px)) rotateX(61deg)}
-.mc-rug-in{position:absolute;inset:0;border-radius:6px;overflow:hidden;clip-path:inset(0 0 100% 0);
-  background:
-    linear-gradient(var(--gold-hi),var(--gold-hi)) 0 3.4%/100% 2px no-repeat,
-    linear-gradient(var(--gold-hi),var(--gold-hi)) 0 96.6%/100% 2px no-repeat,
-    linear-gradient(var(--gold-hi),var(--gold-hi)) 2.4% 0/2px 100% no-repeat,
-    linear-gradient(var(--gold-hi),var(--gold-hi)) 97.6% 0/2px 100% no-repeat,
-    var(--rug);
-  box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--rug) 72%,#000)}
-.mc-rug-in::before,.mc-rug-in::after{content:"";position:absolute;left:3.6%;right:3.6%;height:4.4%;background:var(--gold-hi);opacity:.62;
-  -webkit-mask:var(--m-band) 0 50%/calc(var(--k) * 22px) 100% repeat-x;mask:var(--m-band) 0 50%/calc(var(--k) * 22px) 100% repeat-x}
-.mc-rug-in::before{top:4.6%}
-.mc-rug-in::after{bottom:4.6%}
-.mc-rug-f{position:absolute;inset:10.5% 6.5%;border-radius:3px;background:color-mix(in srgb,var(--rug) 76%,var(--deep-2));box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold-hi) 55%,transparent),0 0 0 5px color-mix(in srgb,var(--rug) 90%,#000)}
-.mc-rug-f::before{content:"";position:absolute;inset:0;background:var(--gold-hi);opacity:.2;-webkit-mask:var(--m-field) 50% 50%/calc(var(--k) * 36px) calc(var(--k) * 36px) repeat;mask:var(--m-field) 50% 50%/calc(var(--k) * 36px) calc(var(--k) * 36px) repeat}
-.mc-rug-g{position:absolute;left:50%;top:50%;width:34%;aspect-ratio:1;transform:translate(-50%,-50%);background:var(--gold-hi);opacity:.6;-webkit-mask:var(--m-gul) center/contain no-repeat;mask:var(--m-gul) center/contain no-repeat}
-.mc-rug-roll{position:absolute;left:-1.2%;right:-1.2%;top:0;height:8%;border-radius:999px;transform:translateY(-50%);opacity:0;
-  background:linear-gradient(180deg,color-mix(in srgb,var(--rug) 55%,#000),var(--rug) 32%,color-mix(in srgb,var(--rug) 62%,var(--gold-hi)) 50%,var(--rug) 68%,color-mix(in srgb,var(--rug) 55%,#000))}
-.mc-rug-fr{position:absolute;left:4.5%;right:4.5%;height:4%;opacity:0;transition:opacity .4s ease .85s;
-  background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--ivory) 70%,transparent) 0 1.5px,transparent 1.5px 4.5px)}
-.mc-rug-fr.t{bottom:100%}
-.mc-rug-fr.b{top:100%}
+/* kilim on the wall — unrolls downward from its rod */
+.mc-rug{position:absolute;left:27%;top:6%;z-index:1;width:32%;pointer-events:none}
+.mc-rug-in{position:relative;clip-path:inset(0 0 100% 0)}
+.mc-kil{display:block;width:100%;height:auto}
+.mc-kil .kl-f{fill:color-mix(in srgb,var(--deep-2) 78%,black)}
+.mc-kil .kl-a{fill:var(--nar)}
+.mc-kil .kl-b{fill:var(--mc-acc)}
+.mc-kil .kl-c{fill:var(--zafaran)}
+.mc-kil .kl-ln{fill:none;stroke:var(--zafaran);stroke-width:.8;opacity:.7}
+.mc-rod{position:absolute;left:-5%;right:-5%;top:calc(var(--k) * -4px);z-index:2;height:calc(var(--k) * 4px);border-radius:999px;background:color-mix(in srgb,var(--on-deep) 34%,var(--deep))}
+.mc-rod::before,.mc-rod::after{content:"";position:absolute;top:50%;width:calc(var(--k) * 7px);aspect-ratio:1;border-radius:50%;transform:translateY(-50%);background:inherit}
+.mc-rod::before{left:-2px}
+.mc-rod::after{right:-2px}
+.mc-rug-roll{position:absolute;left:-1.5%;right:-1.5%;top:0;height:9%;border-radius:999px;transform:translateY(-50%);opacity:0;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rug) 55%,black),var(--rug) 32%,color-mix(in srgb,var(--rug) 62%,white) 50%,var(--rug) 68%,color-mix(in srgb,var(--rug) 55%,black))}
+.mc-rug-fr{position:absolute;left:3%;right:3%;top:100%;height:calc(var(--k) * 6px);opacity:0;transition:opacity .4s ease .85s;
+  background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--on-deep) 46%,transparent) 0 1.5px,transparent 1.5px 4.5px)}
 .mc.is-rug .mc-rug-in{clip-path:inset(0);transition:clip-path 1.05s var(--ease-out)}
 .mc.is-rug .mc-rug-roll{animation:mc-roll 1.05s var(--ease-out) both}
-.mc.is-rug .mc-rug-fr{opacity:.75}
+.mc.is-rug .mc-rug-fr{opacity:.8}
+
+/* desk: the top surface sits behind the elders, the front panel (with name plates) in front */
+.mc-dtop{position:absolute;left:1.5%;right:13.5%;bottom:19.5%;z-index:1;height:11.5%;pointer-events:none;clip-path:polygon(1.2% 0,98.8% 0,100% 100%,0 100%);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--mc-desk) 74%,black),var(--mc-desk) 40%,color-mix(in srgb,var(--mc-desk) 88%,white))}
+.mc-dfront{position:absolute;left:1.5%;right:13.5%;bottom:2%;z-index:5;height:17.5%;pointer-events:none;border-radius:0 0 calc(var(--k) * 6px) calc(var(--k) * 6px);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--mc-desk) 58%,black),color-mix(in srgb,var(--mc-desk) 44%,black));
+  box-shadow:inset 0 calc(var(--k) * 2.5px) 0 var(--mc-acc)}
+.mc-dfront::before{content:"";position:absolute;left:2.5%;right:2.5%;bottom:calc(var(--k) * 5px);height:calc(var(--k) * 6px);opacity:.75;
+  background:linear-gradient(90deg,var(--nar) 0 50%,var(--mc-acc) 50% 100%) 0 0/calc(var(--k) * 16px) 100% repeat-x;
+  -webkit-mask:var(--m-band) 0 0/calc(var(--k) * 16px) 100% repeat-x,var(--m-band2) 0 0/calc(var(--k) * 16px) 100% repeat-x;
+  mask:var(--m-band) 0 0/calc(var(--k) * 16px) 100% repeat-x,var(--m-band2) 0 0/calc(var(--k) * 16px) 100% repeat-x}
+.mc-stage.mc-two .mc-dfront::before{display:none}
+.mc-dfront::after{content:"";position:absolute;left:1%;right:1%;top:100%;height:calc(var(--k) * 7px);background:radial-gradient(closest-side,rgba(0,0,0,.55),transparent)}
+.mc-lap{position:absolute;left:5.6%;bottom:19.9%;z-index:4;width:8.6%;pointer-events:none}
+.mc-mug{position:absolute;left:66.8%;bottom:20.2%;z-index:4;width:3.4%;min-width:12px;pointer-events:none}
+.mc-lap svg,.mc-mug svg{display:block;width:100%;height:auto;overflow:visible}
+.mc-lap .lp-lid{fill:color-mix(in srgb,var(--on-deep) 30%,var(--deep))}
+.mc-lap .lp-base{fill:color-mix(in srgb,var(--on-deep) 44%,var(--deep))}
+.mc-lap .lp-g{fill:var(--nar)}
+.mc-lap .lp-r{fill:var(--ivory)}
+.mc-lap .lp-d{fill:var(--firuze)}
+.mc-mug .mg-c{fill:var(--mc-acc)}
+.mc-mug .mg-h{fill:none;stroke:var(--mc-acc);stroke-width:2.6}
+.mc-mug .mg-g{fill:var(--deep-2)}
+.mc-mug .mg-st{fill:none;stroke:var(--on-deep);stroke-opacity:.5;stroke-width:1.4;stroke-linecap:round;animation:mc-steam 3.2s ease-in-out infinite}
 
 /* elders */
-.mc-elder{position:absolute;left:var(--x);bottom:calc(var(--b) + var(--ph) * .6);z-index:var(--z);width:22%;margin:0;padding:0;border:0;border-radius:14px;background:none;color:inherit;font:inherit;
+.mc-elder{position:absolute;left:var(--x);bottom:var(--b);z-index:var(--z);width:24%;margin:0;padding:0;border:0;border-radius:14px;background:none;color:inherit;font:inherit;
   display:grid;justify-items:center;cursor:pointer;isolation:isolate;-webkit-tap-highlight-color:transparent;
-  transform-origin:50% 100%;transform:translate(-50%,12%) scale(var(--s));opacity:0;
+  transform-origin:50% 75.7%;transform:translate(-50%,7%) scale(var(--s));opacity:0;
   transition:opacity .5s var(--ease-out),transform .55s var(--ease-spring)}
 .mc-elder svg{display:block;width:100%;height:auto;overflow:visible;transition:filter .45s var(--ease-out)}
-.mc-elder::before{content:"";position:absolute;left:50%;bottom:4%;z-index:-1;width:136%;height:46%;transform:translateX(-50%);border-radius:50%;pointer-events:none;
-  background:radial-gradient(closest-side,color-mix(in srgb,var(--gold-hi) 50%,transparent),transparent);opacity:0;transition:opacity .4s var(--ease-out)}
+.mc-elder::before{content:"";position:absolute;left:50%;bottom:14%;z-index:-1;width:120%;height:96%;transform:translateX(-50%);border-radius:50%;pointer-events:none;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--mc-acc) 34%,transparent),transparent);opacity:0;transition:opacity .4s var(--ease-out)}
 .mc.is-elders .mc-elder{opacity:1;transform:translate(-50%,0) scale(var(--s))}
 .mc.is-elders:not(.is-ready) .mc-elder{transition-delay:calc(var(--i) * 110ms)}
-.mc.is-elders .mc-elder.is-on{transform:translate(-50%,-3%) scale(calc(var(--s) * 1.07))}
+.mc.is-elders .mc-elder.is-on{transform:translate(-50%,0) scale(calc(var(--s) * 1.06))}
 .mc-elder.is-on::before{opacity:1}
 .mc.is-work .mc-elder:not(.is-on) svg{filter:brightness(.74) saturate(.86)}
-.mc-plate{position:absolute;left:var(--x);bottom:var(--b);z-index:7;transform:translateX(-50%);display:inline-flex;align-items:center;gap:.35em;padding:.3em .66em;border-radius:999px;white-space:nowrap;pointer-events:none;
+.mc-plate{position:absolute;left:var(--x);bottom:8.2%;z-index:7;transform:translateX(-50%);display:inline-flex;align-items:center;padding:.3em .62em;border-radius:999px;white-space:nowrap;pointer-events:none;
   font:600 clamp(10.5px,var(--k) * 11.5px,13.5px)/1.15 var(--f-body);letter-spacing:.01em;color:var(--on-deep-soft);
-  background:color-mix(in srgb,var(--deep-2) 86%,transparent);border:1px solid color-mix(in srgb,var(--zafaran) 32%,transparent);opacity:0;
+  background:color-mix(in srgb,var(--deep-2) 78%,transparent);border:1px solid color-mix(in srgb,var(--on-deep) 16%,transparent);opacity:0;
   transition:opacity .5s var(--ease-out),color .3s,background .3s,border-color .3s,box-shadow .3s}
+.mc-stage.mc-two .mc-plate{bottom:2.2%;padding:.22em .56em;font-size:clamp(9.5px,var(--k) * 10.5px,13.5px)}
+.mc-stage.mc-two .mc-plate.p2,.mc-stage.mc-two .mc-plate.p4{bottom:10.2%}
 .mc-plate b{font-weight:600}
 .mc.is-elders .mc-plate{opacity:1}
 .mc.is-elders:not(.is-ready) .mc-plate{transition-delay:calc(var(--i) * 110ms + .15s)}
-@media (max-width:560px){.mc-plate.p1{transform:translateX(-38%)}.mc-plate.p5{transform:translateX(-62%)}}
-.mc-plate.is-on{color:var(--deep-2);background:var(--gold-hi);border-color:var(--gold-hi);box-shadow:0 0 18px color-mix(in srgb,var(--gold-hi) 55%,transparent)}
+.mc-plate.is-on{color:var(--deep-2);background:var(--mc-acc);border-color:var(--mc-acc);box-shadow:0 0 16px color-mix(in srgb,var(--mc-acc) 45%,transparent)}
 .mc-plate.is-done,.mc-plate.is-warn{color:var(--on-deep)}
-.mc-tick{display:none;width:1.3em;height:1.3em;flex:none;border-radius:50%;place-items:center;background:var(--mc-ok);color:var(--deep-2);font-style:normal;font-weight:800;font-size:1em;line-height:1}
+.mc-tick{position:absolute;top:-.66em;right:-.82em;display:none;width:1.32em;height:1.32em;border-radius:50%;place-items:center;background:var(--mc-acc);color:var(--deep-2);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--mc-desk) 50%,black);font-style:normal;font-weight:800;font-size:1em;line-height:1}
 .mc-tick svg{width:72%;height:72%}
 .mc-plate.is-done .mc-tick,.mc-plate.is-warn .mc-tick{display:grid;animation:mc-pop .5s var(--ease-spring) both}
 .mc-plate.is-warn .mc-tick{background:var(--zafaran)}
@@ -706,7 +750,7 @@
 .mc .mc-e4.is-on .mc-head{animation:mc-peer 2.2s ease-in-out infinite}
 .mc .mc-e4.is-on .mc-eyes{transform:translate(.3px,1.6px)}
 .mc .mc-e4.is-done .mc-strk,.mc .mc-e4.is-done .mc-care,.mc .mc-e4.is-warn .mc-strk,.mc .mc-e4.is-warn .mc-care{stroke-dashoffset:0}
-/* 5 Möhürdar raises and stamps the seal */
+/* 5 Möhürdar raises and stamps */
 .mc .mc-e5.is-on .mc-arm{animation:mc-raise 1.9s cubic-bezier(.5,0,.3,1) infinite}
 .mc .mc-e5.is-on .mc-stp{animation:mc-squash 1.9s ease-out infinite}
 .mc .mc-e5.is-on .mc-fig{animation:mc-thud 1.9s ease-out infinite}
@@ -718,30 +762,31 @@
 .mc.is-verdict .mc-elder .mc-head{animation:mc-nod .75s ease-in-out 2,mc-bob 4.2s ease-in-out 1.6s infinite}
 .mc.is-verdict .mc-elder .mc-eyes{transform:translate(0,0)}
 
-/* tumar (the scroll on the rug) */
-.mc-tumar{position:absolute;left:50%;bottom:16%;z-index:4;width:33%;pointer-events:none;opacity:0;transform-origin:50% 100%;
-  transform:translate(-50%,0) perspective(var(--mc-p,600px)) rotateX(40deg) scale(1)}
+/* the shared document — flies in above everything, then lies on the desk under Üslubçu's pen (class "tumar" kept for the ceremony code) */
+.mc-tumar{position:absolute;left:43%;bottom:19.9%;z-index:7;width:24%;pointer-events:none;opacity:0;transform-origin:50% 100%;
+  transform:translate(-50%,0) perspective(var(--mc-p,600px)) rotateX(50deg) scale(1)}
+.mc-tumar.is-open{z-index:2}
 .mc-tumar svg{display:block;width:100%;height:auto;overflow:visible}
 .mc-tumar.is-in{animation:mc-tumar-in .7s var(--ease-out) both}
-.mc-tsvg .k-pl{stroke-width:2.2}
-.mc-tsvg .t-pg{transform-box:fill-box;transform-origin:50% 50%;transform:scaleX(.05);transition:transform .75s var(--ease-out)}
-.mc-tsvg .t-rl{transform:translateX(84px);transition:transform .75s var(--ease-out)}
-.mc-tsvg .t-rr{transform:translateX(-84px);transition:transform .75s var(--ease-out)}
-.mc-tumar.is-open .t-pg,.mc-tumar.is-open .t-rl,.mc-tumar.is-open .t-rr{transform:none}
-.mc-tsvg .t-edge{fill:none;stroke:var(--mc-paper2);stroke-width:3}
-.mc-tsvg .t-ttl{fill:none;stroke:var(--mc-wax);stroke-width:3.4;stroke-linecap:round}
-.mc-tsvg .t-cap{fill:var(--mc-gold)}
+.mc-tsvg .k-pl{stroke-width:2.4}
+.mc-tsvg .t-pg,.mc-tsvg .t-rl{transform-box:fill-box;transform-origin:50% 0;transform:scaleY(.34);transition:transform .75s var(--ease-out)}
+.mc-tsvg .t-rl{transition-delay:.06s}
+.mc-tumar.is-open .t-pg,.mc-tumar.is-open .t-rl{transform:none}
+.mc-tsvg .t-ttl{fill:none;stroke:var(--mc-fir);stroke-width:3.6;stroke-linecap:round}
+.mc-tsvg .t-clip{fill:none;stroke:#fff;stroke-opacity:.35;stroke-width:1.6;stroke-linecap:round}
 .mc-tsvg .mk{fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .6s var(--ease-out)}
-.mc-tsvg .mk1{stroke:var(--mc-gold2)}
-.mc-tsvg .mk2{stroke:var(--mc-okd)}
-.mc-tsvg .mk3{stroke:var(--mc-ink)}
+.mc-tsvg .mk1{stroke:var(--mc-zaf)}
+.mc-tsvg .mk2{stroke:var(--mc-fir2)}
+.mc-tsvg .mk3{stroke:var(--mc-ind)}
 .mc-tsvg .mk4{stroke:var(--mc-red)}
 .mc-tsvg .mk5{opacity:0;transform-box:fill-box;transform-origin:center;transform:scale(1.9);transition:opacity .2s,transform .4s var(--ease-spring)}
+.mc-tsvg .t-stmo{fill:none;stroke:var(--mc-fir);stroke-width:2.2}
+.mc-tsvg .t-stm{fill:var(--mc-fir)}
 .mc-tumar.m1 .mk1,.mc-tumar.m2 .mk2,.mc-tumar.m3 .mk3,.mc-tumar.m4 .mk4{stroke-dashoffset:0}
 .mc-tumar.m5 .mk5{opacity:1;transform:none}
 
-/* Nuanza */
-.mc-nz{position:absolute;left:69%;bottom:1.5%;z-index:6;width:13%;min-width:44px;opacity:0;transform:translateX(-50%);cursor:pointer;-webkit-tap-highlight-color:transparent}
+/* Nuanza — stands beside the end of the desk */
+.mc-nz{position:absolute;left:93%;bottom:1.5%;z-index:6;width:12%;min-width:44px;opacity:0;transform:translateX(-50%);cursor:pointer;-webkit-tap-highlight-color:transparent}
 .mc.is-nz .mc-nz{opacity:1;animation:mc-walkin 1.35s var(--ease-out) both}
 .mc-nz::after{content:"";position:absolute;left:14%;right:14%;bottom:-1.5%;height:6%;z-index:-1;border-radius:50%;background:rgba(0,0,0,.32)}
 .mc-nz-in{position:relative;transform-origin:50% 100%}
@@ -765,43 +810,43 @@
   font-size:var(--fs-sm,.8125rem);line-height:1.4;box-shadow:var(--sh-2);pointer-events:none;opacity:0;transform:translateY(4px) scale(.96);transform-origin:var(--ax,50%) 100%;
   transition:opacity .18s,transform .24s var(--ease-spring)}
 .mc-bub.on{opacity:1;transform:none}
-.mc-bub b{display:block;margin-bottom:1px;font-size:var(--fs-xs,.75rem);font-weight:600;color:var(--nar)}
+.mc-bub b{display:block;margin-bottom:1px;font-size:var(--fs-xs,.75rem);font-weight:600;color:var(--firuze)}
 .mc-bub::after{content:"";position:absolute;top:calc(100% - 1px);left:var(--ax,50%);width:12px;height:7px;transform:translateX(-50%);background:var(--surface);clip-path:polygon(0 0,100% 0,50% 100%)}
 
 /* status panel */
 .mc-panel{display:grid;gap:12px;min-width:0}
 .mc-run{display:grid;gap:12px;padding:14px 16px;border-radius:var(--r-lg,18px);
-  background:color-mix(in srgb,var(--deep-2) 74%,transparent);border:1px solid color-mix(in srgb,var(--zafaran) 30%,transparent);
+  background:color-mix(in srgb,var(--deep-2) 74%,transparent);border:1px solid color-mix(in srgb,var(--on-deep) 13%,transparent);
   box-shadow:0 18px 40px -24px rgba(0,0,0,.6);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);animation:mc-rise .5s var(--ease-out) .16s both}
 .mc-prog{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .mc-prog i{display:block;height:4px;border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--on-deep) 14%,transparent)}
-.mc-prog b{display:block;width:0;height:100%;border-radius:inherit;background:var(--gold-hi)}
-.mc-prog i.ok b{width:100%;background:var(--mc-ok)}
+.mc-prog b{display:block;width:0;height:100%;border-radius:inherit;background:var(--mc-acc)}
+.mc-prog i.ok b{width:100%;background:var(--mc-acc)}
 .mc-prog i.warn b{width:100%;background:var(--zafaran)}
 .mc-now{display:flex;align-items:center;gap:12px;min-width:0}
 .mc-av{flex:none;width:46px;height:46px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
-  background:radial-gradient(circle at 50% 30%,color-mix(in srgb,var(--gold-hi) 22%,transparent),color-mix(in srgb,var(--on-deep) 6%,transparent));
-  box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--gold-hi) 60%,transparent)}
+  background:radial-gradient(circle at 50% 30%,color-mix(in srgb,var(--mc-acc) 18%,transparent),color-mix(in srgb,var(--on-deep) 6%,transparent));
+  box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--mc-acc) 60%,transparent)}
 .mc-av svg{display:block;width:100%;height:100%}
 .mc-av.pop{animation:mc-pop .45s var(--ease-spring)}
-.mc-star-av{width:70%!important;height:70%!important}
-.mc-star-av .s1{fill:var(--nar);stroke:var(--zafaran);stroke-width:1.2;stroke-linejoin:round}
-.mc-star-av .s2{fill:var(--ivory);stroke:var(--zafaran);stroke-width:1.2}
-.mc-star-av .s3{fill:var(--deep)}
+.mc-gul-av{width:70%!important;height:70%!important}
+.mc-gul-av .s1{fill:var(--nar)}
+.mc-gul-av .s2{fill:var(--ivory)}
+.mc-gul-av .s3{fill:var(--firuze)}
 .mc-now-tx{flex:1;min-width:0;display:grid;gap:1px}
 .mc-now-tx b{font-family:var(--f-display);font-size:var(--fs-md,1.0625rem);font-weight:600;line-height:1.2;color:var(--on-deep)}
 .mc-now-tx small{font-size:var(--fs-xs,.75rem);color:var(--on-deep-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mc-cnt{flex:none;font-size:var(--fs-sm,.8125rem);font-weight:600;color:var(--gold-hi);font-variant-numeric:tabular-nums}
+.mc-cnt{flex:none;font-size:var(--fs-sm,.8125rem);font-weight:600;color:var(--mc-acc);font-variant-numeric:tabular-nums}
 .mc-line{display:flex;align-items:flex-start;gap:9px;min-height:2.95em;margin:0;font-size:var(--fs-base,.9375rem);line-height:1.45;color:var(--on-deep)}
 .mc-li{display:none;flex:none;width:20px;height:20px;margin-top:1px;border-radius:50%;place-items:center;color:var(--deep-2);font-weight:800;font-size:.8rem}
 .mc-li svg{width:13px;height:13px}
-.mc-line.ok .mc-li{display:grid;background:var(--mc-ok);animation:mc-pop .4s var(--ease-spring) both}
+.mc-line.ok .mc-li{display:grid;background:var(--mc-acc);animation:mc-pop .4s var(--ease-spring) both}
 .mc-line.warn .mc-li{display:grid;background:var(--zafaran);animation:mc-pop .4s var(--ease-spring) both}
 .mc-line.warn .mc-li svg{display:none}
 .mc-line.warn .mc-li::after{content:"!"}
 .mc-lt{min-width:0}
 .mc-dots{display:inline-flex;gap:3px;margin-left:5px;vertical-align:middle;white-space:nowrap}
-.mc-dots i{width:4px;height:4px;border-radius:50%;background:var(--gold-hi);animation:mc-dot 1.1s ease-in-out infinite}
+.mc-dots i{width:4px;height:4px;border-radius:50%;background:var(--mc-acc);animation:mc-dot 1.1s ease-in-out infinite}
 .mc-dots i:nth-child(2){animation-delay:.15s}
 .mc-dots i:nth-child(3){animation-delay:.3s}
 .mc-line.ok .mc-dots,.mc-line.warn .mc-dots{display:none}
@@ -820,7 +865,7 @@
 .mc-v-score{flex:none;display:grid;place-items:center}
 .mc-v-score .ring{--size:112px}
 .mc-v-tx{flex:1 1 190px;min-width:0;display:grid;gap:6px}
-.mc-v-h{margin:0;font-family:var(--f-display);font-size:var(--fs-xl,1.5rem);font-weight:600;line-height:1.15;letter-spacing:-.01em;color:var(--ok)}
+.mc-v-h{margin:0;font-family:var(--f-display);font-size:var(--fs-xl,1.5rem);font-weight:600;font-style:normal;line-height:1.15;letter-spacing:-.01em;color:var(--ok)}
 .mc-v-h.mid{color:var(--zafaran-ink)}
 .mc-v-h.low{color:var(--nar)}
 .mc-v-tx p{margin:0;color:var(--soft);line-height:1.5}
@@ -832,25 +877,25 @@
 .mc-sig i{position:absolute;right:-3px;bottom:-3px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:var(--ok);color:var(--surface);box-shadow:0 0 0 2px var(--surface);font-style:normal;font-weight:800;font-size:.66rem;line-height:1}
 .mc-sig i svg{width:10px;height:10px}
 .mc-sig.warn i{background:var(--zafaran)}
-.mc-seal{position:absolute;top:-24px;right:-10px;width:92px;height:92px;opacity:0;transform:rotate(-12deg);pointer-events:none;filter:drop-shadow(0 6px 8px rgba(0,0,0,.32))}
+.mc-seal{position:absolute;top:-22px;right:-8px;width:88px;height:88px;opacity:0;transform:rotate(-12deg);pointer-events:none;color:var(--firuze)}
+.mc-seal.t-mid{color:var(--zafaran-ink)}
+.mc-seal.t-low{color:var(--nar)}
 .mc-seal svg{display:block;width:100%;height:100%;overflow:visible}
-.mc-seal::before{content:"";position:absolute;inset:-18%;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--mc-wax) 42%,transparent),transparent);opacity:0;transform:scale(.4)}
+.mc-seal::before{content:"";position:absolute;inset:-18%;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,currentColor 34%,transparent),transparent);opacity:0;transform:scale(.4)}
 .mc-seal.is-stamp{animation:mc-stamp .62s cubic-bezier(.5,0,.25,1) both}
 .mc-seal.is-stamp::before{animation:mc-splash .7s ease-out .3s backwards}
-.mc-seal .s-blob{fill:var(--mc-wax)}
-.mc-seal .s-pool{fill:#B32D45}
-.mc-seal .s-ring{fill:none;stroke:var(--mc-wax2);stroke-width:2}
-.mc-seal .s-tx{fill:var(--mc-wax2);font:700 8.2px/1 var(--f-body);letter-spacing:.06em}
-.mc-seal .s-star{fill:var(--mc-wax2);stroke:var(--mc-wax3);stroke-width:1.1;stroke-linejoin:round}
-.mc-seal .s-core{fill:#B32D45;stroke:var(--mc-wax2);stroke-width:1.2}
-.mc-seal .s-star2{fill:var(--mc-wax2)}
-.mc-seal .s-hl{fill:#fff;opacity:.2}
+.mc-seal .s-bg{fill:var(--surface)}
+.mc-seal .s-ring{fill:none;stroke:currentColor;stroke-width:3.4}
+.mc-seal .s-ring2{fill:none;stroke:currentColor;stroke-width:1.4}
+.mc-seal .s-tx{fill:currentColor;font:700 8.2px/1 var(--f-body);letter-spacing:.06em}
+.mc-seal .s-gul,.mc-seal .s-core{fill:currentColor}
+.mc-seal .s-gul2{fill:var(--surface)}
 .mc-v-act{display:flex;justify-content:flex-end;gap:10px;animation:mc-rise .5s var(--ease-out) .25s both}
 .mc-v-act .btn{min-width:168px}
 @media (max-width:520px){.mc-v-act .btn{flex:1}}
-@media (max-width:420px){.mc-seal{width:76px;height:76px;top:-20px;right:-6px}.mc-v-top{padding-right:62px}.mc-v-score .ring{--size:100px}}
-.mc-pt{position:fixed;z-index:12;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;pointer-events:none;background:var(--mc-wax);animation:mc-pt .8s var(--ease-out) forwards}
-.mc-pt.star{width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:0;background:var(--gold-hi);-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}
+@media (max-width:420px){.mc-seal{width:74px;height:74px;top:-18px;right:-6px}.mc-v-top{padding-right:62px}.mc-v-score .ring{--size:100px}}
+.mc-pt{position:fixed;z-index:12;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;pointer-events:none;background:var(--mc-acc);animation:mc-pt .8s var(--ease-out) forwards}
+.mc-pt.star{width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:0;background:var(--zafaran);-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}
 
 /* desktop: scene + side panel */
 @media (min-width:1080px){
@@ -869,6 +914,7 @@
 .mc.mc-rm.is-rug .mc-rug{opacity:1}
 .mc.mc-rm .mc-rug-in{clip-path:none!important}
 .mc.mc-rm .mc-rug-roll{display:none}
+.mc.mc-rm .mg-st{animation:none}
 .mc.mc-rm .mc-tumar.is-in{animation:mc-fade .45s ease both!important}
 .mc.mc-rm .mc-seal.is-stamp{animation:mc-fade .45s ease both!important}
 .mc.mc-rm .mc-v,.mc.mc-rm .mc-v.is-hit{animation:mc-fade .4s ease both!important}
@@ -902,14 +948,13 @@
 @keyframes mc-step{from{transform:translateY(0) rotate(-2.5deg)}to{transform:translateY(-6%) rotate(2.5deg)}}
 @keyframes mc-jump{0%{transform:none}20%{transform:scale(1.06,.92)}50%{transform:translateY(-16px) scale(.96,1.05)}80%{transform:scale(1.03,.97)}100%{transform:none}}
 @keyframes mc-sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(4deg)}}
+@keyframes mc-steam{0%,100%{opacity:.25;transform:translateY(1px)}50%{opacity:.8;transform:translateY(-1.5px)}}
 @keyframes mc-tumar-in{
   0%{opacity:0;transform:translate(calc(-50% + var(--fx,0px)),var(--fy,0px)) perspective(var(--mc-p,600px)) rotateX(0deg) scale(.3)}
   18%{opacity:1}
-  55%{transform:translate(calc(-50% + var(--fx,0px) * .38),calc(var(--fy,0px) * .38 - 26px)) perspective(var(--mc-p,600px)) rotateX(16deg) scale(.6)}
-  100%{opacity:1;transform:translate(-50%,0) perspective(var(--mc-p,600px)) rotateX(40deg) scale(1)}}
+  55%{transform:translate(calc(-50% + var(--fx,0px) * .38),calc(var(--fy,0px) * .38 - 26px)) perspective(var(--mc-p,600px)) rotateX(20deg) scale(.6)}
+  100%{opacity:1;transform:translate(-50%,0) perspective(var(--mc-p,600px)) rotateX(50deg) scale(1)}}
 @keyframes mc-roll{0%{top:0;height:10%;opacity:1}86%{opacity:1}100%{top:100%;height:3%;opacity:0}}
-@keyframes mc-swing{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
-@keyframes mc-flicker{0%,100%{opacity:.85}30%{opacity:1}55%{opacity:.75}80%{opacity:.95}}
 @keyframes mc-dot{0%,100%{opacity:.3;transform:translateY(0)}40%{opacity:1;transform:translateY(-2px)}}
 @keyframes mc-stamp{0%{opacity:0;transform:translate(-14px,-70px) scale(2.3) rotate(-30deg)}55%{opacity:1;transform:translate(0,0) scale(.9,.78) rotate(-12deg)}74%{transform:scale(1.07,1.03) rotate(-12deg)}100%{opacity:1;transform:rotate(-12deg)}}
 @keyframes mc-splash{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(1.5)}}
@@ -993,6 +1038,12 @@
     var w = S.stage.clientWidth || 360;
     S.stage.style.setProperty('--k', (w / 400).toFixed(3));
     S.stage.style.setProperty('--mc-p', Math.round(w * 1.5) + 'px');
+    /* name plates on the desk front: two staggered rows when neighbours would touch */
+    var two = false, pl = S.plates || [];
+    for (var i = 0; i + 1 < pl.length; i++) {
+      if ((pl[i].offsetWidth + pl[i + 1].offsetWidth) / 2 + 6 > (SEATS[i + 1].x - SEATS[i].x) / 100 * w) { two = true; break; }
+    }
+    S.stage.classList.toggle('mc-two', two);
   }
 
   function build(S) {
@@ -1004,7 +1055,7 @@
     }).join('');
     var plates = ELDERS.map(function (e, i) {
       var p = SEATS[i];
-      return '<span class="mc-plate p' + (i + 1) + ' motion-safe" aria-hidden="true" style="--x:' + p.x + '%;--b:' + p.b + '%;--i:' + p.i + '"><i class="mc-tick">' + IC.check + '</i><b>' + esc(e.short) + '</b></span>';
+      return '<span class="mc-plate p' + (i + 1) + ' motion-safe" aria-hidden="true" style="--x:' + p.x + '%;--i:' + p.i + '"><i class="mc-tick">' + IC.check + '</i><b>' + esc(e.short) + '</b></span>';
     }).join('');
     var root = D.createElement('div');
     root.className = 'mc motion-safe' + (S.rm ? ' mc-rm' : '');
@@ -1018,11 +1069,16 @@
         '<header class="mc-h"><div class="mc-ht"><span class="eyebrow">Mirzə Məclisi</span><h2 id="' + tid + '">' + esc(S.title) + '</h2></div>' +
           '<button type="button" class="icon-btn mc-x" aria-label="Bağla">' + icon('x') + '</button></header>' +
         '<div class="mc-stage">' +
-          '<div class="mc-wall" aria-hidden="true">' + archSvg() + '<span class="mc-lamp l">' + lampSvg() + '</span><span class="mc-lamp r">' + lampSvg() + '</span></div>' +
-          '<div class="mc-rug motion-safe" aria-hidden="true"><div class="mc-rug-in"><i class="mc-rug-f"></i><i class="mc-rug-g"></i></div><i class="mc-rug-roll"></i><i class="mc-rug-fr t"></i><i class="mc-rug-fr b"></i></div>' +
-          elders + plates +
+          '<div class="mc-wall" aria-hidden="true">' + windowSvg() + shelfSvg() +
+            '<div class="mc-rug motion-safe"><i class="mc-rod"></i><div class="mc-rug-in">' + kilimSvg() + '</div><i class="mc-rug-roll"></i><i class="mc-rug-fr"></i></div>' +
+            '<span class="mc-plant">' + plantSvg() + '</span></div>' +
+          '<span class="mc-dtop" aria-hidden="true"></span>' +
+          elders +
+          '<span class="mc-lap" aria-hidden="true">' + laptopSvg() + '</span><span class="mc-mug motion-safe" aria-hidden="true">' + mugSvg() + '</span>' +
           '<div class="mc-tumar motion-safe" aria-hidden="true">' + tumarSvg() + '</div>' +
-          '<div class="mc-nz motion-safe" aria-hidden="true"><div class="mc-nz-in"><div class="mc-mc-nf"></div><div class="mc-nz-scr">' + NZ_SCROLL + '</div></div></div>' +
+          '<span class="mc-dfront" aria-hidden="true"></span>' +
+          plates +
+          '<div class="mc-nz motion-safe" aria-hidden="true"><div class="mc-nz-in"><div class="mc-mc-nf"></div><div class="mc-nz-scr">' + NZ_DOC + '</div></div></div>' +
           '<div class="mc-bub" aria-hidden="true"></div>' +
         '</div>' +
         '<div class="mc-panel">' +
@@ -1114,8 +1170,8 @@
   }
   function setNow(S, k) {
     var av, nm, rl, cnt = '', line;
-    if (k === 'intro') { av = starAvatar(); nm = 'Mirzə Məclisi'; rl = 'Beş qoca mirzə · beş yoxlama'; line = 'Xalça sərilir, mirzələr yerini tutur'; }
-    else if (k === 'nuanza') { av = nzPortrait(); nm = 'Nuanza'; rl = 'Köməkçi'; line = 'Nuanza tumarı Məclisə gətirir'; }
+    if (k === 'intro') { av = gulAvatar(); nm = 'Mirzə Məclisi'; rl = 'Beş qoca mirzə · beş yoxlama'; line = 'Divarda xalça açılır, mirzələr yerini tutur'; }
+    else if (k === 'nuanza') { av = nzPortrait(); nm = 'Nuanza'; rl = 'Köməkçi'; line = 'Nuanza sənədi Məclisə gətirir'; }
     else { var e = ELDERS[k]; av = portrait(k); nm = e.name; rl = e.role + ' · ' + e.work; cnt = (k + 1) + ' / 5'; line = e.doing; }
     S.av.innerHTML = av; pop(S.av);
     S.nm.textContent = nm; S.rl.textContent = rl; S.cnt.textContent = cnt;
@@ -1242,7 +1298,7 @@
       '<div class="mc-v-top"><span class="eyebrow">Məclisin hökmü</span><span class="mc-v-dt">' + esc(azDate(new Date())) + '</span></div>' +
       '<div class="mc-v-main"><div class="mc-v-score"></div><div class="mc-v-tx"><h3 class="mc-v-h ' + tone + '" id="mc-vt-' + S.id + '">' + esc(v.seal) + '</h3><p>' + esc(v.text) + '</p></div></div>' +
       '<div class="mc-v-sig"><span class="mc-v-sl">İmzalar</span><span class="mc-v-avs" aria-label="' + esc((5 - warns) + ' mirzə təsdiq etdi' + (warns ? ', ' + warns + ' mirzənin qeydi var' : '')) + '">' + sigs + '</span></div>' +
-      '<div class="mc-seal motion-safe" aria-hidden="true">' + sealSvg() + '</div>';
+      '<div class="mc-seal t-' + tone + ' motion-safe" aria-hidden="true">' + sealSvg() + '</div>';
     var score = q(card, '.mc-v-score');
     if (sc != null) score.appendChild(ringNode(sc));
     else score.innerHTML = '<span class="medal" aria-hidden="true">' + IC.check + '</span>';
@@ -1337,6 +1393,7 @@
       }
       CUR = S;
       lockScroll(true);
+      try { if (D.fonts && D.fonts.ready) D.fonts.ready.then(function () { if (!S.closed) fit(S); }); } catch (e) { /* ignore */ }
 
       S.el.addEventListener('click', function (e) {
         var t = e.target;
@@ -1357,7 +1414,7 @@
           nz.classList.remove('is-poke'); void nz.offsetWidth; nz.classList.add('is-poke');
           later(S, function () { nz.classList.remove('is-poke'); }, 520);
           var lines = S.verdictShown ? ['Hökm hazırdır! «Bağla»ya toxunub işə qayıdaq.', 'Möhür vuruldu — afərin bizə!']
-            : ['Mirzələr tələsməyi sevmir, amma heç nə qaçırmırlar.', 'Tumarı özüm gətirdim!', 'Bir az səbr — Məclis işləyir.'];
+            : ['Mirzələr tələsməyi sevmir, amma heç nə qaçırmırlar.', 'Sənədi özüm gətirdim!', 'Bir az səbr — Məclis işləyir.'];
           bubble(S, q(nz, '.mc-mc-nf'), 'Nuanza', lines[Math.floor(Math.random() * lines.length)]);
         }
       });
