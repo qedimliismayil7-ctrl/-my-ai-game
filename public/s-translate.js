@@ -58,7 +58,7 @@
     if (text && chatty()) o.say = text;
     try { c.set(state, o); } catch (e) { /* ignore */ }
   }
-  function burstAt(el, kind) { try { if (App.fx && App.fx.burstAt && el && el.isConnected) App.fx.burstAt(el, kind || 'stars'); } catch (e) { /* ignore */ } }
+  function burstAt(el, kind) { try { if (App.fx && App.fx.burstAt && el && el.isConnected) App.fx.burstAt(el, kind || 'diamonds'); } catch (e) { /* ignore */ } }
   function busyBtn(btn, on) { if (!btn) return; if (on) btn.setAttribute('aria-busy', 'true'); else btn.removeAttribute('aria-busy'); }
   function restartClass(el, cls, ms) { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); later(function () { el.classList.remove(cls); }, ms || 900); }
 
@@ -121,10 +121,10 @@
   var CONF_LABEL = { high: 'Əmin', mid: 'Yoxlayın', low: 'Şübhəli' };
 
   var AUD = [
-    { id: 'danisiq', aud: 'Həmkar, dost · mesajlaşma, çat', ic: 'message', cls: '' },
+    { id: 'danisiq', aud: 'Həmkar, dost · mesajlaşma, çat', ic: 'message', cls: ' navy' },
     { id: 'neytral', aud: 'Geniş auditoriya · təlimat, interfeys, xəbər', ic: 'globe', cls: '' },
     { id: 'resmi', aud: 'Müştəri, rəhbər · işgüzar məktub, hesabat', ic: 'mail', cls: ' gold' },
-    { id: 'huquqi', aud: 'Hüquq şöbəsi, qarşı tərəf · müqavilə, etibarnamə', ic: 'shield', cls: ' nar' }
+    { id: 'huquqi', aud: 'Hüquq şöbəsi, qarşı tərəf · müqavilə, etibarnamə', ic: 'shield', cls: ' fir' }
   ];
 
   /* the five elders — who catches what (index matches Meclis.portrait) */
@@ -300,10 +300,10 @@
     return S0[key] || '';
   }
   var SAMPLES = [
-    { id: 'ex', t: 'Gecikmə mesajı', s: 'Danışıqdan rəsmiyə — canlı nümunə', ic: 'message', cls: ' nar', get: function () { return EX.src; } },
+    { id: 'ex', t: 'Gecikmə mesajı', s: 'Danışıqdan rəsmiyə — canlı nümunə', ic: 'message', cls: ' fir', get: function () { return EX.src; } },
     { id: 'legal', t: 'Müqavilə bəndləri', s: '«shall», «Employer», xitam — hüquqi terminlər', ic: 'shield', cls: '', get: function () { return sampleText('legal'); } },
     { id: 'report', t: 'İllik hesabat', s: 'Xalis mənfəət, gəlir, dividend', ic: 'chart', cls: ' gold', get: function () { return sampleText('report'); } },
-    { id: 'letter', t: 'İşgüzar məktub', s: '«Dear Mr. Aliyev» — adlar və nəzakət', ic: 'mail', cls: '', get: function () { return sampleText('letter'); } },
+    { id: 'letter', t: 'İşgüzar məktub', s: '«Dear Mr. Aliyev» — adlar və nəzakət', ic: 'mail', cls: ' navy', get: function () { return sampleText('letter'); } },
     { id: 'casual', t: 'Həmkara mesaj', s: 'Faylı bu axşama qədər…', ic: 'message', cls: '', get: function () { return sampleText('casual'); } },
     { id: 'tourism', t: 'Turist bələdçisi', s: 'İçərişəhər, bulvar, Xəzər', ic: 'globe', cls: ' green', get: function () { return sampleText('tourism'); } },
     { id: 'ru', t: 'Rus dilindən: müqavilə', s: 'Договор, поставка, оплата', ic: 'file', cls: '', get: function () { return sampleText('ru'); } },
@@ -331,23 +331,26 @@
     '.translate-lang{display:grid;gap:4px;min-width:0;cursor:pointer}',
     '.translate-lang > span{font-size:.6875rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}',
     '.translate-lang .select{padding-left:12px;padding-right:32px;font-weight:600;text-overflow:ellipsis;background-position:calc(100% - 17px) 52%,calc(100% - 12px) 52%}',
-    '.translate-swap{width:44px;height:44px;border-radius:50%;color:var(--lacquer);box-shadow:var(--sh-pop)}',
+    '.translate-swap{width:44px;height:44px;border-radius:50%;color:var(--firuze);box-shadow:var(--sh-pop)}',
     '.translate-swap svg{transition:transform .55s var(--ease-spring)}',
-    '@media (hover:hover){.translate-swap:hover{border-color:color-mix(in srgb,var(--zafaran) 55%,var(--line))}}',
+    '@media (hover:hover){.translate-swap:hover{border-color:color-mix(in srgb,var(--firuze) 55%,var(--line))}}',
     '.translate-quality .chips{gap:6px}',
     '.translate-qhint{display:flex;align-items:flex-start;gap:6px;font-size:.78rem;line-height:1.45;color:var(--soft)}',
-    '.translate-qhint svg{width:14px;height:14px;margin-top:1px;flex:none;color:var(--zafaran-ink)}',
+    '.translate-qhint svg{width:14px;height:14px;margin-top:1px;flex:none;color:var(--firuze)}',
     '.translate-reg .seg button{flex:1 1 auto;padding:6px 10px}',
-    '.translate-auto-ic{display:inline-grid;color:var(--zafaran-ink)}',
+    /* register chips: the chosen one carries the firuzə accent, the detected one a small göl mark */
+    '.translate-reg .seg button[aria-pressed="true"]{color:var(--firuze);box-shadow:var(--sh-pop),inset 0 0 0 1px color-mix(in srgb,var(--firuze) 45%,transparent)}',
+    '.translate-reg .seg button.detected::after{width:7px;height:7px;border-radius:1px;transform:rotate(45deg);background:var(--firuze);box-shadow:none}',
+    '.translate-auto-ic{display:inline-grid;color:var(--firuze)}',
     '.translate-auto-ic svg{width:14px;height:14px}',
     '.translate-short{display:none}',
     '@media (max-width:479px){.translate-reg .seg button{padding:6px 6px;gap:4px;font-size:.75rem}.translate-full{display:none}.translate-short{display:inline}',
-    '  .translate-reg .seg button.detected::after{width:5px;height:5px;box-shadow:0 0 0 2px var(--zaf-t)}',
+    '  .translate-reg .seg button.detected::after{width:5px;height:5px}',
     '  .translate-pair{gap:6px}.translate-swap{width:38px;height:38px;margin-bottom:3px}',
     '  .translate-lang .select{padding-left:10px;padding-right:26px;background-position:calc(100% - 14px) 52%,calc(100% - 9px) 52%}',
     '  .translate-ta{min-height:112px}}',
     '.translate-explain{display:flex;align-items:flex-start;gap:8px;min-height:2.9em;font-size:var(--fs-sm);line-height:1.45;color:var(--soft)}',
-    '.translate-explain-ic{display:inline-grid;flex:none;margin-top:1px;color:var(--zafaran-ink)}',
+    '.translate-explain-ic{display:inline-grid;flex:none;margin-top:1px;color:var(--firuze)}',
     '.translate-explain-ic svg{width:16px;height:16px}',
     '.translate-explain b{color:var(--ink);font-weight:600}',
     '.translate-cue{color:var(--ink);font-weight:500;white-space:nowrap}',
@@ -362,9 +365,9 @@
     '.translate-pane-h > label{cursor:text}',
     '.translate-badges{display:flex;flex-wrap:wrap;gap:6px}',
     '.translate-detect{display:inline-flex;min-width:0}',
-    '.translate-detect .chip{min-height:28px;padding:0 10px;font-size:var(--fs-xs);border-color:color-mix(in srgb,var(--zafaran) 55%,var(--line-2));background:var(--zaf-t);color:var(--zafaran-ink)}',
+    '.translate-detect .chip{min-height:28px;padding:0 10px;font-size:var(--fs-xs);border-color:color-mix(in srgb,var(--firuze) 50%,var(--line-2));background:var(--fir-t);color:var(--firuze)}',
     '.translate-src{transition:border-color var(--t-base),box-shadow var(--t-base)}',
-    '.translate-src:focus-within{border-color:color-mix(in srgb,var(--lacquer) 40%,var(--line));box-shadow:var(--sh-1),0 0 0 3px color-mix(in srgb,var(--lacquer) 12%,transparent)}',
+    '.translate-src:focus-within{border-color:color-mix(in srgb,var(--firuze) 45%,var(--line));box-shadow:var(--sh-1),0 0 0 3px var(--fir-t)}',
     '.translate-src.translate-shake{animation:translate-shake .42s var(--ease-out)}',
     '.translate-ta{flex:1;min-height:150px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;font-size:1.0625rem;line-height:1.7;resize:none}',
     '.translate-ta:hover,.translate-ta:focus{border:0;box-shadow:none;background:transparent}',
@@ -374,7 +377,7 @@
     '.translate-go{flex:1 1 100%}',
     '.translate-kbd{display:none;gap:3px;margin-left:4px}',
     '@media (hover:hover) and (pointer:fine){.translate-kbd{display:inline-flex}}',
-    '.translate-go .kbd{background:color-mix(in srgb,var(--on-nar) 14%,transparent);border-color:color-mix(in srgb,var(--on-nar) 28%,transparent);color:var(--on-nar)}',
+    '.translate-go .kbd{background:color-mix(in srgb,currentColor 12%,transparent);border-color:color-mix(in srgb,currentColor 28%,transparent);color:inherit}',
     '.translate-go[aria-busy="true"] .translate-kbd{visibility:hidden}',
     '.translate-go.translate-pulse{animation:translate-pulse 1s var(--ease-out) 2}',
 
@@ -399,7 +402,7 @@
     '.translate-terms{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--soft)}',
     '.translate-term{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 9px;border-radius:var(--r-pill);background:var(--ok-t);color:var(--ok);font-weight:600;font-size:.6875rem;white-space:nowrap}',
     '.translate-term svg{width:12px;height:12px}',
-    '.translate-term.new{background:var(--zaf-t);color:var(--zafaran-ink);animation:pop-in .35s var(--ease-spring) both}',
+    '.translate-term.new{background:var(--fir-t);color:var(--firuze);animation:pop-in .35s var(--ease-spring) both}',
     '.translate-out .callout{font-size:var(--fs-sm)}',
     '.translate-out .callout .link{font-size:inherit}',
     '.translate-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding-top:14px;border-top:1px solid var(--line)}',
@@ -414,19 +417,19 @@
     '.translate-load-art .nz[data-size="mini"]{--nz-w:62px}',
     '.translate-load-cap{display:flex;align-items:center;flex-wrap:wrap;font-size:var(--fs-sm);font-weight:600;color:var(--ink)}',
     '.translate-dots{display:inline-flex;gap:3px;margin-left:6px}',
-    '.translate-dots i{width:4px;height:4px;border-radius:50%;background:var(--zafaran);animation:translate-dot 1.1s var(--ease-in-out) infinite}',
+    '.translate-dots i{width:5px;height:5px;border-radius:1px;transform:rotate(45deg);background:var(--firuze);animation:translate-dot 1.1s var(--ease-in-out) infinite}',
     '.translate-dots i:nth-child(2){animation-delay:.15s}',
     '.translate-dots i:nth-child(3){animation-delay:.3s}',
     '.translate-steps{display:flex;flex-wrap:wrap;gap:6px}',
     '.translate-step{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:var(--r-pill);background:var(--surface2);color:var(--faint);font-size:.6875rem;font-weight:600;transition:background var(--t-base),color var(--t-base)}',
     '.translate-step-ic{display:inline-grid;opacity:.25;transition:opacity var(--t-base),transform var(--t-base) var(--ease-spring)}',
     '.translate-step-ic svg{width:12px;height:12px}',
-    '.translate-step.on{background:var(--zaf-t);color:var(--zafaran-ink)}',
+    '.translate-step.on{background:var(--fir-t);color:var(--firuze)}',
     '.translate-step.done{background:var(--ok-t);color:var(--ok)}',
     '.translate-step.done .translate-step-ic{opacity:1;transform:scale(1.1)}',
 
     /* empty */
-    '.translate-out .empty{flex:1;align-content:center;border:0;padding:12px 8px 18px;background:radial-gradient(70% 60% at 50% 28%,var(--zaf-t),transparent 72%)}',
+    '.translate-out .empty{flex:1;align-content:center;border:0;padding:12px 8px 18px;background:radial-gradient(70% 60% at 50% 28%,var(--fir-t),transparent 72%)}',
     '.translate-out .empty-art{width:auto;height:auto;min-height:96px}',
     '.translate-out .empty p .kbd{margin:0 2px}',
 
@@ -455,7 +458,7 @@
     '.translate-review-sub{font-family:var(--f-body);font-size:var(--fs-sm);font-weight:700;letter-spacing:.02em}',
     '.translate-fixes{display:grid;gap:10px}',
     '.translate-fix{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;padding:12px;border-radius:var(--r-md);background:var(--surface2);animation:rise .4s var(--ease-out) both;animation-delay:calc(var(--i,0) * 90ms + 120ms)}',
-    '.translate-elder{width:40px;height:40px;display:block;border-radius:50%;overflow:hidden;background:var(--surface);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--zafaran) 60%,transparent)}',
+    '.translate-elder{width:40px;height:40px;display:block;border-radius:50%;overflow:hidden;background:var(--surface);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--firuze) 60%,transparent)}',
     '.translate-elder svg{display:block;width:100%;height:100%}',
     '.translate-fix-who{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--soft)}',
     '.translate-fix-who b{color:var(--ink);font-size:var(--fs-sm)}',
@@ -467,18 +470,18 @@
     '.translate-checks{display:flex;flex-wrap:wrap;gap:6px}',
 
     /* example compare card */
-    '.translate-ex-src{font-family:var(--f-display);font-style:italic;font-size:1.0625rem;line-height:1.5;color:var(--soft)}',
+    '.translate-ex-src{font-family:var(--f-body);font-style:normal;font-weight:500;font-size:1.0625rem;line-height:1.5;color:var(--soft)}',
     '.translate-ex{display:grid;gap:10px}',
     '@media (min-width:760px){.translate-ex{grid-template-columns:repeat(2,minmax(0,1fr))}}',
     '.translate-ex-row{display:grid;gap:8px;align-content:start;width:100%;min-width:0;padding:14px;border:1.5px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);text-align:left;font:inherit;cursor:pointer;transition:border-color var(--t-base),box-shadow var(--t-base),transform var(--t-fast) var(--ease-out)}',
-    '@media (hover:hover){.translate-ex-row:hover{border-color:color-mix(in srgb,var(--zafaran) 55%,var(--line))}}',
+    '@media (hover:hover){.translate-ex-row:hover{border-color:color-mix(in srgb,var(--firuze) 50%,var(--line))}}',
     '.translate-ex-row:active{transform:scale(.99)}',
     '.translate-ex-row:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.translate-ex-row[aria-pressed="true"]{border-color:var(--lacquer);box-shadow:0 0 0 3px var(--lac-t)}',
-    '.translate-ex-row .t{font-family:var(--f-display);font-size:1.0625rem;line-height:1.5}',
+    '.translate-ex-row[aria-pressed="true"]{border-color:var(--firuze);box-shadow:0 0 0 3px var(--fir-t)}',
+    '.translate-ex-row .t{font-family:var(--f-body);font-weight:600;font-size:1.0625rem;line-height:1.5}',
     '.translate-ex-row small{color:var(--soft);font-size:var(--fs-xs)}',
     '.translate-ex-diff{display:flex;align-items:flex-start;gap:8px;font-size:var(--fs-sm);color:var(--soft);line-height:1.5}',
-    '.translate-ex-diff svg{width:16px;height:16px;flex:none;margin-top:2px;color:var(--zafaran-ink)}',
+    '.translate-ex-diff svg{width:16px;height:16px;flex:none;margin-top:2px;color:var(--firuze)}',
 
     /* history + situation */
     '.translate-hist-end{flex-direction:column;align-items:flex-end;gap:4px}',
@@ -488,14 +491,14 @@
     /* sheets */
     '.translate-styles{display:grid;gap:10px}',
     '.translate-style-tx{display:grid;gap:2px;min-width:0}',
-    '.translate-style-pv{display:block;margin-top:6px;font-family:var(--f-display);font-size:.95rem;line-height:1.45;color:var(--ink)}',
+    '.translate-style-pv{display:block;margin-top:6px;font-family:var(--f-body);font-weight:500;font-size:.95rem;line-height:1.45;color:var(--ink)}',
     '.translate-style-pv .skeleton{width:100%}',
     '.translate-vars{display:grid;gap:12px}',
     '@media (min-width:700px){.translate-vars{grid-template-columns:repeat(3,minmax(0,1fr))}}',
     '.translate-var{display:flex;flex-direction:column;gap:10px;min-width:0;padding:16px;border:1.5px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}',
-    '.translate-var.rec{border-color:color-mix(in srgb,var(--zafaran) 60%,var(--line));background:linear-gradient(var(--zaf-t),var(--zaf-t)),var(--surface)}',
-    '.translate-var.cur{box-shadow:0 0 0 3px var(--lac-t)}',
-    '.translate-var-t{font-family:var(--f-display);font-size:1.0625rem;line-height:1.5}',
+    '.translate-var.rec{border-color:color-mix(in srgb,var(--firuze) 55%,var(--line));background:linear-gradient(var(--fir-t),var(--fir-t)),var(--surface)}',
+    '.translate-var.cur{box-shadow:0 0 0 3px var(--fir-t)}',
+    '.translate-var-t{font-family:var(--f-body);font-weight:500;font-size:1.0625rem;line-height:1.55}',
     '.translate-var-n{font-size:var(--fs-xs);color:var(--soft);line-height:1.5}',
     '.translate-var .row{margin-top:auto}',
     '.translate-bar{display:grid;grid-template-columns:minmax(0,1fr) 38px;gap:4px 8px;align-items:center;font-size:.72rem;color:var(--soft)}',
@@ -507,11 +510,11 @@
     /* keyframes */
     '@keyframes translate-fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}',
     '@keyframes translate-in{from{opacity:0;filter:blur(4px)}to{opacity:1;filter:none}}',
-    '@keyframes translate-fixed{0%{background:color-mix(in srgb,var(--zafaran) 34%,transparent)}100%{background:transparent}}',
+    '@keyframes translate-fixed{0%{background:color-mix(in srgb,var(--ok) 30%,transparent)}100%{background:transparent}}',
     '@keyframes translate-pop{from{opacity:0;transform:translateY(-4px) scale(.96)}to{opacity:1;transform:none}}',
-    '@keyframes translate-dot{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}',
+    '@keyframes translate-dot{0%,80%,100%{opacity:.25;transform:rotate(45deg)}40%{opacity:1;transform:translateY(-3px) rotate(45deg)}}',
     '@keyframes translate-shake{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}',
-    '@keyframes translate-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--nar) 45%,transparent)}100%{box-shadow:0 0 0 14px transparent}}'
+    '@keyframes translate-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--firuze) 45%,transparent)}100%{box-shadow:0 0 0 14px transparent}}'
   ].join('\n');
 
   /* ------------------------------------------------------------------
@@ -754,7 +757,7 @@
   function exampleCard() {
     var rows = [
       { reg: 'danisiq', badge: 'navy', who: 'Həmkara · çatda' },
-      { reg: 'resmi', badge: 'gold', who: 'Müştəriyə · e-poçtda' }
+      { reg: 'resmi', badge: 'fir', who: 'Müştəriyə · e-poçtda' }
     ];
     V.exRows = rows.map(function (r) {
       return h('button', {
@@ -1060,7 +1063,7 @@
     body.setAttribute('aria-busy', 'true');
     V.outEyebrow.textContent = 'Tərcümə · ' + LANG_NAME[S.to];
     V.outBadges.textContent = '';
-    V.outBadges.appendChild(h('span', { class: 'badge gold', text: REG_LABEL[reg] }));
+    V.outBadges.appendChild(h('span', { class: 'badge fir', text: REG_LABEL[reg] }));
     var names = S.quality === 'fast' ? ['Üslub', 'Tərcümə'] :
       S.quality === 'meclis' ? ['Üslub tanınır', 'Lüğət və yaddaş', 'Qaralama', 'Məclisə hazırlıq'] :
         ['Üslub tanınır', 'Lüğət və yaddaş', 'Cümlələr yazılır', 'Əminlik ölçülür'];
@@ -1131,7 +1134,7 @@
     V.outEyebrow.textContent = 'Tərcümə · ' + LANG_NAME[r.to];
     V.outBadges.textContent = '';
     V.outBadges.appendChild(h('span', { class: 'badge navy', text: REG_LABEL[r.reg] || 'Neytral' }));
-    if (r.auto) V.outBadges.appendChild(h('span', { class: 'badge gold' }, ie('sparkle'), 'avtomatik'));
+    if (r.auto) V.outBadges.appendChild(h('span', { class: 'badge fir' }, ie('sparkle'), 'avtomatik'));
     if (r.variant && VAR_META[r.variant]) V.outBadges.appendChild(h('span', { class: 'badge', text: VAR_META[r.variant].label + ' variant' }));
     if (r.reviewed) V.outBadges.appendChild(h('span', { class: 'badge green' }, ie('stamp'), 'Məclis'));
 
@@ -1440,11 +1443,11 @@
         grid.appendChild(h('article', { class: 'translate-var' + (v.rec ? ' rec' : '') + (isCur ? ' cur' : '') },
           h('div', { class: 'row between' }, h('span', { class: 'eyebrow', text: M.label }),
             h('span', { class: 'row', style: 'gap:4px' },
-              v.rec ? h('span', { class: 'badge gold' }, ie('star'), 'Tövsiyə') : null,
+              v.rec ? h('span', { class: 'badge fir' }, ie('check'), 'Tövsiyə') : null,
               isCur ? h('span', { class: 'badge navy', text: 'Hazırkı' }) : null)),
           h('p', { class: 'translate-var-t', lang: r.to, text: v.t }),
           v.near != null ? bar('Mənbəyə yaxınlıq', v.near, 'navy') : null,
-          v.nat != null ? bar('Təbiilik', v.nat, 'gold') : null,
+          v.nat != null ? bar('Təbiilik', v.nat, '') : null,
           h('p', { class: 'translate-var-n', text: M.note }),
           h('div', { class: 'row' },
             h('button', { class: 'btn btn-sm' + (v.rec ? ' btn-secondary' : ''), type: 'button', disabled: isCur, onclick: function () { chooseVariant(r, v); s.close(); } }, ie('check'), isCur ? 'Seçilib' : 'Bunu seç'),
@@ -1484,7 +1487,7 @@
       }, 140);
     }
     var autoRow = h('button', { class: 'choice', type: 'button', 'aria-pressed': String(S.reg === 'auto'), onclick: function () { pick('auto'); } },
-      h('span', { class: 'ic gold', html: App.icon('sparkle') }),
+      h('span', { class: 'ic fir', html: App.icon('sparkle') }),
       h('span', { class: 'translate-style-tx' }, h('b', { text: 'Avtomatik' }), h('small', { text: 'Nuanza özü seçsin' + (V.det ? ' · indi: ' + V.det.label : '') })));
     var list = h('div', { class: 'translate-styles' }, AUD.map(function (a) {
       var pv = h('span', { class: 'translate-style-pv', lang: S.to }, h('span', { class: 'skeleton text', style: 'width:94%' }), h('span', { class: 'skeleton text', style: 'width:66%' }));
@@ -1564,7 +1567,7 @@
       setTimeout(function () {
         if (!alive()) return;
         var pnl = V.outBody.querySelector('.translate-review');
-        if (pnl) { burstAt(pnl.querySelector('.ring') || pnl, 'stars'); if (!wide()) scrollToEl(pnl, true); }
+        if (pnl) { burstAt(pnl.querySelector('.ring') || pnl, 'diamonds'); if (!wide()) scrollToEl(pnl, true); }
         if (App.mode && App.mode() === 'academy') {
           try {
             var rr = (pnl || V.out).getBoundingClientRect();
@@ -1584,7 +1587,11 @@
     App.toast('Düzəlişlər geri qaytarıldı', 'info', { sub: 'Mətn Məclisdən əvvəlki halındadır' });
     nz('idle');
   }
+  /* an elder's face from the Məclis art (App.elderFace → Meclis.portrait); initials only if that art is missing */
   function elderFace(i) {
+    var el = null;
+    try { if (App.elderFace) el = App.elderFace(ELD[i].name, 'translate-elder'); } catch (e) { el = null; }
+    if (el) return el;
     var svg = null;
     try { if (W.Meclis && typeof W.Meclis.portrait === 'function') svg = W.Meclis.portrait(i); } catch (e) { svg = null; }
     if (svg) return h('span', { class: 'translate-elder', html: svg, 'aria-hidden': 'true' });
@@ -1783,7 +1790,7 @@
     items.forEach(function (it) {
       if (!it || !it.src) return;
       V.hist.appendChild(h('button', { class: 'list-row', type: 'button', onclick: function () { loadHistory(it); } },
-        h('span', { class: 'ic' + (it.reg === 'huquqi' ? ' nar' : it.reg === 'resmi' ? ' gold' : ''), html: App.icon('translate') }),
+        h('span', { class: 'ic' + (it.reg === 'huquqi' ? ' fir' : it.reg === 'resmi' ? ' gold' : ' navy'), html: App.icon('translate') }),
         h('span', { class: 'tx' }, h('b', { class: 'truncate', lang: it.from, text: it.src }), h('small', { class: 'truncate', lang: it.to, text: it.out })),
         h('span', { class: 'end translate-hist-end' },
           h('span', { class: 'badge', text: (CODE[it.from] || '?') + ' → ' + (CODE[it.to] || '?') }),

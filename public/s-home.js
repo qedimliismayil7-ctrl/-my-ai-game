@@ -45,7 +45,7 @@
   function rel(msAgo) { return App.fmt && App.fmt.rel ? App.fmt.rel(new Date(Date.now() - msAgo)) : ''; }
   function sget(k, fb) { try { var v = App.store.get(k, fb); return v === undefined ? fb : v; } catch (e) { return fb; } }
   function sset(k, v) { try { App.store.set(k, v); } catch (e) { /* storage blocked */ } }
-  function profile() { try { return App.profile(); } catch (e) { return { name: 'Aysel Məmmədova', firstName: 'Aysel', xp: 1840, streak: 12, bestStreak: 31, dailyGoal: 30, initials: 'AM', avatarColor: 'av-nar' }; } }
+  function profile() { try { return App.profile(); } catch (e) { return { name: 'Aysel Məmmədova', firstName: 'Aysel', xp: 1840, streak: 12, bestStreak: 31, dailyGoal: 30, initials: 'AM', avatarColor: 'av-firuze' }; } }
   function reduced() { try { return App.reducedMotion ? App.reducedMotion() : false; } catch (e) { return false; } }
 
   function dateLine(d) { return cap(WEEKDAYS[d.getDay()]) + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()]; }
@@ -245,7 +245,7 @@
     '.home-file .tx small{color:var(--soft)}',
     '.home-ex{display:grid;gap:6px;padding:14px 16px;border-radius:var(--r-md);background:var(--surface2)}',
     '.home-ex-src{color:var(--soft);font-size:var(--fs-sm)}',
-    '.home-ex-tgt{font-family:var(--f-display);font-size:1.0625rem;line-height:1.45}',
+    '.home-ex-tgt{font-family:var(--f-body);font-weight:600;font-size:1.0625rem;line-height:1.45}',
     '.home-risks{margin:0;padding-left:1.1em;display:grid;gap:4px;font-size:var(--fs-sm)}',
     /* the whole lesson sheet */
     '.home-ls{display:grid;gap:18px}',
@@ -636,7 +636,7 @@
     var items = [
       { t: 'Yeni layihə', s: 'Sənəd, müştəri, müddət', ic: 'plus', cls: 'fir', run: newProjectSheet },
       { t: 'Sürətli tərcümə', s: 'Üslub avtomatik tanınır', ic: 'zap', cls: 'gold', run: quickTranslateSheet },
-      { t: 'Termin axtar', s: (G.length ? num(G.length) + ' termin lüğətdə' : 'Lüğət və yaddaş'), ic: 'search', cls: '', run: termSheet },
+      { t: 'Termin axtar', s: (G.length ? num(G.length) + ' termin lüğətdə' : 'Lüğət və yaddaş'), ic: 'search', cls: 'navy', run: termSheet },
       { t: 'Fayl yüklə', s: 'Analiz, həcm və qiymət', ic: 'upload', cls: 'green', run: uploadSheet }
     ];
     return h('div', { class: 'tiles home-quick', role: 'group', 'aria-label': 'Sürətli əməliyyatlar' }, items.map(function (it) {
@@ -833,7 +833,7 @@
     var items = [
       { av: dil.av, init: dil.short, elder: dil.name, b: 'Dilçi Nənə 3 türk formasını düzəltdi', s: 'Kapital Bank — Kredit müqaviləsi', ago: 14 * 60000, run: turkishFixesSheet },
       { av: lug.av, init: lug.short, elder: lug.name, b: '«indemnity» termini təsdiqləndi: «zərərin ödənilməsi»', s: 'Lüğətçi Mirzə · Caspian Logistics', ago: 62 * 60000, run: termSheet },
-      { av: p.avatarColor || 'av-nar', init: p.initials || 'AM', b: '1 240 söz təsdiqlədiniz', s: 'Xidmət müqaviləsi · 42 seqment', ago: 3 * 3600000, run: function () { goFirst(['editor', 'translate', 'projects'], { project: 'caspian' }, 'Redaktor hələ yüklənməyib'); } },
+      { av: p.avatarColor || 'av-firuze', init: p.initials || 'AM', b: '1 240 söz təsdiqlədiniz', s: 'Xidmət müqaviləsi · 42 seqment', ago: 3 * 3600000, run: function () { goFirst(['editor', 'translate', 'projects'], { project: 'caspian' }, 'Redaktor hələ yüklənməyib'); } },
       { av: moh.av, init: moh.short, elder: moh.name, b: 'Möhür vuruldu: 94 bal', s: 'AzerGold — Təchizat müqaviləsi', ago: 26 * 3600000, run: function () { App.toast('Hazırdır', 'ok', { sub: 'QA hesabatı (PDF) möhürlə birlikdə paketdədir', icon: 'stamp' }); } },
       { ic: 'telegram', b: 'Telegram botu ilə 3 sürətli tərcümə', s: 'RU → AZ · 412 söz', ago: 30 * 3600000, run: function () { App.toast('Telegram botu qoşuludur', 'info', { sub: 'Mətni bota göndərin — tərcümə elə orada gəlir', icon: 'telegram' }); } }
     ];
@@ -1560,7 +1560,7 @@
   function toolsGrid() {
     var tools = [
       { t: 'Dərslər', s: 'Qısa, 5–7 dəqiqəlik', ic: 'book', cls: 'fir', go: ['lessons', 'academy'] },
-      { t: 'Məşq', s: 'Zəif yerinizə görə', ic: 'target', cls: '', go: ['practice', 'academy'] },
+      { t: 'Məşq', s: 'Zəif yerinizə görə', ic: 'target', cls: 'navy', go: ['practice', 'academy'] },
       { t: 'Səhv kartları', s: '14 kart təkrarda', ic: 'cards', cls: 'gold', go: ['cards', 'review', 'academy'] },
       { t: 'Tərcüməçi', s: 'Üslub nəzarəti ilə', ic: 'translate', cls: '', go: ['translate'] },
       { t: 'Termin lüğəti', s: 'Hüquq, maliyyə, neft-qaz', ic: 'tag', cls: 'green', run: termSheet },
