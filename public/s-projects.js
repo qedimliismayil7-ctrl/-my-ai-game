@@ -1777,10 +1777,20 @@
           out.textContent = '';
           out.appendChild(h('div', { class: 'sk-stack' }, h('span', { class: 'skeleton title' }), h('span', { class: 'skeleton text' }), h('span', { class: 'skeleton text', style: 'width:72%' })));
           nz('think', 'Mirzələr seqmenti oxuyur…', 1800);
-          App.fakeAI('check', { src: d.s, tgt: st.t }).then(function () {
+          App.fakeAI('check', { src: d.s, tgt: st.t, pair: p.pair, register: regNow, domain: p.field, terms: gl }).then(function (c) {
             if (S.dead || !out.isConnected) return;
             var iss = analyze(d, r.st, ctx);
             var sc = !String(r.st.t || '').trim() ? 0 : clamp(98 - iss.reduce(function (s, x) { return s + (x.sev === 'high' ? 24 : x.sev === 'mid' ? 10 : 4); }, 0), 40, 98);
+            var tx = String(r.st.t || '');
+            if (tx.trim() && c && c.live && Array.isArray(c.errors)) { /* live engine: add what the reviser found to the local checks */
+              c.errors.forEach(function (e) {
+                if (!e || e.auto || iss.some(function (x) { return x.was && lower(x.was) === lower(e.was); })) return;
+                var real = !!e.was && e.was !== '—' && tx.indexOf(e.was) >= 0;
+                iss.push({ type: e.type, sev: e.severity || 'mid', was: real ? e.was : '', now: e.now || '', fix: real && e.now ? 'raw' : null,
+                  text: (real ? '«' + e.was + '» → «' + (e.now || '—') + '». ' : e.now ? '→ «' + e.now + '». ' : '') + (e.why || '') });
+              });
+              if (c.score != null) sc = Math.min(sc, c.score);
+            }
             out.textContent = '';
             out.appendChild(h('div', { class: 'editor-check' }, App.ring(sc, 'bal', null, { size: 'sm' }),
               h('div', { class: 'stack-sm' }, h('b', { text: iss.length ? iss.length + ' qeyd tapıldı' : 'Mirzələr razıdır' }),

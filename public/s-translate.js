@@ -984,7 +984,8 @@
       busyBtn(V.go, false);
       if (res && res.ok === false) {
         renderEmpty('error');
-        App.toast(res.error || 'Mühərrik cavab vermədi', 'err');
+        /* In live mode App.fakeAI has already shown this error as a toast. */
+        if (!(App.isLive && App.isLive())) App.toast(res.error || 'Mühərrik cavab vermədi', 'err');
         nz('sad', 'Alınmadı… bir də cəhd edək?');
         return;
       }
@@ -1492,7 +1493,8 @@
     var tgt = textOf(r).trim();
     var p = r.example && r.pristine && EX.reg[r.reg] ?
       Promise.resolve(exReview(r.reg)) :
-      App.fakeAI('check', { src: r.src, tgt: tgt, from: r.from, to: r.to }, 500).then(function (c) {
+      App.fakeAI('check', { src: r.src, tgt: tgt, from: r.from, to: r.to, register: r.reg, domain: r.situation && r.situation.domain }, 500).then(function (c) {
+        if (c && c.ok === false) throw c; /* live engine failed — fakeAI already showed the toast */
         c = c || {};
         return {
           score: c.score != null ? c.score : 92, text: c.summary || 'Məclis işini bitirdi.', seal: (c.verdict && c.verdict.seal) || null,
@@ -1523,7 +1525,7 @@
           } catch (e) { /* ignore */ }
         }
       }, 320);
-    }, function () { reviewing = false; deepBusy(false); });
+    }, function () { reviewing = false; deepBusy(false); nz('idle'); });
   }
   function undoReview() {
     if (!R || !R.prevSegs) return;

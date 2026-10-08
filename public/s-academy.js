@@ -1123,7 +1123,8 @@
     nz('think', 'Mirzələri çağırıram…', 1600);
     var g = gen, out = null, hints = T.hints;
     App.bigJob('Tərcüməniz yoxlanılır', function () {
-      return App.fakeAI('grade', { src: task.src, text: text, model: task.model }, 700).then(function (r) {
+      return App.fakeAI('grade', { src: task.src, text: text, model: task.model, register: T.reg || task.reg, domain: task.domain, level: task.level }, 700).then(function (r) {
+        if (r && r.ok === false) throw r; /* live engine failed — fakeAI already showed the toast */
         out = evaluate(task, text, r || {}, hints);
         return out.verdict;
       });
@@ -1131,11 +1132,11 @@
       if (g !== gen || !T) return;
       T.checking = false; busy(T.check, false);
       if (out) showResult(out);
-    }, function () {
+    }, function (e) {
       if (g !== gen || !T) return;
       T.checking = false; busy(T.check, false);
       T.resSlot.textContent = '';
-      App.toast('Məclis toplana bilmədi', 'err', { sub: 'Bir az sonra yenidən cəhd edin' });
+      if (!(e && e.ok === false)) App.toast('Məclis toplana bilmədi', 'err', { sub: 'Bir az sonra yenidən cəhd edin' });
     });
   }
 
@@ -1168,7 +1169,7 @@
     var errs = [];
     (r.errors || []).forEach(function (e) {
       if (!e) return;
-      errs.push({ was: String(e.was == null ? '—' : e.was), now: String(e.now || ''), type: e.type || 'Məna', why: e.why || '', severity: e.severity || SEV[e.type] || 'mid', elder: e.elder || TYPE_ELDER[e.type] || 'Mənaçı Mirzə', ex: EX_BY_TYPE[e.type] || '' });
+      errs.push({ was: String(e.was == null ? '—' : e.was), now: String(e.now || ''), type: e.type || 'Məna', why: e.why || '', severity: e.severity || SEV[e.type] || 'mid', elder: e.elder || TYPE_ELDER[e.type] || 'Mənaçı Mirzə', ex: e.ex || EX_BY_TYPE[e.type] || '' });
     });
     (task.traps || []).forEach(function (tr) {
       var w = findTrap(text, tr);

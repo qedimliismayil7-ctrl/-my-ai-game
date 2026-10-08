@@ -916,6 +916,11 @@
       return App.fakeAI('translate', { text: text, register: reg === 'auto' ? null : reg }).then(function (r) {
         if (!out.isConnected || !r) return;
         out.textContent = '';
+        if (r.ok === false) {
+          out.appendChild(h('div', { class: 'home-qt-hint' }, ie('alert'), r.error || 'Mühərrik cavab vermədi. Yenidən cəhd edin.'));
+          nz('sad', null, 1600);
+          return;
+        }
         seg.markDetected(r.detectedId || r.registerId);
         var st = r.stats || {};
         out.appendChild(h('div', { class: 'chips' },
@@ -1304,7 +1309,7 @@
       model: 'Podratçı 14 gün ərzində Sifarişçini xəbərdar etməlidir.'
     }, 500).then(function (r) {
       busy(btn, false);
-      if (!r) throw new Error('grade');
+      if (!r || r.ok === false) throw new Error('grade'); /* live engine failed — fakeAI already showed the toast */
       var v = r.verdict || { score: r.score, text: 'Tapşırıq yoxlandı.' };
       return App.bigJob('Tapşırığınız yoxlanılır', v).then(function () { return r; });
     }).then(function (r) {
