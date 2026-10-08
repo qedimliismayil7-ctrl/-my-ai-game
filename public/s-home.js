@@ -531,13 +531,27 @@
     qaBadge.classList.remove('bump'); void qaBadge.offsetWidth; qaBadge.classList.add('bump');
   }
 
+  /* QA input: live engine checks the project's real segments (from the Projects screen); the demo keeps its sample input. */
+  function isLive() { return !!(App.isLive && App.isLive()); }
+  function qaInput(pj) {
+    var pi = null;
+    if (isLive() && App.projects && typeof App.projects.qaInput === 'function') { try { pi = App.projects.qaInput(pj.id); } catch (e) { pi = null; } }
+    return { project: pi || { name: pj.client + ' — ' + pj.name, segments: pj.segs } };
+  }
+
   /* 5.2 quick QA in a sheet (skeleton → ring + issues) */
   function quickQA(pj, qaBadge) {
     var body = h('div', { class: 'stack' }, skel(4), h('span', { class: 'skeleton block', style: 'height:150px' }));
     var s = App.sheet({ title: 'QA yoxlaması', body: body, wide: true, actions: [{ label: 'Bağla', kind: 'ghost' }] });
     nz('think', 'Rəqəmlərə, adlara, tarixlərə və terminlərə baxıram…', 2200);
-    App.fakeAI('qa', { project: { name: pj.client + ' — ' + pj.name, segments: pj.segs } }).then(function (r) {
-      if (!body.isConnected || !r || !r.issues) return;
+    App.fakeAI('qa', qaInput(pj)).then(function (r) {
+      if (!body.isConnected || !r) return;
+      if (r.ok === false || !Array.isArray(r.issues)) {
+        body.textContent = '';
+        body.appendChild(h('div', { class: 'callout' }, ie('alert'), h('div', { text: r.error || 'Yoxlama alınmadı. Yenidən cəhd edin.' })));
+        nz('sad', null, 1600);
+        return;
+      }
       body.textContent = '';
       var checks = h('div', { class: 'home-checks' }, (r.checks || []).map(function (c) {
         return c.ok ? badge(c.label, 'green', 'check') : badge(c.label + ' · ' + c.issues, c.key === 'complete' || c.key === 'numbers' ? 'red' : 'gold');
@@ -559,7 +573,10 @@
       var fixedScore = Math.max(r.score, 96 + (r.issues.length % 3));
       s.setActions([
         { label: 'Bağla', kind: 'ghost' },
-        { label: 'Hamısını düzəlt', kind: 'primary', icon: 'wand', onClick: function () {
+        /* Live: fixes are applied for real on the QA screen, never simulated here. */
+        isLive() ? { label: 'QA-da düzəlt', kind: 'primary', icon: 'shield', onClick: function () {
+          goFirst(['qa', 'projects'], { project: pj.id }, 'QA bölməsi hələ yüklənməyib');
+        } } : { label: 'Hamısını düzəlt', kind: 'primary', icon: 'wand', onClick: function () {
           sset('home:qa', fixedScore); sset('home:qafixed', true); setQA(qaBadge, fixedScore);
           App.toast(r.issues.length + ' düzəliş tətbiq edildi', 'ok', { sub: 'Yeni QA balı: ' + fixedScore + ' · dəyişikliklər redaktorda görünür' });
           nz('success', 'Hazırdır! İndi Məclisə göndərmək olar.', 2600);
@@ -573,9 +590,10 @@
   function sendToCouncil(pj, btn, qaBadge) {
     if (isBusy(btn)) return;
     busy(btn, true);
-    var fixed = sget('home:qafixed', false);
-    App.fakeAI('qa', { project: { name: pj.client + ' — ' + pj.name, segments: pj.segs } }, 450).then(function (r) {
+    var fixed = !isLive() && sget('home:qafixed', false);
+    App.fakeAI('qa', qaInput(pj), 450).then(function (r) {
       busy(btn, false);
+      if (r && r.ok === false) return null;
       var v = fixed
         ? { score: Math.max(sget('home:qa', 95), 95), text: 'Bütün QA qeydləri bağlanıb. Terminlər lüğətə uyğundur, rəqəmlər və tarixlər möhürləndi, Dilçi Nənə türk formasına rast gəlmədi.', seal: 'Təhvilə hazırdır' }
         : (r && r.verdict) || { score: 88, text: 'Məclis razıdır: mətn təhvilə hazırdır.' };
@@ -1015,10 +1033,18 @@
         resolve('');
       });
       textP.then(function (txt) {
+        /* Live: never present the sample text's analysis as the analysis of a real file we could not read. */
+        if (!String(txt || '').trim() && W.Blob && f instanceof W.Blob && isLive()) return { ok: false, error: 'Bu faylın mətnini oxuya bilmədim — hələlik yalnız mətnli .txt faylları analiz olunur.' };
         return App.fakeAI('analyze', { text: txt || ((S.legal || '') + '\n' + (S.report || '')) });
       }).then(function (a) {
         if (!res.isConnected || !a) return;
         res.textContent = '';
+        if (a.ok === false) {
+          res.appendChild(h('div', { class: 'callout' }, ie('alert'), h('div', { text: a.error || 'Analiz alınmadı. Yenidən cəhd edin.' })));
+          dz.hidden = false; sampleBtn.hidden = false; file.value = '';
+          nz('sad', null, 1600);
+          return;
+        }
         var tm = a.tm || {}, est = a.estimate || {};
         res.appendChild(h('div', { class: 'home-file' }, icTile('file', 'nar'), h('span', { class: 'tx' }, h('b', { text: f.name }), h('small', { text: sizeLabel(f.size || 0) + ' · ' + num(a.words) + ' söz' })), badge('Analiz edildi', 'green', 'check')));
         res.appendChild(h('dl', { class: 'kv' },
@@ -1220,13 +1246,15 @@
     busy(btn, true);
     App.fakeAI('lesson', { id: WEAK[0].lesson }, 450).then(function (L) {
       busy(btn, false);
+      if (L && L.ok === false) return null; /* live engine failed — fakeAI already showed the toast */
       if (!L || !L.title) throw new Error('lesson');
       var ex = (L.examples || []).length, qz = (L.quiz || []).length;
       return App.bigJob('Şəxsi dərs hazırlanır', {
-        text: '«' + L.title + '» — ' + L.minutes + ' dəqiqəlik dərs: ' + ex + ' nümunə, ' + qz + ' sual və bir tapşırıq. ' + (L.elderNote || ''),
+        text: '«' + L.title + '» — ' + L.minutes + ' dəqiqəlik dərs: ' + ex + ' nümunə, ' + qz + ' sual' + (L.task ? ' və bir tapşırıq' : '') + '. ' + (L.elderNote || ''),
         seal: 'Dərs hazırdır'
       }).then(function () { return L; });
     }).then(function (L) {
+      if (!L) return;
       sset('home:lesson', { day: dayKey(), lesson: L });
       if (A.cta && A.cta.isConnected) A.cta = replaceNode(A.cta, ctaButton());
       setTimeout(function () { openLesson(L, false); }, 350);
@@ -1332,7 +1360,11 @@
       b.addEventListener('click', function () {
         if (isBusy(b)) return;
         busy(b, true);
-        App.fakeAI('lesson', { id: w.lesson }, 500).then(function (L) { busy(b, false); openLesson(L, false); }, function () { busy(b, false); });
+        App.fakeAI('lesson', { id: w.lesson }, 500).then(function (L) {
+          busy(b, false);
+          if (!L || L.ok === false || !L.title) return; /* live engine failed — fakeAI already showed the toast */
+          openLesson(L, false);
+        }, function () { busy(b, false); });
       });
       return b;
     });

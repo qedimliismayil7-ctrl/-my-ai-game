@@ -91,6 +91,7 @@
   /* Local check types taken from the demo checker (Termin and Məna are left to the model: the demo's
      fixed glossary and length ratio do not know this project's approved terms or sentence structure). */
   var LOCAL_TYPES = { 'Türk forması': 1, 'Rəqəm': 1, 'Durğu': 1, 'Orfoqrafiya': 1, 'Üslub': 1 };
+  var LITERAL = { 'Türk forması': 1, 'Durğu': 1, 'Orfoqrafiya': 1 };
 
   var FATAL = { bad_code: 1, not_configured: 1, daily_limit: 1, rate_limited: 1, network: 1, model_unavailable: 1 };
   var RETRY = { invalid_json: 1, empty_completion: 1, server_error: 1 };
@@ -384,6 +385,8 @@
       if (!sg || !sg.t) return;
       var type = normType(x.type);
       var was = locate(sg.t, rawWas) || '—';
+      /* A Turkish form, punctuation or spelling issue must quote the target literally — otherwise it is not there. */
+      if (was === '—' && rawWas && LITERAL[type]) return;
       var now = clean(x.now != null ? x.now : x.fix != null ? x.fix : x.correct);
       var why = clean(x.why || x.text || x.reason || x.comment);
       if (was !== '—' && now === was) return;
@@ -481,7 +484,7 @@
         mergeSeg(local[sg.n] || [], remote[sg.n] || []).forEach(function (x) {
           var type = ELDER_BY_TYPE[x.type] ? x.type : normType(x.type);
           var sev = x.severity === 'high' || x.severity === 'mid' || x.severity === 'low' ? x.severity : (SEV_DEF[type] || 'mid');
-          var was = clean(x.was) || '—', now = clean(x.now);
+          var was = N.str(x.was).trim() || '—', now = clean(x.now);
           issues.push({ id: '', type: type, severity: sev, seg: sg.n, src: sg.s, tgt: sg.t, was: was, now: now, fix: now, text: clean(x.why) || WHY_DEF[type] || '', elder: ELDER_BY_TYPE[type] || 'Mənaçı Mirzə' });
         });
       });
@@ -581,7 +584,7 @@
     });
 
     var risks = [], rk = {};
-    function addRisk(r) { r = clean(r && typeof r === 'object' ? (r.why || r.text || r.risk) : r); var k = lower(r); if (!r || rk[k] || risks.length >= 7) return; rk[k] = 1; risks.push(r); }
+    function addRisk(r) { r = clean(r && typeof r === 'object' ? (r.why || r.text || r.risk) : r); var k = lower(r); if (!r || rk[k] || risks.length >= 6) return; rk[k] = 1; risks.push(r); }
     N.arr(d.risks).slice(0, 5).forEach(addRisk);
     N.arr(base.risks).forEach(addRisk);
 

@@ -154,6 +154,7 @@
     { key: 'turkish', label: 'Türk formaları', types: ['Türk forması', 'Orfoqrafiya'] },
     { key: 'meaning', label: 'Məna', types: ['Məna'] },
     { key: 'punct', label: 'Durğu', types: ['Durğu'] },
+    { key: 'style', label: 'Üslub', types: ['Üslub', 'Söz sırası', 'Ardıcıllıq'] },
     { key: 'complete', label: 'Tamlıq', types: ['Boş seqment'] }
   ];
   function catTypes(key) { for (var i = 0; i < CATS.length; i++) if (CATS[i].key === key) return CATS[i].types; return []; }
@@ -467,6 +468,18 @@
   function reqsOf(p) {
     if (Array.isArray(p.reqs) && p.reqs.length) return p.reqs;
     return REQS[p.id] || DEFAULT_REQS;
+  }
+  /* Input for the QA engine (live adapter ai/qa.js): the real segments and the project context. */
+  function qaInput(p, segs) {
+    var set = setOf(p), sit = sitOf(p);
+    segs = segs || loadSegs(p);
+    return {
+      id: p.id, name: p.client + ' — ' + p.name, pair: p.pair, register: p.reg, field: p.field,
+      segments: set.segs.map(function (d, i) { return { n: i + 1, s: d.s, t: (segs[i] && segs[i].t) || '' }; }),
+      terms: glossOf(p).map(function (g) { return { a: g.a, b: g.b, note: g.note || '' }; }),
+      reqs: reqsOf(p).map(function (r) { return Array.isArray(r) ? r[0] : String(r); }),
+      situation: { purpose: sit.purpose || '', audience: sit.audience || '', note: sit.note || '' }
+    };
   }
   function seedState(d, p) {
     var delivered = p.status === 'delivered' && !p.fresh;
@@ -1868,6 +1881,7 @@
     var set = setOf(p), segs = loadSegs(p), gl = glossOf(p), ctx = { set: set, gl: gl };
     var ignored = getMap('pj:qaign:' + p.id), reqManual = getMap('pj:req:' + p.id);
     var M = null, sevF = 'all', ring = null, built = false;
+    var aiIss = []; /* live engine issues (ai/qa.js); kept while their fragment is still in the segment */
     var page = h('div', { class: 'page qa' });
     el.appendChild(page);
 
@@ -1891,11 +1905,21 @@
           h('div', { class: 'card sk-stack' }, h('span', { class: 'skeleton title', style: 'width:40%' }), [1, 2, 3, 4, 5, 6].map(function () { return h('span', { class: 'skeleton text' }); }))),
         h('span', { class: 'skeleton block', style: 'height:260px' })));
     }
+    function liveIssue(q, st, mine) {
+      var t = String(st.t || ''), was = q.was && q.was !== '—' ? String(q.was) : '';
+      if (!t.trim() || q.type === 'Boş seqment' || (was && t.indexOf(was) < 0)) return null;
+      var lw = lower(was);
+      if (mine.some(function (x) { var lx = lower(x.was || ''); return was && lx ? lx.indexOf(lw) >= 0 || lw.indexOf(lx) >= 0 : x.type === q.type; })) return null;
+      return { type: q.type, sev: q.severity === 'high' || q.severity === 'mid' ? q.severity : 'low', was: was, now: was ? q.now || '' : '',
+        text: (q.text || '') + (!was && q.now ? ' Təklif: «' + q.now + '».' : ''), fix: was && q.now ? 'raw' : null, elder: q.elder };
+    }
     function model() {
       var issues = [];
       segs.forEach(function (st, i) {
-        analyze(set.segs[i], st, ctx).forEach(function (iss) {
-          iss.n = i + 1; iss.key = issKey(iss.n, iss); iss.ign = !!ignored[iss.key]; iss.elder = ELDER[iss.type] || 'Nuanza';
+        var mine = analyze(set.segs[i], st, ctx);
+        aiIss.forEach(function (q) { var x = q.seg === i + 1 ? liveIssue(q, st, mine) : null; if (x) mine.push(x); });
+        mine.forEach(function (iss) {
+          iss.n = i + 1; iss.key = issKey(iss.n, iss); iss.ign = !!ignored[iss.key]; iss.elder = ELDER[iss.type] || iss.elder || 'Nuanza';
           issues.push(iss);
         });
       });
@@ -1909,9 +1933,11 @@
       skeleton();
       againBtn.setAttribute('aria-busy', 'true');
       nz('think', first ? 'Rəqəmlərə, adlara, terminlərə və türk formalarına baxıram…' : 'Yenidən yoxlayıram…', 2200);
-      App.fakeAI('qa', { project: { name: p.client + ' — ' + p.name, segments: p.segs } }).then(function () {
+      App.fakeAI('qa', { project: qaInput(p, segs) }).then(function (r) {
         if (S.dead) return;
         againBtn.removeAttribute('aria-busy');
+        /* Only the live engine's issues describe these segments; the demo answer stays unused, and {ok:false} leaves the local checks. */
+        aiIss = App.isLive && App.isLive() && r && r.ok !== false && Array.isArray(r.issues) ? r.issues : [];
         segs = loadSegs(p); M = model(); build();
         setMap('pj:qa', p.id, M.score);
         nz(M.score >= 85 ? 'success' : 'worried', M.score >= 85 ? M.score + ' bal — təhvilə az qalıb!' : M.score + ' bal. Kritik qeydlərdən başlayaq.', 2800);
@@ -2256,5 +2282,6 @@
   });
 
   /* Small public hook so other screens can open the same «Yeni layihə» sheet. */
-  App.projects = { open: function (id) { App.go('editor', { project: id }); }, create: function () { newProjectSheet(null); }, list: allProjects };
+  App.projects = { open: function (id) { App.go('editor', { project: id }); }, create: function () { newProjectSheet(null); }, list: allProjects,
+    qaInput: function (id) { var p = id ? findProject(String(id)) : null; return p ? qaInput(p, loadSegs(p)) : null; } };
 })();
