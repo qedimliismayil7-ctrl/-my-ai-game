@@ -3,7 +3,7 @@
    'settings' — Profil və ayarlar (hər iki rejim, «Hesab» qrupu).
      • Telefonda: axtarışlı bölmələr siyahısı → hər bölmə geri düyməli alt səhifə.
      • Geniş ekranda: solda yapışqan bölmə naviqasiyası, sağda bölmənin məzmunu.
-     • Profil başlığı: 8 guşəli ulduzda baş hərflər, rəng seçimi, profil tamlığı.
+     • Profil başlığı: xalça gölündə baş hərflər, rəng seçimi, profil tamlığı.
      • Bölmələr: Hesab · İş profili · Tərcümə · Nuanza köməkçisi · Görünüş ·
        Bildirişlər · Məxfilik və məlumat · Abunə · Klaviatura qısayolları · Haqqında.
      • Formlar qaralama kimi saxlanılır: «Yadda saxlanılmamış dəyişikliklər» paneli,
@@ -99,7 +99,7 @@
       desc: 'Ad, əlaqə məlumatları, giriş üsulları və aktiv sessiyalar.' },
     { id: 'work', title: 'İş profili', icon: 'quill', cls: 'gold', grp: 'Profil', kw: 'dil cüt ixtisas tarif qiymət imza möhür faktura vöen bank',
       desc: 'Dil cütləri, ixtisas sahələri, tariflər və hesab-faktura rekvizitləri.' },
-    { id: 'translation', title: 'Tərcümə', icon: 'translate', cls: 'nar', grp: 'İş üslubu', kw: 'üslub register keyfiyyət format tarix rəqəm transliterasiya türk',
+    { id: 'translation', title: 'Tərcümə', icon: 'translate', cls: 'settings-fir', grp: 'İş üslubu', kw: 'üslub register keyfiyyət format tarix rəqəm transliterasiya türk',
       desc: 'Əsas üslub, keyfiyyət rejimi, formatlar və avtomatik yoxlamalar.' },
     { id: 'companion', title: 'Nuanza köməkçisi', icon: 'sparkle', cls: 'gold', grp: 'İş üslubu', kw: 'köməkçi qız nuanza animasiya danışıq ölçü', live: true,
       desc: 'Nuanzanın görünüşü, ölçüsü, nə qədər danışdığı və hərəkəti.' },
@@ -109,7 +109,7 @@
       desc: 'Son tarix xatırlatmaları, Telegram bot və həftəlik e-poçt hesabatı.' },
     { id: 'privacy', title: 'Məxfilik və məlumat', icon: 'lock', cls: 'green', grp: 'Tətbiq', kw: 'məxfilik lokal maska sil ixrac json tmx tbx',
       desc: 'Lokal rejim, maskalama, saxlama müddəti və məlumatların ixracı.' },
-    { id: 'billing', title: 'Abunə', icon: 'card', cls: 'nar', grp: 'Abunə və kömək', kw: 'plan abunə ödəniş limit qiymət',
+    { id: 'billing', title: 'Abunə', icon: 'card', cls: 'settings-fir', grp: 'Abunə və kömək', kw: 'plan abunə ödəniş limit qiymət',
       desc: 'Cari plan, istifadə limitləri və planların müqayisəsi.' },
     { id: 'shortcuts', title: 'Klaviatura qısayolları', icon: 'keyboard', cls: '', grp: 'Abunə və kömək', kw: 'qısayol klaviatura düymə',
       desc: 'Siçana əl atmadan, daha sürətli işləmək üçün.' },
@@ -216,7 +216,7 @@
   var QUALITY = [
     { id: 'fast', label: 'Sürətli', ic: 'zap', cls: 'gold', hint: 'Təxminən 1 saniyə, bir keçid. Qısa mesajlar və çat üçün.' },
     { id: 'exact', label: 'Dəqiq', ic: 'target', cls: '', hint: 'Lüğət, tərcümə yaddaşı və hər seqment üçün əminlik yoxlaması.' },
-    { id: 'meclis', label: 'Mirzə Məclisi', ic: 'shield', cls: 'nar', hint: 'Tərcümədən sonra beş mirzə yoxlayır və səhvləri özləri düzəldir.' }
+    { id: 'meclis', label: 'Mirzə Məclisi', ic: 'shield', cls: 'settings-fir', hint: 'Tərcümədən sonra beş mirzə yoxlayır və səhvləri özləri düzəldir.' }
   ];
   var Q_SHORT = { fast: 'Sürətli', exact: 'Dəqiq', meclis: 'Mirzə Məclisi' };
   var ADDRS = [
@@ -259,14 +259,14 @@
     { id: 'av-zeytun', name: 'Zeytun', note: 'təbii və təmkinli' }
   ];
   var THEMES = [
-    { id: 'system', label: 'Sistem', ic: 'settings' },
+    { id: 'dark', label: 'Qaranlıq', ic: 'moon' },
     { id: 'light', label: 'İşıqlı', ic: 'sun' },
-    { id: 'dark', label: 'Qaranlıq', ic: 'moon' }
+    { id: 'system', label: 'Sistem', ic: 'settings' }
   ];
   var LANGS_UI = [{ id: 'az', label: 'Azərbaycan' }, { id: 'en', label: 'English' }, { id: 'ru', label: 'Русский' }];
   var PLANS = [
-    { id: 'Pulsuz', price: 0, yearly: 0, ic: 'star', cls: '', tag: 'Başlamaq və sınamaq üçün', rank: 0 },
-    { id: 'Peşəkar', price: 19, yearly: 15.2, ic: 'quill', cls: 'nar', tag: 'Fərdi peşəkar tərcüməçilər üçün', rank: 1 },
+    { id: 'Pulsuz', price: 0, yearly: 0, ic: 'tag', cls: '', tag: 'Başlamaq və sınamaq üçün', rank: 0 },
+    { id: 'Peşəkar', price: 19, yearly: 15.2, ic: 'quill', cls: 'settings-fir', tag: 'Fərdi peşəkar tərcüməçilər üçün', rank: 1 },
     { id: 'Büro', price: 59, yearly: 47.2, ic: 'users', cls: 'gold', tag: '5 nəfərə qədər komanda üçün', rank: 2 }
   ];
   var LIMITS = { 'Pulsuz': { words: 5000, meclis: 3 }, 'Peşəkar': { words: 100000, meclis: 40 }, 'Büro': { words: 500000, meclis: null } };
@@ -429,17 +429,18 @@
     '.settings-hero{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px 18px;overflow:hidden;isolation:isolate;padding-top:26px}',
     '@media (min-width:640px){.settings-hero{grid-template-columns:auto minmax(0,1fr) auto;gap:16px 24px;padding:30px 28px 22px}}',
     '.settings-hero > .rugband{position:absolute;left:0;right:0;top:0}',
-    '.settings-hero::before{content:"";position:absolute;top:0;right:0;bottom:0;width:62%;z-index:-2;background:var(--zafaran);opacity:.12;-webkit-mask:var(--m-field) 0 0/56px 56px repeat;mask:var(--m-field) 0 0/56px 56px repeat}',
-    '.settings-hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(90deg,var(--surface) 38%,transparent),radial-gradient(60% 130% at 100% 0%,var(--zaf-t),transparent 70%)}',
+    '.settings-hero::before{content:"";position:absolute;top:0;right:0;bottom:0;width:62%;z-index:-2;background:var(--firuze);opacity:.1;-webkit-mask:var(--m-field) 0 0/56px 56px repeat;mask:var(--m-field) 0 0/56px 56px repeat}',
+    '.settings-hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(90deg,var(--surface) 38%,transparent),radial-gradient(60% 130% at 100% 0%,var(--fir-t),transparent 70%)}',
     '.settings-av{--av:var(--av-nar);position:relative;flex:none;width:84px;height:84px;display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:none;color:inherit;cursor:pointer;filter:drop-shadow(0 8px 12px color-mix(in srgb,var(--av) 30%,transparent))}',
     '@media (min-width:640px){.settings-av{width:104px;height:104px}}',
     '.settings-av .sa-star,.settings-av .sa-fill{position:absolute;-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat;transition:transform .7s var(--ease-spring),background-color .3s var(--ease-out)}',
-    '.settings-av .sa-star{inset:0;background:conic-gradient(from 22.5deg,var(--zafaran),var(--gold-hi),var(--zafaran),var(--gold-hi),var(--zafaran),var(--gold-hi),var(--zafaran),var(--gold-hi),var(--zafaran))}',
-    '.settings-av .sa-fill{inset:5px;background:radial-gradient(circle at 34% 26%,color-mix(in srgb,var(--on-av) 30%,transparent),transparent 58%),var(--av)}',
-    '.settings-av .sa-ring{position:absolute;inset:24%;border-radius:50%;border:1px dashed color-mix(in srgb,var(--gold-hi) 70%,transparent);pointer-events:none}',
+    /* avatar: göl — firuzə stepped rim with a zəfəran glint, the colour fill inside */
+    '.settings-av .sa-star{inset:0;background:linear-gradient(135deg,var(--firuze),color-mix(in srgb,var(--firuze) 60%,var(--gold-hi)) 55%,var(--zafaran))}',
+    '.settings-av .sa-fill{inset:6px;background:linear-gradient(160deg,color-mix(in srgb,var(--on-av) 18%,var(--av)),var(--av) 60%)}',
+    '.settings-av .sa-ring{display:none}',
     '.settings-av b{position:relative;font-family:var(--f-display);font-size:1.75rem;font-weight:600;letter-spacing:.03em;color:var(--on-av);line-height:1}',
     '@media (min-width:640px){.settings-av b{font-size:2.125rem}}',
-    '@media (hover:hover){.settings-av:hover .sa-star,.settings-av:hover .sa-fill{transform:rotate(45deg)}}',
+    '@media (hover:hover){.settings-av:hover .sa-star,.settings-av:hover .sa-fill{transform:rotate(90deg)}}',
     '.settings-av:active{transform:scale(.97)}',
     '.settings-av:focus-visible{outline:2px solid var(--focus);outline-offset:4px}',
     '.settings-av-edit{position:absolute;right:-2px;bottom:2px;width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:var(--surface);color:var(--ink);box-shadow:var(--sh-pop),0 0 0 1px var(--line)}',
@@ -474,7 +475,7 @@
     '.settings-grp-h{padding:0 4px;font-size:.6875rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}',
     '.settings-navcard{padding:2px 16px}',
     '.settings-nav-row .tx small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.settings-dot{width:8px;height:8px;flex:none;border-radius:50%;background:var(--nar);box-shadow:0 0 0 3px var(--nar-t);animation:pop-in .3s var(--ease-spring) both}',
+    '.settings-dot{width:8px;height:8px;flex:none;border-radius:50%;background:var(--zafaran);box-shadow:0 0 0 3px var(--zaf-t);animation:pop-in .3s var(--ease-spring) both}',
     '.settings-page.is-wide .settings-grp{gap:2px}',
     '.settings-page.is-wide .settings-grp + .settings-grp{margin-top:12px}',
     '.settings-page.is-wide .settings-navcard{padding:0;background:none;border:0;box-shadow:none}',
@@ -485,12 +486,12 @@
     '.settings-page.is-wide .settings-nav-row .ic svg{width:16px;height:16px}',
     '.settings-page.is-wide .settings-nav-row .tx b{font-size:var(--fs-sm);font-weight:500}',
     '.settings-page.is-wide .settings-nav-row .tx small,.settings-page.is-wide .settings-nav-row .chev{display:none}',
-    '.settings-page.is-wide .settings-nav-row[aria-current="page"]::before{opacity:1;background:var(--nar-t)}',
-    '.settings-page.is-wide .settings-nav-row[aria-current="page"] .tx b{color:var(--nar);font-weight:600}',
-    '.settings-page.is-wide .settings-nav-row[aria-current="page"] .end::after{content:"";width:9px;height:9px;background:var(--nar);-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}',
+    '.settings-page.is-wide .settings-nav-row[aria-current="page"]::before{opacity:1;background:var(--fir-t)}',
+    '.settings-page.is-wide .settings-nav-row[aria-current="page"] .tx b{color:var(--firuze);font-weight:600}',
+    '.settings-page.is-wide .settings-nav-row[aria-current="page"] .end::after{content:"";width:9px;height:9px;background:var(--firuze);-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}',
     '.settings-results .list-row .tx small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
     '.settings-page.is-wide .settings-results{padding:2px 12px}',
-    '.settings-mk{background:var(--zaf-t);color:inherit;border-radius:3px;padding:0 1px}',
+    '.settings-mk{background:var(--fir-t);color:inherit;border-radius:3px;padding:0 1px}',
     '.settings-noresult{padding:24px 16px}',
     '.settings-noresult .empty-art{width:72px;height:72px}',
     /* section */
@@ -543,7 +544,7 @@
     '.settings-savebar .sb-tx small{font-size:var(--fs-xs);color:var(--inv-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
     '.settings-savebar .sb-act{flex:none;display:flex;gap:6px}',
     '.settings-savebar .btn-ghost{--btn-ink:var(--inv-ink);--btn-bg-h:color-mix(in srgb,var(--inv-ink) 12%,transparent)}',
-    '.settings-savebar .kbd{background:color-mix(in srgb,var(--on-nar) 14%,transparent);border-color:color-mix(in srgb,var(--on-nar) 28%,transparent);color:var(--on-nar);height:18px;min-width:18px;font-size:.66rem}',
+    '.settings-savebar .kbd{background:color-mix(in srgb,var(--on-firuze) 14%,transparent);border-color:color-mix(in srgb,var(--on-firuze) 28%,transparent);color:var(--on-firuze);height:18px;min-width:18px;font-size:.66rem}',
     '@media (max-width:479px){.settings-savebar .kbd{display:none}}',
     /* inputs */
     '.settings-affix{position:relative;display:block;min-width:0}',
@@ -559,61 +560,73 @@
     '.settings-choices.three{grid-template-columns:minmax(0,1fr)}',
     '@container stmain (min-width:600px){.settings-choices.three{grid-template-columns:repeat(3,minmax(0,1fr))}}',
     '.settings-choices .choice b{display:flex;align-items:center;gap:6px;flex-wrap:wrap}',
-    '.settings-chip-main{border-color:color-mix(in srgb,var(--zafaran) 70%,var(--line-2));background:var(--zaf-t)}',
-    '.settings-chip-main svg{color:var(--zafaran-ink)}',
+    '.settings-chip-main{border-color:color-mix(in srgb,var(--firuze) 60%,var(--line-2));background:var(--fir-t)}',
+    '.settings-chip-main svg{color:var(--firuze)}',
+    /* firuzə variants for brand/selected icon tiles, badges and bars (scoped names, work in sheets too) */
+    '.ic.settings-fir{background:var(--fir-t);color:var(--firuze)}',
+    '.badge.settings-fir{background:var(--fir-t);color:var(--firuze)}',
+    '.progress.settings-over > i{background:var(--nar)}',
+    '.progress.settings-prog > i{background:linear-gradient(90deg,color-mix(in srgb,var(--firuze) 70%,var(--lacquer)),var(--firuze))}',
     '.settings-add{border-style:dashed;color:var(--soft);background:transparent}',
     '.settings-chips-pick .chip{cursor:pointer}',
     /* signature + seal */
     '.settings-sign{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;border-radius:var(--r-md);background:var(--surface);border:1px dashed var(--line-2);min-width:0}',
     '.settings-sign .sg-l{min-width:0;display:grid;gap:2px}',
     '.settings-sign .sg-k{font-size:.6875rem;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);font-weight:600}',
-    '.settings-sign .sg-name{font-family:var(--f-display);font-style:italic;font-size:var(--fs-xl);color:var(--lacquer);line-height:1.25;overflow-wrap:anywhere}',
+    '.settings-sign .sg-name{font-family:var(--f-display);font-style:normal;font-weight:500;letter-spacing:-.01em;font-size:var(--fs-xl);color:var(--lacquer);line-height:1.25;overflow-wrap:anywhere}',
     '.settings-sign .sg-line{display:block;height:1px;background:var(--line-2);margin:6px 0 2px}',
     '.settings-sign .sg-meta{font-size:var(--fs-xs);color:var(--soft)}',
-    '.settings-seal{width:88px;height:88px;flex:none;color:var(--nar);opacity:.9;transform:rotate(-12deg)}',
+    '.settings-seal{width:88px;height:88px;flex:none;color:var(--firuze);opacity:.9;transform:rotate(-12deg)}',
     '.settings-seal .s-o{fill:none;stroke:currentColor;stroke-width:2.5}',
     '.settings-seal .s-i{fill:none;stroke:currentColor;stroke-width:1;stroke-dasharray:2 2}',
     '.settings-seal .s-t{fill:currentColor;font-family:var(--f-body);font-size:9px;font-weight:600;letter-spacing:.04em}',
-    '.settings-seal .s-star{fill:none;stroke:currentColor;stroke-width:1.4;stroke-linejoin:round}',
+    '.settings-seal .s-star{fill:none;stroke:currentColor;stroke-width:1.4;stroke-linejoin:miter}',
     '.settings-seal .s-c{fill:currentColor}',
+    '.settings-seal .s-c2{fill:none;stroke:currentColor;stroke-width:1}',
     '.settings-seal.stamp{animation:settings-stamp .5s var(--ease-spring)}',
     /* theme tiles */
     '.settings-theme{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}',
     '.settings-tt{position:relative;display:grid;gap:8px;min-width:0;padding:7px 7px 10px;border:1.5px solid var(--line-2);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);text-align:left;font:inherit;cursor:pointer;transition:border-color var(--t-base),box-shadow var(--t-base),transform var(--t-fast) var(--ease-out)}',
-    '@media (hover:hover){.settings-tt:hover{border-color:color-mix(in srgb,var(--nar) 40%,var(--line-2))}}',
+    '@media (hover:hover){.settings-tt:hover{border-color:color-mix(in srgb,var(--firuze) 45%,var(--line-2))}}',
     '.settings-tt:active{transform:scale(.98)}',
     '.settings-tt:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.settings-tt[aria-pressed="true"]{border-color:var(--nar);box-shadow:0 0 0 3px var(--nar-t)}',
+    '.settings-tt[aria-pressed="true"]{border-color:var(--firuze);box-shadow:0 0 0 3px var(--fir-t)}',
     '.settings-tt > b{display:flex;align-items:center;gap:6px;padding-inline:3px;font-size:var(--fs-sm);font-weight:600;min-width:0}',
     '.settings-tt > b svg{width:15px;height:15px;color:var(--soft)}',
-    '.settings-tt .tt-ck{position:absolute;top:12px;right:12px;z-index:2;width:20px;height:20px;border-radius:50%;background:var(--nar);box-shadow:0 0 0 2px var(--surface);transform:scale(0);transition:transform .3s var(--ease-spring)}',
-    '.settings-tt .tt-ck::after{content:"";position:absolute;inset:5px;background:var(--on-nar);-webkit-mask:var(--m-check) center/contain no-repeat;mask:var(--m-check) center/contain no-repeat}',
+    '.settings-tt .tt-ck{position:absolute;top:12px;right:12px;z-index:2;width:20px;height:20px;border-radius:50%;background:var(--firuze);box-shadow:0 0 0 2px var(--surface);transform:scale(0);transition:transform .3s var(--ease-spring)}',
+    '.settings-tt .tt-ck::after{content:"";position:absolute;inset:5px;background:var(--on-firuze);-webkit-mask:var(--m-check) center/contain no-repeat;mask:var(--m-check) center/contain no-repeat}',
     '.settings-tt[aria-pressed="true"] .tt-ck{transform:scale(1)}',
     '.settings-tt-art{position:relative;display:block;aspect-ratio:4 / 3;border-radius:11px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}',
+    /* mini app previews: lt = new light UI (cool grey, ink, firuzə), dk = new dark UI (near-black, firuzə headings).
+       Fixed per tile, independent of the current theme. Kilim strip = nar + firuzə triangles; logo = göl. */
     '.settings-art{position:absolute;inset:0;background:var(--a-bg)}',
-    '.settings-art.lt{--a-bg:color-mix(in srgb,var(--ivory) 86%,var(--zafaran));--a-card:var(--ivory);--a-line:color-mix(in srgb,var(--deep) 20%,transparent);--a-top:color-mix(in srgb,var(--ivory) 55%,var(--a-bg))}',
-    '.settings-art.dk{--a-bg:var(--deep-2);--a-card:var(--deep);--a-line:color-mix(in srgb,var(--on-deep) 24%,transparent);--a-top:color-mix(in srgb,var(--deep) 55%,var(--deep-2))}',
+    '.settings-art.lt{--a-bg:color-mix(in srgb,var(--ivory) 93%,var(--deep-2));--a-card:var(--ivory);--a-line:color-mix(in srgb,var(--deep-2) 16%,transparent);--a-h:color-mix(in srgb,var(--deep-2) 78%,transparent);--a-fir:color-mix(in srgb,var(--firuze) 78%,var(--deep-2));--a-top:color-mix(in srgb,var(--ivory) 70%,var(--a-bg));--a-dia:var(--ivory)}',
+    '.settings-art.dk{--a-bg:color-mix(in srgb,var(--deep-2) 40%,black);--a-card:color-mix(in srgb,var(--on-deep) 7%,var(--a-bg));--a-line:color-mix(in srgb,var(--on-deep) 20%,transparent);--a-fir:color-mix(in srgb,var(--firuze) 82%,var(--on-deep));--a-h:var(--a-fir);--a-top:color-mix(in srgb,var(--on-deep) 4%,var(--a-bg));--a-dia:var(--on-deep)}',
     '.settings-art.half{clip-path:polygon(100% 0,100% 100%,0 100%)}',
     '.settings-art i{position:absolute;display:block}',
     '.settings-art .a-top{left:0;right:0;top:0;height:17%;background:var(--a-top)}',
-    '.settings-art .a-band{left:0;right:0;top:17%;height:5%;background:repeating-linear-gradient(90deg,var(--rug) 0 5px,var(--zafaran) 5px 7px)}',
-    '.settings-art .a-logo{left:44%;top:3%;width:12%;aspect-ratio:1;background:var(--rug);-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}',
-    '.settings-art .a-side{left:0;top:22%;bottom:0;width:24%;background:color-mix(in srgb,var(--a-card) 55%,var(--a-bg))}',
+    '.settings-art .a-band{left:0;right:0;top:17%;height:6%}',
+    '.settings-art .a-band::before,.settings-art .a-band::after{content:"";position:absolute;inset:0;background:var(--nar);-webkit-mask:var(--m-band) 0 100%/9px 100% repeat-x;mask:var(--m-band) 0 100%/9px 100% repeat-x}',
+    '.settings-art .a-band::after{background:var(--a-fir);-webkit-mask-image:var(--m-band2);mask-image:var(--m-band2)}',
+    '.settings-art .a-logo{left:44%;top:2.5%;width:12%;aspect-ratio:1;background:var(--rug);-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}',
+    '.settings-art .a-logo::before,.settings-art .a-logo::after{content:"";position:absolute;inset:24%;background:var(--a-dia);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}',
+    '.settings-art .a-logo::after{inset:37%;background:var(--a-fir)}',
+    '.settings-art .a-side{left:0;top:23%;bottom:0;width:24%;background:color-mix(in srgb,var(--a-card) 55%,var(--a-bg))}',
     '.settings-art .a-s1,.settings-art .a-s2{left:5%;height:4px;border-radius:2px;background:var(--a-line)}',
-    '.settings-art .a-s1{top:32%;width:13%}',
+    '.settings-art .a-s1{top:32%;width:13%;background:var(--a-fir)}',
     '.settings-art .a-s2{top:42%;width:10%}',
-    '.settings-art .a-card{left:31%;right:7%;top:31%;bottom:12%;border-radius:5px;background:var(--a-card);box-shadow:0 0 0 1px var(--a-line)}',
+    '.settings-art .a-card{left:31%;right:7%;top:31%;bottom:12%;border-radius:6px;background:var(--a-card);box-shadow:0 0 0 1px var(--a-line)}',
     '.settings-art .a-l1,.settings-art .a-l2,.settings-art .a-l3{left:37%;height:4px;border-radius:2px;background:var(--a-line)}',
-    '.settings-art .a-l1{top:40%;width:34%}',
-    '.settings-art .a-l2{top:50%;width:46%}',
+    '.settings-art .a-l1{top:39%;width:34%;height:6px;border-radius:3px;background:var(--a-h)}',
+    '.settings-art .a-l2{top:51%;width:46%}',
     '.settings-art .a-l3{top:60%;width:28%}',
-    '.settings-art .a-btn{left:37%;bottom:19%;width:22%;height:9%;border-radius:3px;background:var(--rug)}',
+    '.settings-art .a-btn{left:37%;bottom:19%;width:24%;height:10%;border-radius:999px;background:var(--a-fir)}',
     /* range */
     '.settings-range{--p:50%;-webkit-appearance:none;appearance:none;display:block;width:100%;height:28px;margin:0;background:transparent;cursor:pointer}',
     '.settings-range:focus{outline:none}',
-    '.settings-range::-webkit-slider-runnable-track{height:6px;border-radius:var(--r-pill);background:linear-gradient(90deg,var(--nar) 0 var(--p),var(--surface2) var(--p) 100%);box-shadow:inset 0 0 0 1px var(--line)}',
+    '.settings-range::-webkit-slider-runnable-track{height:6px;border-radius:var(--r-pill);background:linear-gradient(90deg,var(--firuze) 0 var(--p),var(--surface2) var(--p) 100%);box-shadow:inset 0 0 0 1px var(--line)}',
     '.settings-range::-moz-range-track{height:6px;border-radius:var(--r-pill);background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}',
-    '.settings-range::-moz-range-progress{height:6px;border-radius:var(--r-pill);background:var(--nar)}',
+    '.settings-range::-moz-range-progress{height:6px;border-radius:var(--r-pill);background:var(--firuze)}',
     '.settings-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;margin-top:-8px;border:0;border-radius:50%;background:var(--knob);box-shadow:var(--sh-pop),0 0 0 1px var(--line-2);transition:transform var(--t-fast) var(--ease-spring)}',
     '.settings-range::-moz-range-thumb{width:22px;height:22px;border:0;border-radius:50%;background:var(--knob);box-shadow:var(--sh-pop),0 0 0 1px var(--line-2)}',
     '.settings-range:active::-webkit-slider-thumb{transform:scale(1.14)}',
@@ -631,8 +644,8 @@
     /* companion */
     '.settings-nzgrid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);align-items:start}',
     '@container stmain (min-width:620px){.settings-nzgrid{grid-template-columns:minmax(0,1fr) minmax(0,.92fr)}.settings-nzgrid > .settings-nzprev{order:2;position:sticky;top:calc(var(--hdr-h) + var(--band-h) + 16px)}}',
-    '.settings-nzstage{position:relative;isolation:isolate;display:grid;place-items:end center;min-height:250px;padding:84px 12px 20px;border-radius:var(--r-md);background:radial-gradient(80% 70% at 50% 100%,var(--zaf-t),transparent 70%),var(--surface2)}',
-    '.settings-nzstage::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--zafaran);opacity:.09;-webkit-mask:var(--m-field) 0 0/48px 48px repeat;mask:var(--m-field) 0 0/48px 48px repeat}',
+    '.settings-nzstage{position:relative;isolation:isolate;display:grid;place-items:end center;min-height:250px;padding:84px 12px 20px;border-radius:var(--r-md);background:radial-gradient(80% 70% at 50% 100%,var(--fir-t),transparent 70%),var(--surface2)}',
+    '.settings-nzstage::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--firuze);opacity:.08;-webkit-mask:var(--m-field) 0 0/48px 48px repeat;mask:var(--m-field) 0 0/48px 48px repeat}',
     '.settings-nzstage > .rugband{position:absolute;left:14%;right:14%;bottom:16px;z-index:-1}',
     '.settings-nzstage .nz{transition:width .45s var(--ease-spring),opacity .3s,filter .3s}',
     '.settings-nzstage.off .nz{opacity:.38;filter:grayscale(.75)}',
@@ -659,6 +672,9 @@
     '.settings-plan .price{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}',
     '.settings-plan .price b{font-family:var(--f-display);font-size:2.5rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums lining-nums}',
     '.settings-plan .kv dd{color:var(--on-deep)}',
+    /* modern plan panel: firuzə plan name and a thin firuzə inner frame instead of the gold manuscript frame */
+    '.settings-plan.card.lacquer::before{border-color:color-mix(in srgb,var(--firuze) 32%,transparent)}',
+    '.settings-plan.card.lacquer h2 em{color:color-mix(in srgb,var(--firuze) 80%,var(--on-deep))}',
     '.settings-plan .actions{display:flex;flex-wrap:wrap;gap:8px}',
     '.settings-plan .btn-ghost{--btn-ink:var(--on-deep);--btn-bg-h:color-mix(in srgb,var(--on-deep) 12%,transparent)}',
     '.settings-meter{display:grid;gap:7px}',
@@ -670,8 +686,8 @@
     '.settings-cmp th:first-child,.settings-cmp td:first-child{padding-left:14px}',
     '.settings-cmp th:not(:first-child),.settings-cmp td:not(:first-child){text-align:center}',
     '.settings-cmp td:first-child{font-weight:500}',
-    '.settings-cmp .cur{background:var(--nar-t)}',
-    '.settings-cmp th.cur{color:var(--nar)}',
+    '.settings-cmp .cur{background:var(--fir-t)}',
+    '.settings-cmp th.cur{color:var(--firuze)}',
     '.settings-cmp th small{display:block;margin-top:3px;font-weight:500;letter-spacing:0;text-transform:none;font-size:.72rem;color:var(--soft)}',
     '.settings-cmp .yes{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ok-t);color:var(--ok)}',
     '.settings-cmp .yes svg{width:13px;height:13px}',
@@ -680,7 +696,7 @@
     '.settings-keys td:last-child{text-align:right;white-space:nowrap}',
     '.settings-keys .kbd{transition:background var(--t-fast),color var(--t-fast),transform var(--t-fast),border-color var(--t-fast)}',
     '.settings-keys .kbd.on{background:var(--lacquer);border-color:var(--lacquer);color:var(--on-lacquer);transform:translateY(1px)}',
-    '.settings-keys tr.hit td{background:var(--zaf-t)}',
+    '.settings-keys tr.hit td{background:var(--fir-t)}',
     '.settings-keys tr.grp td{background:var(--surface2);font-size:.6875rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);padding-block:8px}',
     '.settings-keys .plus{margin:0 3px;color:var(--faint);font-size:var(--fs-xs)}',
     /* about */
@@ -692,7 +708,9 @@
     '.settings-legal{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;font-size:var(--fs-sm)}',
     '.settings-stars{display:flex;gap:2px}',
     '.settings-stars button{width:40px;height:40px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:none;color:var(--line-2);cursor:pointer;transition:transform var(--t-fast) var(--ease-spring),color var(--t-fast)}',
-    '.settings-stars button span{width:26px;height:26px;background:currentColor;-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}',
+    /* rating: a plain rounded 5-point star (universal «rate us» symbol, not the göl ornament) */
+    '.settings-stars{--settings-m-star5:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\'%3E%3Cpath d=\'M12 2.6l2.9 5.9 6.5.95-4.7 4.58 1.1 6.47L12 17.45 6.2 20.5l1.1-6.47L2.6 9.45l6.5-.95z\' stroke=\'black\' stroke-width=\'1.6\' stroke-linejoin=\'round\'/%3E%3C/svg%3E")}',
+    '.settings-stars button span{width:26px;height:26px;background:currentColor;-webkit-mask:var(--settings-m-star5) center/contain no-repeat;mask:var(--settings-m-star5) center/contain no-repeat}',
     '.settings-stars button.on{color:var(--zafaran)}',
     '.settings-stars button:active{transform:scale(.86)}',
     '.settings-stars button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}',
@@ -706,7 +724,7 @@
     '@keyframes settings-in-r{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}',
     '@keyframes settings-in-l{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}',
     '@keyframes settings-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}',
-    '@keyframes settings-flash{0%,35%{box-shadow:0 0 0 3px var(--zafaran);background-color:var(--zaf-t)}100%{box-shadow:0 0 0 3px transparent;background-color:transparent}}',
+    '@keyframes settings-flash{0%,35%{box-shadow:0 0 0 3px var(--firuze);background-color:var(--fir-t)}100%{box-shadow:0 0 0 3px transparent;background-color:transparent}}',
     '@keyframes settings-shake{0%,100%{transform:none}20%{transform:translateX(-7px)}45%{transform:translateX(6px)}70%{transform:translateX(-3px)}}',
     '@keyframes settings-stamp{0%{transform:rotate(-12deg) scale(1.3);opacity:0}60%{transform:rotate(-12deg) scale(.93);opacity:1}100%{transform:rotate(-12deg) scale(1)}}',
     '@keyframes settings-pop{0%{transform:scale(.86)}100%{transform:scale(1)}}',
@@ -915,7 +933,7 @@
     V.compBtn = h('button', { class: 'link small', type: 'button', onclick: completeNext }, 'Tamamla');
     V.comp = h('div', { class: 'settings-complete' },
       h('div', { class: 'row' }, V.compTx, V.compBtn),
-      h('div', { class: 'progress gold thin', role: 'progressbar', 'aria-label': 'Profil tamlığı', 'aria-valuemin': '0', 'aria-valuemax': '100' }, V.compBar));
+      h('div', { class: 'progress settings-prog thin', role: 'progressbar', 'aria-label': 'Profil tamlığı', 'aria-valuemin': '0', 'aria-valuemax': '100' }, V.compBar));
     return h('section', { class: 'card settings-hero', 'aria-label': 'Profil' },
       h('div', { class: 'rugband thin', 'aria-hidden': 'true' }),
       V.av,
@@ -937,7 +955,7 @@
     V.heroMail.title = Dr.email || '';
     V.heroBadges.textContent = '';
     var plan = planOf(p.plan);
-    V.heroBadges.appendChild(h('span', { class: 'badge gold' }, ie('star'), plan.id + ' plan'));
+    V.heroBadges.appendChild(h('span', { class: 'badge settings-fir' }, ie('tag'), plan.id + ' plan'));
     if (App.mode && App.mode() === 'academy' && p.rank) V.heroBadges.appendChild(h('span', { class: 'badge navy' }, ie('medal'), p.rank + ' rütbəsi'));
     if (Dr.notarial) V.heroBadges.appendChild(h('span', { class: 'badge navy' }, ie('stamp'), 'Notarial tərcümə'));
     var since = new Date(p.memberSince || '2024-03-11');
@@ -982,7 +1000,7 @@
       sw.appendChild(b);
     });
     var body = h('div', { class: 'settings-avsheet' }, prev, cap, sw,
-      h('p', { class: 'small muted', text: 'Fotoşəkil əvəzinə baş hərfləriniz 8 guşəli ulduzda göstərilir — layihələrdə, hesab-fakturada və Telegram botda.' }));
+      h('p', { class: 'small muted', text: 'Fotoşəkil əvəzinə baş hərfləriniz xalça gölündə göstərilir — layihələrdə, hesab-fakturada və Telegram botda.' }));
     App.sheet({
       title: 'Şəkli dəyiş', body: body,
       actions: [{ label: 'Ləğv et', kind: 'ghost' }, { label: 'Yadda saxla', kind: 'primary', onClick: function () {
@@ -1162,12 +1180,14 @@
   /* ------------------------------------------------------------------
      10. SECTION: İŞ PROFİLİ
      ------------------------------------------------------------------ */
-  function star8(cx, cy, R0, r) {
-    var p = [];
-    for (var i = 0; i < 16; i++) {
-      var a = -Math.PI / 2 + i * Math.PI / 8, rr = (i % 2) ? r : R0;
-      p.push((Math.round((cx + rr * Math.cos(a)) * 100) / 100) + ',' + (Math.round((cy + rr * Math.sin(a)) * 100) / 100));
-    }
+  /* göl: stepped carpet diamond centred on (cx, cy), half-diagonal R0, `n` steps per edge */
+  function golPts(cx, cy, R0, n) {
+    var st = R0 / (n + 1), p = [], i;
+    function pt(x, y) { p.push((Math.round((cx + x) * 100) / 100) + ',' + (Math.round((cy + y) * 100) / 100)); }
+    for (i = 0; i <= n; i++) { pt(i * st, -R0 + i * st); pt((i + 1) * st, -R0 + i * st); }
+    for (i = 0; i <= n; i++) { pt(R0 - i * st, i * st); pt(R0 - i * st, (i + 1) * st); }
+    for (i = 0; i <= n; i++) { pt(-i * st, R0 - i * st); pt(-(i + 1) * st, R0 - i * st); }
+    for (i = 0; i <= n; i++) { pt(-R0 + i * st, -i * st); pt(-R0 + i * st, -(i + 1) * st); }
     return p.join(' ');
   }
   function sealSvg(name) {
@@ -1176,7 +1196,7 @@
     return '<svg class="settings-seal" viewBox="0 0 120 120" aria-hidden="true" focusable="false"><defs><path id="' + id + '" d="M60 60 m-45 0 a45 45 0 1 1 90 0 a45 45 0 1 1 -90 0"/></defs>' +
       '<circle class="s-o" cx="60" cy="60" r="57"/><circle class="s-i" cx="60" cy="60" r="35"/>' +
       '<text class="s-t"><textPath href="#' + id + '" textLength="278" lengthAdjust="spacingAndGlyphs">' + esc(txt) + '</textPath></text>' +
-      '<polygon class="s-star" points="' + star8(60, 60, 22, 17) + '"/><circle class="s-c" cx="60" cy="60" r="5"/></svg>';
+      '<polygon class="s-star" points="' + golPts(60, 60, 23, 3) + '"/><polygon class="s-c2" points="60,47 73,60 60,73 47,60"/><polygon class="s-c" points="60,54 66,60 60,66 54,60"/></svg>';
   }
 
   function secWork() {
@@ -1193,7 +1213,7 @@
           var nx = chips.querySelector('.x'); focusEl(nx || chips.querySelector('.settings-add'));
         });
         chips.appendChild(h('span', { class: 'chip' + (i === 0 ? ' settings-chip-main' : ''), role: 'listitem', title: pairName(pid) + (i === 0 ? ' · əsas cüt' : '') },
-          i === 0 ? ie('star') : null, pairLabel(pid), x));
+          i === 0 ? ie('target') : null, pairLabel(pid), x));
       });
       chips.appendChild(h('button', { class: 'chip settings-add', type: 'button', onclick: addPairsSheet }, ie('plus'), 'Cüt əlavə et'));
     }
@@ -1225,7 +1245,7 @@
     }
     drawPairs();
     var pErr = h('span', { class: 'err', role: 'alert', hidden: true }); ERR.pairs = pErr;
-    var pairsCard = card('Dil cütləri', 'Hansı istiqamətlərdə tərcümə edirsiniz. Ulduzlu cüt əsasdır.', [chips, pErr], { opt: 'pairs' });
+    var pairsCard = card('Dil cütləri', 'Hansı istiqamətlərdə tərcümə edirsiniz. İşarəli birinci cüt əsasdır.', [chips, pErr], { opt: 'pairs' });
 
     /* specialties */
     var sChips = h('div', { class: 'chips', id: 'st-specialties', role: 'list', 'aria-label': 'İxtisas sahələri' });
@@ -1558,7 +1578,7 @@
   }
   function secAppearance() {
     var ui = uiCfg();
-    var cur = App.theme ? App.theme() : 'system';
+    var cur = App.theme ? App.theme() : 'dark';
     var tiles = h('div', { class: 'settings-theme', role: 'group', 'aria-label': 'Tema', id: 'st-theme' });
     function markTiles(t) { each(tiles.children, function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === t)); }); }
     THEMES.forEach(function (t) {
@@ -1566,7 +1586,7 @@
       var b = h('button', { class: 'settings-tt', type: 'button', 'aria-pressed': String(t.id === cur), 'data-v': t.id },
         h('span', { class: 'settings-tt-art', 'aria-hidden': 'true' }, art), h('span', { class: 'tt-ck', 'aria-hidden': 'true' }), h('b', null, ie(t.ic), t.label));
       b.addEventListener('click', function () {
-        if ((App.theme ? App.theme() : 'system') === t.id) return;
+        if ((App.theme ? App.theme() : 'dark') === t.id) return;
         markTiles(t.id);
         setThemeFx(t.id, b);
         syncSummaries();
@@ -1576,7 +1596,7 @@
       });
       tiles.appendChild(b);
     });
-    V.onTheme = function () { markTiles(App.theme ? App.theme() : 'system'); };
+    V.onTheme = function () { markTiles(App.theme ? App.theme() : 'dark'); };
 
     /* font size */
     var fsVal = h('span', { class: 'settings-rangeval' });
@@ -1628,7 +1648,7 @@
       }
     });
     var introRow = h('button', { class: 'list-row', type: 'button', 'data-opt': 'intro', onclick: function () { if (App.onboarding) App.onboarding(); } },
-      icTile('sparkle', 'nar'), h('span', { class: 'tx' }, h('b', { text: 'Girişi yenidən göstər' }), h('small', { text: 'Nuanza ilə tanışlıq, rejim və dil cütlərinin seçimi' })), h('span', { class: 'end' }, ie('chevron')));
+      icTile('sparkle', 'settings-fir'), h('span', { class: 'tx' }, h('b', { text: 'Girişi yenidən göstər' }), h('small', { text: 'Nuanza ilə tanışlıq, rejim və dil cütlərinin seçimi' })), h('span', { class: 'end' }, ie('chevron')));
 
     return h('div', { class: 'stack-lg' },
       card('Tema', 'Sistem rejimi gündüz işıqlı, axşam qaranlıq görünür.', [tiles], { opt: 'theme' }),
@@ -1910,7 +1930,7 @@
     var lim = LIMITS[plan.id] || LIMITS['Peşəkar'];
     function meter(label, used, limit, unit) {
       var pct = limit ? Math.min(100, Math.round(used / limit * 100)) : 12;
-      var cls = !limit ? 'green' : pct >= 100 ? '' : pct >= 80 ? 'gold' : 'navy';
+      var cls = !limit ? 'green' : pct >= 100 ? 'settings-over' : pct >= 80 ? 'gold' : 'settings-prog';
       return h('div', { class: 'settings-meter' },
         h('div', { class: 'row' }, h('b', null, label, ' ', limit && used > limit ? h('span', { class: 'badge red', text: 'Limit aşılıb' }) : null),
           h('span', { class: 'settings-meter-n', text: num(used) + ' / ' + (limit ? num(limit) : 'limitsiz') + '\u00a0' + unit })),
@@ -1957,7 +1977,7 @@
       PLANS.forEach(function (pl) {
         var pr = period === 'year' ? pl.yearly : pl.price;
         var b = h('button', { class: 'choice', type: 'button', 'aria-pressed': String(pl.id === chosen) }, icTile(pl.ic, pl.cls),
-          h('span', { class: 'grow' }, h('b', null, pl.id, pl.id === cur ? h('span', { class: 'badge gold', text: 'Cari' }) : null),
+          h('span', { class: 'grow' }, h('b', null, pl.id, pl.id === cur ? h('span', { class: 'badge settings-fir', text: 'Cari' }) : null),
             h('small', { text: pl.tag + ' · ' + (pr ? priceTxt(pr) + '\u00a0/\u00a0ay' : 'Pulsuz') })));
         b.addEventListener('click', function () { chosen = pl.id; draw(); var f = list.querySelector('[aria-pressed="true"]'); focusEl(f); });
         list.appendChild(b);
@@ -2059,8 +2079,8 @@
       'Notarial və hüquqi sənədlərdə yekun məsuliyyət imzalayan tərcüməçinin üzərindədir. Mirzə Məclisinin hökmü tövsiyə xarakterlidir.',
       'Abunə istənilən vaxt ləğv edilə bilər; ödənilmiş dövr sonuna qədər bütün imkanlar açıq qalır.'] },
     licenses: { title: 'Açıq mənbə lisenziyaları', paras: [
-      'Noto Serif Display və Noto Sans şriftləri — SIL Open Font License 1.1.',
-      'Xalça naxışları və 8 guşəli ulduz motivi Nuanza komandası tərəfindən çəkilib.',
+      'Unbounded və Plus Jakarta Sans şriftləri — SIL Open Font License 1.1.',
+      'Xalça naxışları və göl motivi Nuanza komandası tərəfindən çəkilib.',
       'Nuanza və Mirzə Məclisi personajları — © 2026 Nuanza, Bakı.'] }
   };
   function legalSheet(id) {
@@ -2171,7 +2191,7 @@
       if (id === 'work') { var r = parseDec(Dr.rate); return (pairsShort(Dr.pairs) || '—') + (isFinite(r) ? ' · ' + num(r) + ' ₼/söz' : ''); }
       if (id === 'translation') return (REG_SHORT[Dr.register] || '') + ' · ' + (Q_SHORT[Dr.quality] || '');
       if (id === 'companion') { var c = compCfg(); return c.show ? 'Görünür · ' + ({ sakit: 'sakit', normal: 'normal danışır', cox: 'çox danışır' }[c.talk] || '') : 'Gizlədilib'; }
-      if (id === 'appearance') { var t = App.theme ? App.theme() : 'system'; var mo = App.motion ? App.motion() : 'full'; return ({ system: 'Sistem', light: 'İşıqlı', dark: 'Qaranlıq' }[t] || '') + ' · şrift ' + uiCfg().fontScale + '%' + (mo === 'reduce' ? ' · az animasiya' : mo === 'system' ? ' · animasiya sistemə görə' : ''); }
+      if (id === 'appearance') { var t = App.theme ? App.theme() : 'dark'; var mo = App.motion ? App.motion() : 'full'; return ({ system: 'Sistem', light: 'İşıqlı', dark: 'Qaranlıq' }[t] || '') + ' · şrift ' + uiCfg().fontScale + '%' + (mo === 'reduce' ? ' · az animasiya' : mo === 'system' ? ' · animasiya sistemə görə' : ''); }
       if (id === 'notifications') return tgLink().linked ? 'Telegram qoşulub' : 'Telegram qoşulmayıb';
       if (id === 'privacy') return Dr.local ? 'Lokal rejim' : (Dr.mask ? 'Bulud · maskalama aktiv' : 'Bulud rejimi');
       if (id === 'billing') { var p = App.profile(), pl = planOf(p.plan); return pl.id + (pl.price ? ' · ' + priceTxt(billing().period === 'year' ? pl.yearly : pl.price) + '/ay' : ''); }

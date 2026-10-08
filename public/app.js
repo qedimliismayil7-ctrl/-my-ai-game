@@ -333,7 +333,7 @@
   var PROFILE_DEFAULTS = {
     name: 'Aysel Məmmədova', email: 'aysel.mammadova@nuanza.az', phone: '+994 50 412 36 18', telegram: '@aysel_tercume',
     role: 'Freelance tərcüməçi', city: 'Bakı', pairs: ['en-az', 'ru-az'], specialties: ['Hüquq', 'Maliyyə', 'Neft-qaz'],
-    avatarColor: 'av-nar', plan: 'Peşəkar', planPrice: 29, planRenews: '2026-11-07', rate: 0.06, currency: 'AZN',
+    avatarColor: 'av-firuze', plan: 'Peşəkar', planPrice: 29, planRenews: '2026-11-07', rate: 0.06, currency: 'AZN',
     memberSince: '2024-03-11', xp: 1840, streak: 12, bestStreak: 31, dailyGoal: 30,
     school: 'Bakı Dövlət Universiteti · Tərcümə fakültəsi',
     bio: 'Hüquqi və maliyyə tərcüməsi üzrə 7 illik təcrübə. SOCAR, Kapital Bank və ADA Universiteti ilə əməkdaşlıq.'
@@ -384,7 +384,7 @@
     '.dr-profile .who .badge{display:inline-flex}',
     '.shell-dock{position:relative;width:var(--dock);height:var(--dock);padding:0;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;',
     '  background:radial-gradient(circle at 35% 28%,color-mix(in srgb,var(--deep) 70%,var(--ivory)),var(--deep) 70%);',
-    '  box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--zafaran),var(--sh-2);transition:transform var(--t-base) var(--ease-spring)}',
+    '  box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--firuze),var(--sh-2);transition:transform var(--t-base) var(--ease-spring)}',
     '.shell-dock svg{width:34px;height:34px;transition:transform .7s var(--ease-spring)}',
     '@media (hover:hover){.shell-dock:hover{transform:translateY(-2px) scale(1.04)}.shell-dock:hover svg{transform:rotate(45deg)}}',
     '.shell-dock:active{transform:scale(.94)}.shell-dock.bump{animation:medal-pop .6s var(--ease-spring)}',
@@ -1646,8 +1646,8 @@
         '<header class="hdr"><div class="hdr-in">' +
         '<button class="burger" type="button" aria-label="Menyunu aç" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>' +
         '<a class="brand" href="#home" aria-label="Nuanza — ana səhifə">' + logoSvg() + '<b>Nuanza</b><small hidden>Akademiya</small></a>' +
-        '<button class="avatar av-nar" type="button" aria-label="Profil və ayarlar">AM</button></div><div class="rugband" aria-hidden="true"></div></header>' +
-        '<nav class="drawer" id="drawer" aria-label="Əsas menyu"><button class="dr-profile" type="button"><span class="avatar lg av-nar" aria-hidden="true">AM</span><span class="who"><b></b><small></small><span class="badge"></span></span></button>' +
+        '<button class="avatar av-firuze" type="button" aria-label="Profil və ayarlar">AM</button></div><div class="rugband" aria-hidden="true"></div></header>' +
+        '<nav class="drawer" id="drawer" aria-label="Əsas menyu"><button class="dr-profile" type="button"><span class="avatar lg av-firuze" aria-hidden="true">AM</span><span class="who"><b></b><small></small><span class="badge"></span></span></button>' +
         '<div class="dr-mode"><div class="seg block" role="group" aria-label="Rejim"><button type="button" data-mode="pro" aria-pressed="true">Peşəkar</button><button type="button" data-mode="academy" aria-pressed="false">Akademiya</button></div></div>' +
         '<div class="dr-tools"><button class="dr-search" type="button"></button></div><div class="dr-nav"></div>' +
         '<div class="dr-foot"><button class="icon-btn ghost theme-toggle" type="button" aria-label="Rəng rejimini dəyiş"></button><span class="ver">Nuanza ' + VERSION + ' · Bakı</span></div></nav>' +
@@ -1726,7 +1726,7 @@
       if (a.getAttribute('data-id') === id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
   }
-  function avatarCls(c) { return /^av-(nar|lacquer|zafaran|firuze|benovse|zeytun)$/.test(c || '') ? c : 'av-nar'; }
+  function avatarCls(c) { return /^av-(nar|lacquer|zafaran|firuze|benovse|zeytun)$/.test(c || '') ? c : 'av-firuze'; }
   function renderProfile() {
     var p = profile(), cls = avatarCls(p.avatarColor);
     if (els.hdrAvatar) {
@@ -1992,7 +1992,7 @@
     var rows = [
       { ic: 'sparkle', cls: 'gold', b: 'Növbəti məsləhət', s: 'Hər dəfə yeni bir incəlik', run: function () { ti = (ti + 1) % tips.length; bubble.textContent = tips[ti]; try { if (mini && mini.set) mini.set('point', { ms: 1200 }); } catch (e) { /* ignore */ } return false; } },
       { ic: 'search', b: 'Axtar və keç', s: MOD + ' + K', run: function () { later(palette, 60); } },
-      { ic: 'shield', cls: 'nar', b: 'Mirzə Məclisi necə işləyir?', s: 'Beş mirzə, beş yoxlama — nümunəyə baxın', run: function () { later(demoCouncil, 60); } },
+      { ic: 'shield', cls: 'fir', b: 'Mirzə Məclisi necə işləyir?', s: 'Beş mirzə, beş yoxlama — nümunəyə baxın', run: function () { later(demoCouncil, 60); } },
       { ic: 'keyboard', b: 'Klaviatura qısayolları', s: 'Tez işləmək üçün', run: function () { later(shortcuts, 60); } },
       { ic: 'eyeoff', b: 'Nuanzanı gizlət', s: 'Ayarlardan yenə qaytara bilərsiniz', run: function () {
         setCompanion({ show: false });
@@ -2211,7 +2211,7 @@
         h('h1', { class: 'onb-h', id: 'onb-h', html: 'Necə <em>işləyirsiniz</em>?' }),
         h('p', { class: 'onb-p', text: 'Rejimi istənilən vaxt menyudan dəyişə bilərsiniz.' }),
         h('div', { class: 'onb-choices', role: 'group', 'aria-label': 'Rejim' },
-          choice('pro', 'folder', 'nar', 'Peşəkar tərcüməçi', 'Layihələr, lüğət, tərcümə yaddaşı, QA və təhvil paketi'),
+          choice('pro', 'folder', 'fir', 'Peşəkar tərcüməçi', 'Layihələr, lüğət, tərcümə yaddaşı, QA və təhvil paketi'),
           choice('academy', 'cap', 'gold', 'Tələbə — Akademiya', 'Dərslər, missiyalar, səhv kartları, XP və rütbələr')),
         h('div', { class: 'onb-actions' },
           h('button', { class: 'btn btn-ghost btn-lg', type: 'button', onclick: function () { show(0); } }, iconEl('back'), 'Geri'),
