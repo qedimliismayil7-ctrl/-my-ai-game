@@ -1,0 +1,10 @@
+{
+  "name": "nuanza",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "deploy": "node build.mjs && wrangler deploy",
+    "check": "node build.mjs && node --check dist/worker.js"
+  }
+}

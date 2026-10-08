@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Nuanza — Azərbaycan dili ilə işləyən tərcüməçilər üçün iş masası: layihələr, redaktor, keyfiyyət yoxlaması, Mirzə Məclisi və Akademiya.">
+<meta name="theme-color" content="#F6F2EA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10132A" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nuanza">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.png">
+<script>window.NUANZA_LIVE = true;</script>
+<script src="https://telegram.org/js/telegram-web-app.js" async onload="try{Telegram.WebApp.ready();Telegram.WebApp.expand();}catch(e){}"></script>
+<title>Nuanza — tərcüməçinin iş masası</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,500;0,600;0,700;1,400;1,500&display=swap">
+<link rel="stylesheet" href="app.css">
+<script>
+  /* Apply saved theme + mode before first paint (no flash). */
+  (function () {
+    var r = document.documentElement;
+    r.lang = 'az';
+    try {
+      var t = JSON.parse(localStorage.getItem('nuanza2:theme'));
+      if (t === 'dark' || t === 'light') r.setAttribute('data-theme', t);
+      var m = JSON.parse(localStorage.getItem('nuanza2:mode'));
+      r.setAttribute('data-mode', m === 'academy' ? 'academy' : 'pro');
+      var mo = JSON.parse(localStorage.getItem('nuanza2:motion'));
+      r.setAttribute('data-motion', (mo === 'reduce' || mo === true) ? 'reduce' : mo === 'system' ? 'system' : 'full');
+    } catch (e) { r.setAttribute('data-mode', 'pro'); }
+  })();
+</script>
+
+</head>
+<body>
+<a class="skip-link" href="#main">Məzmuna keç</a>
+
+<div class="app" id="app">
+  <header class="hdr">
+    <div class="hdr-in">
+      <button class="burger" type="button" aria-label="Menyunu aç" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>
+      <a class="brand" href="#home" aria-label="Nuanza — ana səhifə">
+        <svg class="logo" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false">
+          <polygon class="l-star" points="0,-19 5.56,-13.43 13.43,-13.43 13.43,-5.56 19,0 13.43,5.56 13.43,13.43 5.56,13.43 0,19 -5.56,13.43 -13.43,13.43 -13.43,5.56 -19,0 -13.43,-5.56 -13.43,-13.43 -5.56,-13.43"/>
+          <circle class="l-ring" r="8"/><circle class="l-dot" r="2.6"/>
+        </svg>
+        <b>Nuanza</b><small hidden>Akademiya</small>
+      </a>
+      <button class="avatar av-nar" type="button" aria-label="Profil və ayarlar">AM</button>
+    </div>
+    <div class="rugband" aria-hidden="true"></div>
+  </header>
+
+  <nav class="drawer" id="drawer" aria-label="Əsas menyu">
+    <button class="dr-profile" type="button" aria-label="Profil və ayarlar">
+      <span class="avatar lg av-nar" aria-hidden="true">AM</span>
+      <span class="who"><b>Aysel Məmmədova</b><small>Freelance tərcüməçi · EN/RU → AZ</small><span class="badge">Peşəkar</span></span>
+    </button>
+    <div class="dr-mode">
+      <div class="seg block" role="group" aria-label="Rejim">
+        <button type="button" data-mode="pro" aria-pressed="true">Peşəkar</button><button type="button" data-mode="academy" aria-pressed="false">Akademiya</button>
+      </div>
+    </div>
+    <div class="dr-tools"><button class="dr-search" type="button" aria-label="Axtar və keç"><span class="lbl">Axtar və keç</span></button></div>
+    <div class="dr-nav" id="dr-nav"></div>
+    <div class="dr-foot">
+      <button class="icon-btn ghost theme-toggle" type="button" aria-label="Rəng rejimini dəyiş"></button>
+      <span class="ver">Nuanza 2.0 · Bakı</span>
+    </div>
+  </nav>
+  <div class="scrim" aria-hidden="true"></div>
+
+  <main class="main" id="main">
+    <section class="screen" aria-busy="true" aria-label="Yüklənir">
+      <div class="page">
+        <div class="sk-stack"><span class="skeleton text" style="width:120px"></span><span class="skeleton title"></span><span class="skeleton text" style="width:72%"></span></div>
+        <div class="grid-3"><span class="skeleton block"></span><span class="skeleton block"></span><span class="skeleton block"></span></div>
+        <span class="skeleton block" style="height:220px"></span>
+      </div>
+    </section>
+  </main>
+
+  <div class="companion" aria-label="Nuanza"></div>
+</div>
+
+<div class="toasts" aria-live="polite"></div>
+<canvas class="fx-layer" aria-hidden="true"></canvas>
+
+<script src="nuanza.js"></script>
+<script src="meclis.js"></script>
+<script src="ai/core.js"></script>
+<script src="ai/translate.js"></script>
+<script src="ai/check.js"></script>
+<script src="ai/qa.js"></script>
+<script src="ai/lesson.js"></script>
+<script src="app.js"></script>
+<script src="s-home.js"></script>
+<script src="s-translate.js"></script>
+<script src="s-projects.js"></script>
+<script src="s-academy.js"></script>
+<script src="s-settings.js"></script>
+<script>
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(function () {}); }
+  if (window.App && typeof App.start === 'function') {
+    App.start();
+  } else {
+    var m = document.getElementById('main');
+    if (m) m.innerHTML = '<div class="page"><div class="empty"><div class="empty-art"></div><h3>Nuanza yüklənmədi</h3><p>Səhifəni yeniləyin. Problem davam edərsə, bir az sonra yenidən cəhd edin.</p></div></div>';
+  }
+</script>
+</body>
+</html>
