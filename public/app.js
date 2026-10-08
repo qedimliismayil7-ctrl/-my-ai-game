@@ -83,7 +83,7 @@
   function storeWatch(key) {
     if (!started) return;
     try {
-      if (key === 'theme') applyTheme(store.get('theme', 'system'));
+      if (key === 'theme') applyTheme(store.get('theme', 'dark'));
       else if (key === 'motion') applyMotion();
       else if (key === 'companion') { clearTimeout(watchTimer); watchTimer = later(mountCompanion, 30); }
       else if (key === 'profile') renderProfile();
@@ -227,10 +227,11 @@
       '" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + ICONS[n] + '</svg>';
   }
   function iconEl(name, cls) { return frag(icon(name, cls)); }
-  var STAR_PTS = '0,-19 5.56,-13.43 13.43,-13.43 13.43,-5.56 19,0 13.43,5.56 13.43,13.43 5.56,13.43 0,19 -5.56,13.43 -13.43,13.43 -13.43,5.56 -19,0 -13.43,-5.56 -13.43,-13.43 -5.56,-13.43';
+  /* göl — stepped carpet diamond (the brand mark; replaced the old 8-point star) */
+  var STAR_PTS = '0,-19 4.22,-14.78 4.22,-11.61 7.39,-11.61 11.61,-7.39 11.61,-4.22 14.78,-4.22 19,0 14.78,4.22 11.61,4.22 11.61,7.39 7.39,11.61 4.22,11.61 4.22,14.78 0,19 -4.22,14.78 -4.22,11.61 -7.39,11.61 -11.61,7.39 -11.61,4.22 -14.78,4.22 -19,0 -14.78,-4.22 -11.61,-4.22 -11.61,-7.39 -7.39,-11.61 -4.22,-11.61 -4.22,-14.78';
   function logoSvg(cls) {
     return '<svg class="' + (cls || 'logo') + '" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false"><polygon class="l-star" points="' + STAR_PTS +
-      '"/><circle class="l-ring" r="8"/><circle class="l-dot" r="2.6"/></svg>';
+      '"/><polygon class="l-ring" points="0,-10 10,0 0,10 -10,0"/><polygon class="l-dot" points="0,-5 5,0 0,5 -5,0"/></svg>';
   }
 
   /* ------------------------------------------------------------------
@@ -2168,7 +2169,7 @@
     var restore = D.activeElement, done = false, nz = null;
     var el = h('div', { class: 'onb', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Nuanza-ya xoş gəldiniz' });
     var skip = h('button', { class: 'btn btn-ghost btn-sm onb-skip', type: 'button', onclick: function () { finish(true); } }, 'Keç');
-    var star = frag('<svg class="onb-star" viewBox="-20 -20 40 40" aria-hidden="true"><path class="l-star" pathLength="1" d="M0 -19 5.56 -13.43 13.43 -13.43 13.43 -5.56 19 0 13.43 5.56 13.43 13.43 5.56 13.43 0 19 -5.56 13.43 -13.43 13.43 -13.43 5.56 -19 0 -13.43 -5.56 -13.43 -13.43 -5.56 -13.43Z"/><circle class="l-ring" r="8"/><circle class="l-dot" r="2.6"/></svg>');
+    var star = frag('<svg class="onb-star" viewBox="-20 -20 40 40" aria-hidden="true"><path class="l-star" pathLength="1" d="M0 -19 4.22 -14.78 4.22 -11.61 7.39 -11.61 11.61 -7.39 11.61 -4.22 14.78 -4.22 19 0 14.78 4.22 11.61 4.22 11.61 7.39 7.39 11.61 4.22 11.61 4.22 14.78 0 19 -4.22 14.78 -4.22 11.61 -7.39 11.61 -11.61 7.39 -11.61 4.22 -14.78 4.22 -19 0 -14.78 -4.22 -11.61 -4.22 -11.61 -7.39 -7.39 -11.61 -4.22 -11.61 -4.22 -14.78Z"/><polygon class="l-ring" points="0,-10 10,0 0,10 -10,0"/><polygon class="l-dot" points="0,-5 5,0 0,5 -5,0"/></svg>');
     var stage = h('div', { class: 'onb-stage' });
     var rug = h('div', { class: 'onb-rug', 'aria-hidden': 'true' });
     var hero = h('div', { class: 'onb-hero' }, star, stage, rug);
@@ -2334,7 +2335,7 @@
     try { W.history.scrollRestoration = 'manual'; } catch (e) { /* ignore */ }
     css('shell', SHELL_CSS);
     var m = store.get('mode', 'pro'); curMode = m === 'academy' ? 'academy' : 'pro';
-    applyTheme(store.get('theme', 'system'));
+    applyTheme(store.get('theme', 'dark'));
     applyMotion();
     buildShell();
     syncModeUI();
@@ -2442,7 +2443,7 @@
     intro: onboarding,
     openDrawer: openDrawer,
     closeDrawer: function () { closeDrawer(false); },
-    theme: function () { return store.get('theme', 'system'); },
+    theme: function () { return store.get('theme', 'dark'); },
     effectiveTheme: effectiveTheme,
     setTheme: function (t) { setTheme(t, null); },
     toggleTheme: function () { toggleTheme(null); },

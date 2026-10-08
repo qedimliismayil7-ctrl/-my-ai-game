@@ -4,8 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Nuanza — Azərbaycan dili ilə işləyən tərcüməçilər üçün iş masası: layihələr, redaktor, keyfiyyət yoxlaması, Mirzə Məclisi və Akademiya.">
-<meta name="theme-color" content="#F6F2EA" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#10132A" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0A0B0E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Nuanza">
@@ -17,7 +16,7 @@
 <title>Nuanza — tərcüməçinin iş masası</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Serif+Display:ital,wght@0,500;0,600;0,700;1,400;1,500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="app.css">
 <script>
   /* Apply saved theme + mode before first paint (no flash). */
@@ -25,13 +24,14 @@
     var r = document.documentElement;
     r.lang = 'az';
     try {
+      /* dark is the default look; 'system' follows the OS, 'light' is opt-in */
       var t = JSON.parse(localStorage.getItem('nuanza2:theme'));
-      if (t === 'dark' || t === 'light') r.setAttribute('data-theme', t);
+      if (t !== 'system') r.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
       var m = JSON.parse(localStorage.getItem('nuanza2:mode'));
       r.setAttribute('data-mode', m === 'academy' ? 'academy' : 'pro');
       var mo = JSON.parse(localStorage.getItem('nuanza2:motion'));
       r.setAttribute('data-motion', (mo === 'reduce' || mo === true) ? 'reduce' : mo === 'system' ? 'system' : 'full');
-    } catch (e) { r.setAttribute('data-mode', 'pro'); }
+    } catch (e) { r.setAttribute('data-mode', 'pro'); r.setAttribute('data-theme', 'dark'); }
   })();
 </script>
 
@@ -45,8 +45,8 @@
       <button class="burger" type="button" aria-label="Menyunu aç" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>
       <a class="brand" href="#home" aria-label="Nuanza — ana səhifə">
         <svg class="logo" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false">
-          <polygon class="l-star" points="0,-19 5.56,-13.43 13.43,-13.43 13.43,-5.56 19,0 13.43,5.56 13.43,13.43 5.56,13.43 0,19 -5.56,13.43 -13.43,13.43 -13.43,5.56 -19,0 -13.43,-5.56 -13.43,-13.43 -5.56,-13.43"/>
-          <circle class="l-ring" r="8"/><circle class="l-dot" r="2.6"/>
+          <polygon class="l-star" points="0,-19 4.22,-14.78 4.22,-11.61 7.39,-11.61 11.61,-7.39 11.61,-4.22 14.78,-4.22 19,0 14.78,4.22 11.61,4.22 11.61,7.39 7.39,11.61 4.22,11.61 4.22,14.78 0,19 -4.22,14.78 -4.22,11.61 -7.39,11.61 -11.61,7.39 -11.61,4.22 -14.78,4.22 -19,0 -14.78,-4.22 -11.61,-4.22 -11.61,-7.39 -7.39,-11.61 -4.22,-11.61 -4.22,-14.78"/>
+          <polygon class="l-ring" points="0,-10 10,0 0,10 -10,0"/><polygon class="l-dot" points="0,-5 5,0 0,5 -5,0"/>
         </svg>
         <b>Nuanza</b><small hidden>Akademiya</small>
       </a>

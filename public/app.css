@@ -1,6 +1,7 @@
 /* =====================================================================
    NUANZA — design system (app.css)
-   Modern-Eastern: lacquer navy, pomegranate (nar), saffron (zəfəran), ivory.
+   Modern kilim: near-black (default) or cool light, firuzə brand + nar, zəfəran, lacivərt accents.
+   Display: Unbounded · UI: Plus Jakarta Sans (both carry ə/Ə). The carpet shape is the göl, never a star.
    Layout: mobile-first app shell — sticky glass header + carpet band,
    left drawer (persistent sidebar ≥1024px), one 960px page column, 16px gutters.
    Screen CSS is injected via App.css(id, css) with classes prefixed by screen id.
@@ -11,39 +12,41 @@
    1. TOKENS — light values on bare :root, dark below (two blocks)
    --------------------------------------------------------------------- */
 :root{
-  /* brand + neutrals */
-  --bg:#F6F2EA; --surface:#FFFDF8; --surface2:#EFE8DA; --surface3:#FFFDF8;
-  --ink:#1B1F3B; --soft:#6A6577; --faint:#958F9F;
-  --line:#E2D8C5; --line-2:#CFC2A8;
-  --lacquer:#1E2A5A; --nar:#A3253A; --zafaran:#C58B2A; --ivory:#FFFDF8;
-  --zafaran-ink:#8A5D12; --gold-hi:#F2D08A;
-  --rug:#9E2337;
-  /* deep lacquer panels (hero cards, drawer profile) — ivory text in both themes */
-  --deep:#1E2A5A; --deep-2:#16204A; --on-deep:#FFFDF8; --on-deep-soft:rgba(255,253,248,.72);
+  /* brand + neutrals — modern kilim: firuzə (brand), nar, zəfəran, lacivərt on cool neutrals */
+  --bg:#F4F5F7; --surface:#FFFFFF; --surface2:#ECEEF2; --surface3:#FFFFFF;
+  --ink:#111318; --soft:#596070; --faint:#8A90A0;
+  --line:#E0E3E9; --line-2:#C9CED8;
+  --firuze:#08857D; --fir-t:rgba(8,133,125,.11); --on-firuze:#FFFFFF;
+  --heading:#111318; --heading-em:#08857D;
+  --lacquer:#3341B0; --nar:#CF2E46; --zafaran:#D3961A; --ivory:#FFFFFF;
+  --zafaran-ink:#8A5C06; --gold-hi:#F2C14E;
+  --rug:#CF2E46;
+  /* deep panels (hero cards, drawer profile) — near-black with light text in both themes */
+  --deep:#111318; --deep-2:#08090C; --on-deep:#F2F4F6; --on-deep-soft:rgba(242,244,246,.7);
   /* text on solid accent fills */
-  --on-nar:#FFFDF8; --on-lacquer:#FFFDF8; --on-zafaran:#1B1F3B;
+  --on-nar:#FFFFFF; --on-lacquer:#FFFFFF; --on-zafaran:#111318;
   /* semantic + tints */
-  --ok:#2E7D5B; --ok-t:rgba(46,125,91,.11);
-  --nar-t:rgba(163,37,58,.09); --zaf-t:rgba(197,139,42,.14); --lac-t:rgba(30,42,90,.08);
-  --conf-high:#2E7D5B; --conf-mid:#C58B2A; --conf-low:#A3253A;
+  --ok:#1E8757; --ok-t:rgba(30,135,87,.11);
+  --nar-t:rgba(207,46,70,.09); --zaf-t:rgba(211,150,26,.14); --lac-t:rgba(51,65,176,.08);
+  --conf-high:#1E8757; --conf-mid:#D3961A; --conf-low:#CF2E46;
   /* utility colors */
-  --focus:#9A6A14; --scrim:rgba(16,19,42,.44); --hl:rgba(255,255,255,.7); --shimmer:rgba(255,255,255,.78);
-  --knob:#FFFDF8;
+  --focus:#08857D; --scrim:rgba(8,9,12,.46); --hl:rgba(255,255,255,.7); --shimmer:rgba(255,255,255,.78);
+  --knob:#FFFFFF;
   /* inverted surfaces (toasts) */
-  --inv-bg:#1B1F3B; --inv-ink:#FFFDF8; --inv-soft:rgba(255,253,248,.68);
-  --inv-ok:#6FD6A6; --inv-bad:#FF8C9D; --inv-gold:#F2C46B; --inv-info:#AFC0FF;
-  /* avatar palette (always ivory initials) */
-  --av-nar:#A3253A; --av-lacquer:#1E2A5A; --av-zafaran:#A9741B; --av-firuze:#1F7A80; --av-benovse:#5B3A86; --av-zeytun:#56682A; --on-av:#FFFDF8;
+  --inv-bg:#111318; --inv-ink:#F2F4F6; --inv-soft:rgba(242,244,246,.68);
+  --inv-ok:#6EE3A6; --inv-bad:#FF7D90; --inv-gold:#FFD27A; --inv-info:#5FE3D4;
+  /* avatar palette (always light initials) */
+  --av-nar:#C42B43; --av-lacquer:#3341B0; --av-zafaran:#B07A10; --av-firuze:#08857D; --av-benovse:#6A44A8; --av-zeytun:#4F6B1F; --on-av:#FFFFFF;
 
   /* shadows */
-  --sh-pop:0 1px 2px rgba(27,31,59,.10),0 2px 6px -2px rgba(27,31,59,.10);
-  --sh-1:0 1px 2px rgba(27,31,59,.06),0 8px 24px -16px rgba(27,31,59,.20);
-  --sh-2:0 2px 6px rgba(27,31,59,.06),0 18px 40px -18px rgba(27,31,59,.32);
-  --sh-3:0 4px 12px rgba(16,19,42,.08),0 28px 70px -20px rgba(16,19,42,.42);
+  --sh-pop:0 1px 2px rgba(17,19,24,.10),0 2px 6px -2px rgba(17,19,24,.10);
+  --sh-1:0 1px 2px rgba(17,19,24,.05),0 8px 24px -16px rgba(17,19,24,.18);
+  --sh-2:0 2px 6px rgba(17,19,24,.06),0 18px 40px -18px rgba(17,19,24,.30);
+  --sh-3:0 4px 12px rgba(8,9,12,.08),0 28px 70px -20px rgba(8,9,12,.40);
 
   /* type */
-  --f-display:"Noto Serif Display","Noto Serif",Georgia,"Times New Roman",serif;
-  --f-body:"Noto Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --f-display:"Unbounded","Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --f-body:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
   --f-mono:ui-monospace,"SFMono-Regular","Cascadia Mono",Menlo,Consolas,monospace;
   --fs-xs:.75rem; --fs-sm:.8125rem; --fs-base:.9375rem; --fs-md:1.0625rem; --fs-lg:1.25rem; --fs-xl:1.5rem;
   --fs-2xl:clamp(1.75rem,1.4rem + 1.5vw,2.25rem);
@@ -64,60 +67,65 @@
   --z-meclis:70; --z-toast:80; --z-onb:90; --z-fx:100;
 
   /* carpet motifs — geometry only (black = opaque); colour comes from the element's background via mask */
-  --m-band:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='8' viewBox='0 0 24 8'%3E%3Cpath d='M6 .5 10 4 6 7.5 2 4z'/%3E%3C/svg%3E");
-  --m-band2:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='8' viewBox='0 0 24 8'%3E%3Cpath d='M18 1.8 20.4 4 18 6.2 15.6 4z'/%3E%3C/svg%3E");
-  --m-bandv:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='24' viewBox='0 0 8 24'%3E%3Cpath d='M4 2 7.5 6 4 10 .5 6z'/%3E%3C/svg%3E");
-  --m-bandv2:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='24' viewBox='0 0 8 24'%3E%3Cpath d='M4 15.6 6.2 18 4 20.4 1.8 18z'/%3E%3C/svg%3E");
+  --m-band:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='8' viewBox='0 0 24 8'%3E%3Cpath d='M0 8 6 0 12 8z'/%3E%3C/svg%3E");
+  --m-band2:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='8' viewBox='0 0 24 8'%3E%3Cpath d='M12 8 18 0 24 8z'/%3E%3C/svg%3E");
+  --m-bandv:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='24' viewBox='0 0 8 24'%3E%3Cpath d='M8 0 0 6 8 12z'/%3E%3C/svg%3E");
+  --m-bandv2:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='24' viewBox='0 0 8 24'%3E%3Cpath d='M8 12 0 18 8 24z'/%3E%3C/svg%3E");
   --m-field:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='black' stroke-width='1'%3E%3Cpath d='M28 6 50 28 28 50 6 28z'/%3E%3Cpath d='M28 16 40 28 28 40 16 28z'/%3E%3Cpath d='M28 0v6M28 50v6M0 28h6M50 28h6'/%3E%3C/g%3E%3Ccircle cx='28' cy='28' r='2.5'/%3E%3C/svg%3E");
   --m-gul:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='black' stroke-width='2.5'%3E%3Cpath d='M46 6H54V14H62V22H70V30H78V38H86V46H94V54H86V62H78V70H70V78H62V86H54V94H46V86H38V78H30V70H22V62H14V54H6V46H14V38H22V30H30V22H38V14H46Z'/%3E%3Cpath d='M46 22H54V30H62V38H70V46H78V54H70V62H62V70H54V78H46V70H38V62H30V54H22V46H30V38H38V30H46Z'/%3E%3C/g%3E%3Cpath d='M50 40 60 50 50 60 40 50z'/%3E%3C/svg%3E");
-  --m-star:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 0 64.64 14.64H85.36V35.36L100 50 85.36 64.64V85.36H64.64L50 100 35.36 85.36H14.64V64.64L0 50 14.64 35.36V14.64H35.36z'/%3E%3C/svg%3E");
+  /* göl — the stepped carpet diamond; kept under the old name so every user of the mask follows */
+  --m-star:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 0 61.11 11.11 61.11 19.44 69.44 19.44 80.56 30.56 80.56 38.89 88.89 38.89 100 50 88.89 61.11 80.56 61.11 80.56 69.44 69.44 80.56 61.11 80.56 61.11 88.89 50 100 38.89 88.89 38.89 80.56 30.56 80.56 19.44 69.44 19.44 61.11 11.11 61.11 0 50 11.11 38.89 19.44 38.89 19.44 30.56 30.56 19.44 38.89 19.44 38.89 11.11z'/%3E%3C/svg%3E");
   --m-check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#10132A; --surface:#171B38; --surface2:#1D2246; --surface3:#272D5A;
-  --ink:#F1ECE1; --soft:#A9A5B8; --faint:#7E7A96;
-  --line:#2B3160; --line-2:#3B4277;
-  --lacquer:#8EA2FF; --nar:#F0697D; --zafaran:#E5B45A; --ivory:#F6EFE2;
-  --zafaran-ink:#E5B45A; --gold-hi:#F5D79B;
-  --rug:#93283E;
-  --deep:#232E66; --deep-2:#1A2253; --on-deep:#FFFDF8; --on-deep-soft:rgba(255,253,248,.72);
-  --on-nar:#10132A; --on-lacquer:#10132A; --on-zafaran:#10132A;
-  --ok:#5CCB97; --ok-t:rgba(92,203,151,.14);
-  --nar-t:rgba(240,105,125,.14); --zaf-t:rgba(229,180,90,.14); --lac-t:rgba(142,162,255,.13);
-  --conf-high:#5CCB97; --conf-mid:#E5B45A; --conf-low:#F0697D;
-  --focus:#E5B45A; --scrim:rgba(4,5,14,.62); --hl:rgba(255,255,255,.035); --shimmer:rgba(255,255,255,.07);
-  --knob:#F6EFE2;
-  --inv-bg:#F1ECE1; --inv-ink:#10132A; --inv-soft:rgba(16,19,42,.66);
-  --inv-ok:#23704F; --inv-bad:#A3253A; --inv-gold:#8A5D12; --inv-info:#1E2A5A;
-  --av-nar:#B8344B; --av-lacquer:#3A4C9A; --av-zafaran:#A9741B; --av-firuze:#23868C; --av-benovse:#6E4BA0; --av-zeytun:#66792F; --on-av:#FFFDF8;
-  --sh-pop:0 1px 2px rgba(0,0,0,.45),0 2px 8px -2px rgba(0,0,0,.4);
-  --sh-1:0 1px 2px rgba(0,0,0,.4),0 10px 28px -16px rgba(0,0,0,.7);
-  --sh-2:0 2px 6px rgba(0,0,0,.4),0 20px 44px -18px rgba(0,0,0,.8);
-  --sh-3:0 4px 12px rgba(0,0,0,.4),0 30px 80px -20px rgba(0,0,0,.85);
+  --bg:#0A0B0E; --surface:#13151A; --surface2:#1A1D24; --surface3:#22262F;
+  --ink:#ECEFF2; --soft:#9AA2AD; --faint:#6B737F;
+  --line:#252930; --line-2:#333843;
+  --firuze:#3DDBCB; --fir-t:rgba(61,219,203,.13); --on-firuze:#05211E;
+  --heading:#3DDBCB; --heading-em:#ECEFF2;
+  --lacquer:#8E9BFF; --nar:#FF5C70; --zafaran:#F4BD48; --ivory:#F2F4F6;
+  --zafaran-ink:#F4BD48; --gold-hi:#FFD77A;
+  --rug:#E23B52;
+  --deep:#0E2725; --deep-2:#091A19; --on-deep:#F2F4F6; --on-deep-soft:rgba(242,244,246,.72);
+  --on-nar:#0A0B0E; --on-lacquer:#0A0B0E; --on-zafaran:#0A0B0E;
+  --ok:#5FD99A; --ok-t:rgba(95,217,154,.14);
+  --nar-t:rgba(255,92,112,.14); --zaf-t:rgba(244,189,72,.14); --lac-t:rgba(142,155,255,.13);
+  --conf-high:#5FD99A; --conf-mid:#F4BD48; --conf-low:#FF5C70;
+  --focus:#3DDBCB; --scrim:rgba(0,0,0,.64); --hl:rgba(255,255,255,.035); --shimmer:rgba(255,255,255,.07);
+  --knob:#F2F4F6;
+  --inv-bg:#ECEFF2; --inv-ink:#0A0B0E; --inv-soft:rgba(10,11,14,.66);
+  --inv-ok:#13774A; --inv-bad:#B8233A; --inv-gold:#8A5C06; --inv-info:#07766F;
+  --av-nar:#C42B43; --av-lacquer:#4453C4; --av-zafaran:#B07A10; --av-firuze:#0C8F86; --av-benovse:#7351B3; --av-zeytun:#5A7724; --on-av:#FFFFFF;
+  --sh-pop:0 1px 2px rgba(0,0,0,.5),0 2px 8px -2px rgba(0,0,0,.45);
+  --sh-1:0 1px 2px rgba(0,0,0,.45),0 10px 28px -16px rgba(0,0,0,.75);
+  --sh-2:0 2px 6px rgba(0,0,0,.45),0 20px 44px -18px rgba(0,0,0,.85);
+  --sh-3:0 4px 12px rgba(0,0,0,.45),0 30px 80px -20px rgba(0,0,0,.9);
   color-scheme:dark;
 }}
 :root[data-theme="dark"]{
-  --bg:#10132A; --surface:#171B38; --surface2:#1D2246; --surface3:#272D5A;
-  --ink:#F1ECE1; --soft:#A9A5B8; --faint:#7E7A96;
-  --line:#2B3160; --line-2:#3B4277;
-  --lacquer:#8EA2FF; --nar:#F0697D; --zafaran:#E5B45A; --ivory:#F6EFE2;
-  --zafaran-ink:#E5B45A; --gold-hi:#F5D79B;
-  --rug:#93283E;
-  --deep:#232E66; --deep-2:#1A2253; --on-deep:#FFFDF8; --on-deep-soft:rgba(255,253,248,.72);
-  --on-nar:#10132A; --on-lacquer:#10132A; --on-zafaran:#10132A;
-  --ok:#5CCB97; --ok-t:rgba(92,203,151,.14);
-  --nar-t:rgba(240,105,125,.14); --zaf-t:rgba(229,180,90,.14); --lac-t:rgba(142,162,255,.13);
-  --conf-high:#5CCB97; --conf-mid:#E5B45A; --conf-low:#F0697D;
-  --focus:#E5B45A; --scrim:rgba(4,5,14,.62); --hl:rgba(255,255,255,.035); --shimmer:rgba(255,255,255,.07);
-  --knob:#F6EFE2;
-  --inv-bg:#F1ECE1; --inv-ink:#10132A; --inv-soft:rgba(16,19,42,.66);
-  --inv-ok:#23704F; --inv-bad:#A3253A; --inv-gold:#8A5D12; --inv-info:#1E2A5A;
-  --av-nar:#B8344B; --av-lacquer:#3A4C9A; --av-zafaran:#A9741B; --av-firuze:#23868C; --av-benovse:#6E4BA0; --av-zeytun:#66792F; --on-av:#FFFDF8;
-  --sh-pop:0 1px 2px rgba(0,0,0,.45),0 2px 8px -2px rgba(0,0,0,.4);
-  --sh-1:0 1px 2px rgba(0,0,0,.4),0 10px 28px -16px rgba(0,0,0,.7);
-  --sh-2:0 2px 6px rgba(0,0,0,.4),0 20px 44px -18px rgba(0,0,0,.8);
-  --sh-3:0 4px 12px rgba(0,0,0,.4),0 30px 80px -20px rgba(0,0,0,.85);
+  --bg:#0A0B0E; --surface:#13151A; --surface2:#1A1D24; --surface3:#22262F;
+  --ink:#ECEFF2; --soft:#9AA2AD; --faint:#6B737F;
+  --line:#252930; --line-2:#333843;
+  --firuze:#3DDBCB; --fir-t:rgba(61,219,203,.13); --on-firuze:#05211E;
+  --heading:#3DDBCB; --heading-em:#ECEFF2;
+  --lacquer:#8E9BFF; --nar:#FF5C70; --zafaran:#F4BD48; --ivory:#F2F4F6;
+  --zafaran-ink:#F4BD48; --gold-hi:#FFD77A;
+  --rug:#E23B52;
+  --deep:#0E2725; --deep-2:#091A19; --on-deep:#F2F4F6; --on-deep-soft:rgba(242,244,246,.72);
+  --on-nar:#0A0B0E; --on-lacquer:#0A0B0E; --on-zafaran:#0A0B0E;
+  --ok:#5FD99A; --ok-t:rgba(95,217,154,.14);
+  --nar-t:rgba(255,92,112,.14); --zaf-t:rgba(244,189,72,.14); --lac-t:rgba(142,155,255,.13);
+  --conf-high:#5FD99A; --conf-mid:#F4BD48; --conf-low:#FF5C70;
+  --focus:#3DDBCB; --scrim:rgba(0,0,0,.64); --hl:rgba(255,255,255,.035); --shimmer:rgba(255,255,255,.07);
+  --knob:#F2F4F6;
+  --inv-bg:#ECEFF2; --inv-ink:#0A0B0E; --inv-soft:rgba(10,11,14,.66);
+  --inv-ok:#13774A; --inv-bad:#B8233A; --inv-gold:#8A5C06; --inv-info:#07766F;
+  --av-nar:#C42B43; --av-lacquer:#4453C4; --av-zafaran:#B07A10; --av-firuze:#0C8F86; --av-benovse:#7351B3; --av-zeytun:#5A7724; --on-av:#FFFFFF;
+  --sh-pop:0 1px 2px rgba(0,0,0,.5),0 2px 8px -2px rgba(0,0,0,.45);
+  --sh-1:0 1px 2px rgba(0,0,0,.45),0 10px 28px -16px rgba(0,0,0,.75);
+  --sh-2:0 2px 6px rgba(0,0,0,.45),0 20px 44px -18px rgba(0,0,0,.85);
+  --sh-3:0 4px 12px rgba(0,0,0,.45),0 30px 80px -20px rgba(0,0,0,.9);
   color-scheme:dark;
 }
 
@@ -128,22 +136,23 @@
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{
   margin:0;min-height:100%;
-  background:radial-gradient(1100px 420px at 50% -200px,var(--zaf-t),transparent 70%) no-repeat,var(--bg);
+  background:radial-gradient(1100px 420px at 50% -220px,var(--fir-t),transparent 70%) no-repeat,var(--bg);
   background-color:var(--bg);
   color:var(--ink);font-family:var(--f-body);font-size:var(--fs-base);line-height:var(--lh-body);
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
 }
 h1,h2,h3,h4,p,figure,blockquote,dl,dd{margin:0}
 h1,h2,h3,h4{font-family:var(--f-display);font-weight:600;line-height:var(--lh-snug);text-wrap:balance;color:inherit}
-h1{font-size:var(--fs-2xl);line-height:var(--lh-tight);letter-spacing:-.012em}
-h2{font-size:var(--fs-lg);letter-spacing:-.005em}
+h1{font-size:var(--fs-2xl);line-height:var(--lh-tight);letter-spacing:-.025em;color:var(--heading)}
+h2{font-size:var(--fs-lg);letter-spacing:-.015em}
+h3{letter-spacing:-.01em}
 h3{font-size:var(--fs-md)}
 h4{font-family:var(--f-body);font-size:var(--fs-base)}
-h1 em,h2 em,.display em{font-style:italic;font-weight:400;color:var(--nar)}
+h1 em,h2 em,.display em{font-style:normal;font-weight:inherit;color:var(--heading-em)}
 p{text-wrap:pretty}
 small{font-size:var(--fs-sm)}
 b,strong{font-weight:600}
-a{color:var(--nar);text-decoration-thickness:1px;text-underline-offset:3px}
+a{color:var(--firuze);text-decoration-thickness:1px;text-underline-offset:3px}
 a:hover{text-decoration-thickness:2px}
 img,video{max-width:100%;height:auto}
 svg{flex:none}
@@ -151,11 +160,11 @@ button,input,select,textarea{font:inherit;color:inherit;letter-spacing:inherit}
 button{-webkit-tap-highlight-color:transparent}
 button:not(:disabled){cursor:pointer}
 [hidden]{display:none!important}
-::selection{background:color-mix(in srgb,var(--zafaran) 34%,transparent)}
+::selection{background:color-mix(in srgb,var(--firuze) 32%,transparent)}
 *{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
 .no-scroll{overflow:hidden}
 
-/* focus — saffron ring for keyboard users everywhere */
+/* focus — firuzə ring for keyboard users everywhere */
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 :focus:not(:focus-visible){outline:none}
 .skip-link{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:calc(var(--z-onb) + 1);padding:10px 14px;border-radius:var(--r-md);background:var(--ink);color:var(--bg);font-weight:600;text-decoration:none;transform:translateY(-160%);transition:transform var(--t-base) var(--ease-out)}
@@ -164,70 +173,65 @@ button:not(:disabled){cursor:pointer}
 /* ---------------------------------------------------------------------
    3. CARPET MOTIFS
    --------------------------------------------------------------------- */
-/* Horizontal rug band: saffron hairlines, pomegranate diamonds, lacquer lozenges, saffron knots */
+/* Horizontal kilim band: flat zigzag of nar + firuzə triangles on a thin zəfəran baseline */
 .rugband{
-  --bt:calc(var(--band-h) * 2.4);
+  --bt:calc(var(--band-h) * 3.6);
   position:relative;display:block;flex:none;height:var(--band-h);
-  background:
-    linear-gradient(var(--zafaran),var(--zafaran)) 0 0/100% 1px no-repeat,
-    linear-gradient(var(--zafaran),var(--zafaran)) 0 100%/100% 1px no-repeat,
-    radial-gradient(circle,var(--zafaran) 0 1px,transparent 1.5px) calc(var(--bt) / -4) 50%/calc(var(--bt) / 2) 100% repeat-x;
+  background:linear-gradient(var(--zafaran),var(--zafaran)) 0 100%/100% 1px no-repeat;
   pointer-events:none;
 }
 .rugband::before,.rugband::after{
-  content:"";position:absolute;inset:1px 0;background:var(--nar);
-  -webkit-mask:var(--m-band) 0 50%/var(--bt) calc(var(--band-h) - 2px) repeat-x;
-          mask:var(--m-band) 0 50%/var(--bt) calc(var(--band-h) - 2px) repeat-x;
+  content:"";position:absolute;inset:0 0 1px;background:var(--nar);
+  -webkit-mask:var(--m-band) 0 100%/var(--bt) calc(var(--band-h) - 1px) repeat-x;
+          mask:var(--m-band) 0 100%/var(--bt) calc(var(--band-h) - 1px) repeat-x;
 }
-.rugband::after{background:var(--lacquer);-webkit-mask-image:var(--m-band2);mask-image:var(--m-band2)}
+.rugband::after{background:var(--firuze);-webkit-mask-image:var(--m-band2);mask-image:var(--m-band2)}
 .rugband.thin{--band-h:6px}
 .rugband.thick{--band-h:14px}
 .rugband.v{
   width:var(--band-h);height:auto;align-self:stretch;
   background:
-    linear-gradient(var(--zafaran),var(--zafaran)) 0 0/1px 100% no-repeat,
     linear-gradient(var(--zafaran),var(--zafaran)) 100% 0/1px 100% no-repeat;
 }
-.rugband.v::before,.rugband.v::after{inset:0 1px;-webkit-mask:var(--m-bandv) 50% 0/calc(var(--band-h) - 2px) var(--bt) repeat-y;mask:var(--m-bandv) 50% 0/calc(var(--band-h) - 2px) var(--bt) repeat-y}
+.rugband.v::before,.rugband.v::after{inset:0 1px 0 0;-webkit-mask:var(--m-bandv) 50% 0/calc(var(--band-h) - 2px) var(--bt) repeat-y;mask:var(--m-bandv) 50% 0/calc(var(--band-h) - 2px) var(--bt) repeat-y}
 .rugband.v::after{-webkit-mask-image:var(--m-bandv2);mask-image:var(--m-bandv2)}
 
 /* Faint carpet field behind any container */
 .carpet{position:relative;isolation:isolate}
-.carpet::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background:var(--zafaran);opacity:.08;
+.carpet::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background:var(--firuze);opacity:.07;
   -webkit-mask:var(--m-field) 0 0/56px 56px repeat;mask:var(--m-field) 0 0/56px 56px repeat}
 
-/* 8-point star medal (rank rosette) */
+/* göl badge (rank) — stepped carpet diamond with a dark diamond core */
 .medal{
   --size:72px;
   position:relative;isolation:isolate;flex:none;display:inline-grid;place-items:center;
   width:var(--size);height:var(--size);max-width:100%;
-  filter:drop-shadow(0 6px 10px rgba(16,19,42,.22));
+  filter:drop-shadow(0 6px 12px rgba(0,0,0,.28));
 }
 .medal::before{content:"";position:absolute;inset:0;z-index:-1;
-  background:conic-gradient(from 22.5deg,var(--zafaran),var(--gold-hi),var(--zafaran),var(--gold-hi),var(--zafaran),var(--gold-hi),var(--zafaran),var(--gold-hi),var(--zafaran));
+  background:linear-gradient(135deg,var(--firuze),color-mix(in srgb,var(--firuze) 55%,var(--gold-hi)) 52%,var(--zafaran));
   -webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}
-.medal::after{content:"";position:absolute;inset:19%;z-index:-1;border-radius:50%;
-  background:radial-gradient(circle at 35% 28%,color-mix(in srgb,var(--deep) 78%,#ffffff),var(--deep) 68%);
-  box-shadow:inset 0 0 0 1.5px var(--gold-hi);
-  outline:1px dashed color-mix(in srgb,var(--zafaran) 80%,transparent);outline-offset:calc(var(--size) * -.07)}
-.medal > *{font-family:var(--f-display);font-weight:600;font-style:normal;font-size:calc(var(--size) * .3);line-height:1;color:var(--gold-hi)}
+.medal::after{content:"";position:absolute;inset:22%;z-index:-1;
+  clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
+  background:linear-gradient(160deg,color-mix(in srgb,var(--deep) 80%,#ffffff),var(--deep) 70%)}
+.medal > *{font-family:var(--f-display);font-weight:600;font-style:normal;font-size:calc(var(--size) * .24);line-height:1;color:var(--on-deep)}
 .medal > svg{width:calc(var(--size) * .3);height:calc(var(--size) * .3)}
 .medal.sm{--size:40px}
 .medal.lg{--size:104px}
 .medal.xl{--size:148px}
-.medal.nar::before{background:conic-gradient(from 22.5deg,var(--nar),color-mix(in srgb,var(--nar) 60%,var(--gold-hi)),var(--nar),color-mix(in srgb,var(--nar) 60%,var(--gold-hi)),var(--nar))}
+.medal.nar::before{background:linear-gradient(135deg,var(--nar),color-mix(in srgb,var(--nar) 55%,var(--gold-hi)))}
 .medal.locked{filter:none}
 .medal.locked::before{background:var(--line-2)}
-.medal.locked::after{background:var(--surface2);box-shadow:inset 0 0 0 1.5px var(--line-2);outline-color:var(--line-2)}
+.medal.locked::after{background:var(--surface2)}
 .medal.locked > *{color:var(--faint)}
 .medal.pop{animation:medal-pop .8s var(--ease-spring) both}
 
-/* Ornamental divider with a centred saffron star */
+/* Ornamental divider with a centred göl */
 .divider{display:block;height:1px;border:0;margin:4px 0;background:var(--line);flex:none}
 .divider.orn{position:relative;height:14px;margin-block:8px;background:
   linear-gradient(var(--line),var(--line)) 0 50%/calc(50% - 18px) 1px no-repeat,
   linear-gradient(var(--line),var(--line)) 100% 50%/calc(50% - 18px) 1px no-repeat}
-.divider.orn::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;transform:translate(-50%,-50%);background:var(--zafaran);
+.divider.orn::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;transform:translate(-50%,-50%);background:var(--firuze);
   -webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}
 
 /* ---------------------------------------------------------------------
@@ -241,7 +245,7 @@ button:not(:disabled){cursor:pointer}
   transition:box-shadow var(--t-base);
 }
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.hdr{background:var(--bg)}}
-.hdr.scrolled{box-shadow:0 10px 24px -20px rgba(16,19,42,.45)}
+.hdr.scrolled{box-shadow:0 10px 24px -20px rgba(0,0,0,.5)}
 .hdr-in{
   height:var(--hdr-h);max-width:calc(var(--page-max) + 2 * var(--gutter));margin-inline:auto;padding-inline:var(--gutter);
   display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:12px;
@@ -262,12 +266,13 @@ button:not(:disabled){cursor:pointer}
 
 .brand{display:inline-flex;align-items:center;justify-content:center;gap:10px;justify-self:center;min-width:0;padding:4px 8px;border-radius:var(--r-md);color:var(--ink);text-decoration:none}
 .brand .logo{width:30px;height:30px;transition:transform .7s var(--ease-spring)}
-.brand:hover .logo{transform:rotate(45deg)}
-.brand b{font-family:var(--f-display);font-size:1.375rem;font-weight:600;letter-spacing:.005em;line-height:1}
-.brand small{font-size:.625rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--zafaran-ink);align-self:flex-end;margin-bottom:2px}
+.brand:hover .logo{transform:rotate(90deg)}
+.brand b{font-family:var(--f-display);font-size:1.2rem;font-weight:600;letter-spacing:-.01em;line-height:1;text-transform:lowercase}
+.brand small{font-size:.625rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--firuze);align-self:flex-end;margin-bottom:2px}
+/* logo: göl — nar stepped diamond, light diamond, firuzə core */
 .logo .l-star{fill:var(--nar)}
-.logo .l-ring{fill:var(--ivory);stroke:var(--zafaran);stroke-width:1.6}
-.logo .l-dot{fill:var(--lacquer)}
+.logo .l-ring{fill:#FFFFFF}
+.logo .l-dot{fill:var(--firuze)}
 
 .avatar{
   --av:var(--av-nar);
@@ -275,7 +280,7 @@ button:not(:disabled){cursor:pointer}
   display:inline-grid;place-items:center;user-select:none;text-decoration:none;
   background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.24),transparent 62%),var(--av);
   color:var(--on-av);font-family:var(--f-display);font-weight:600;font-size:.9375rem;letter-spacing:.03em;line-height:1;
-  box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px color-mix(in srgb,var(--zafaran) 75%,transparent);
+  box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px color-mix(in srgb,var(--firuze) 75%,transparent);
   transition:transform var(--t-base) var(--ease-spring);
 }
 button.avatar:hover,a.avatar:hover{transform:scale(1.05)}
@@ -283,9 +288,9 @@ button.avatar:active,a.avatar:active{transform:scale(.95)}
 /* an elder's painted face (App.elderFace) */
 .avatar.face{background:var(--surface2);color:inherit}
 .avatar.face > svg{display:block;width:100%;height:100%}
-.avatar.sm{width:28px;height:28px;font-size:.6875rem;box-shadow:0 0 0 1.5px var(--surface),0 0 0 2.5px color-mix(in srgb,var(--zafaran) 70%,transparent)}
+.avatar.sm{width:28px;height:28px;font-size:.6875rem;box-shadow:0 0 0 1.5px var(--surface),0 0 0 2.5px color-mix(in srgb,var(--firuze) 70%,transparent)}
 .avatar.lg{width:52px;height:52px;font-size:1.125rem}
-.avatar.xl{width:88px;height:88px;font-size:1.875rem;box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--zafaran),var(--sh-2)}
+.avatar.xl{width:88px;height:88px;font-size:1.875rem;box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--firuze),var(--sh-2)}
 .av-nar{--av:var(--av-nar)} .av-lacquer{--av:var(--av-lacquer)} .av-zafaran{--av:var(--av-zafaran)}
 .av-firuze{--av:var(--av-firuze)} .av-benovse{--av:var(--av-benovse)} .av-zeytun{--av:var(--av-zeytun)}
 
@@ -307,25 +312,25 @@ button.avatar:active,a.avatar:active{transform:scale(.95)}
 .drawer.on,.drawer.open{transform:none;visibility:visible;transition:transform var(--t-slow) var(--ease-out),visibility 0s}
 .drawer::before,.drawer::after{content:"";position:absolute;top:0;bottom:0;right:0;width:8px;pointer-events:none;
   background:var(--nar);-webkit-mask:var(--m-bandv) 50% 0/8px 24px repeat-y;mask:var(--m-bandv) 50% 0/8px 24px repeat-y}
-.drawer::after{background:var(--zafaran);-webkit-mask-image:var(--m-bandv2);mask-image:var(--m-bandv2)}
+.drawer::after{background:var(--firuze);-webkit-mask-image:var(--m-bandv2);mask-image:var(--m-bandv2)}
 
 .dr-profile{
   position:relative;isolation:isolate;overflow:hidden;flex:none;
   display:flex;align-items:center;gap:12px;margin:14px 20px 8px 12px;padding:14px;
   border:0;border-radius:var(--r-lg);text-align:left;text-decoration:none;font:inherit;
-  background:radial-gradient(120% 120% at 100% 0%,color-mix(in srgb,var(--zafaran) 20%,transparent),transparent 60%),var(--deep);
+  background:radial-gradient(120% 120% at 100% 0%,color-mix(in srgb,var(--firuze) 26%,transparent),transparent 60%),var(--deep);
   color:var(--on-deep);box-shadow:var(--sh-1);
   transition:transform var(--t-base) var(--ease-out),box-shadow var(--t-base);
 }
-.dr-profile::before{content:"";position:absolute;inset:5px;z-index:-1;border:1px solid color-mix(in srgb,var(--zafaran) 55%,transparent);border-radius:13px;pointer-events:none}
-.dr-profile::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:var(--zafaran);opacity:.13;
+.dr-profile::before{content:"";position:absolute;inset:0;z-index:-1;border:1px solid color-mix(in srgb,var(--firuze) 30%,transparent);border-radius:inherit;pointer-events:none}
+.dr-profile::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:var(--firuze);opacity:.12;
   -webkit-mask:var(--m-field) 0 0/40px 40px repeat;mask:var(--m-field) 0 0/40px 40px repeat}
 :is(a,button).dr-profile:hover{transform:translateY(-1px);box-shadow:var(--sh-2)}
-.dr-profile .avatar{box-shadow:0 0 0 2px var(--deep),0 0 0 3.5px var(--zafaran)}
+.dr-profile .avatar{box-shadow:0 0 0 2px var(--deep),0 0 0 3.5px var(--firuze)}
 .dr-profile .who{min-width:0;display:grid;gap:2px}
 .dr-profile .who b{font-family:var(--f-display);font-size:var(--fs-md);font-weight:600;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere}
 .dr-profile .who small{font-size:.78rem;line-height:1.35;color:var(--on-deep-soft);overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
-.dr-profile .badge{justify-self:start;margin-top:4px;background:color-mix(in srgb,var(--zafaran) 26%,transparent);color:var(--gold-hi)}
+.dr-profile .badge{justify-self:start;margin-top:4px;background:color-mix(in srgb,var(--firuze) 22%,transparent);color:var(--firuze)}
 .dr-mode{flex:none;padding:8px 20px 4px 12px}
 .dr-nav{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 20px 16px 12px}
 .dr-grp{display:flex;align-items:center;gap:10px;padding:18px 12px 6px;font-size:.6875rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}
@@ -341,9 +346,9 @@ button.avatar:active,a.avatar:active{transform:scale(.95)}
 .dr-link:hover{background:var(--surface2)}
 .dr-link:hover svg{transform:scale(1.08)}
 .dr-link:active{background:color-mix(in srgb,var(--surface2) 70%,var(--line))}
-.dr-link[aria-current="page"]{background:var(--nar-t);color:var(--nar);font-weight:600}
-.dr-link[aria-current="page"] svg{color:var(--nar)}
-.dr-link[aria-current="page"]::after{content:"";flex:none;width:9px;height:9px;margin-left:auto;background:var(--nar);
+.dr-link[aria-current="page"]{background:var(--fir-t);color:var(--firuze);font-weight:600}
+.dr-link[aria-current="page"] svg{color:var(--firuze)}
+.dr-link[aria-current="page"]::after{content:"";flex:none;width:9px;height:9px;margin-left:auto;background:var(--firuze);
   -webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}
 .dr-foot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 20px 12px 20px;border-top:1px solid var(--line)}
 .dr-foot .ver{font-size:var(--fs-xs);color:var(--faint);font-variant-numeric:tabular-nums}
@@ -395,8 +400,8 @@ button.avatar:active,a.avatar:active{transform:scale(.95)}
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:4px}
 .sec-h h2{font-size:var(--fs-lg)}
 .sec-h a,.sec-h .link{font-size:var(--fs-sm)}
-.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.6875rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);line-height:1.4}
-.eyebrow::before{content:"";flex:none;width:8px;height:8px;background:var(--zafaran);-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.6875rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--firuze);line-height:1.4}
+.eyebrow::before{content:"";flex:none;width:8px;height:8px;background:var(--nar);-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}
 .eyebrow.plain::before{display:none}
 .muted{color:var(--soft)}
 .grid-2,.grid-3{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
@@ -893,10 +898,10 @@ textarea.seg-tgt{display:block;width:calc(100% + 16px);border:0;background:trans
 .onb-in{position:relative;width:min(540px,100%);display:grid;gap:20px;justify-items:center;text-align:center}
 .onb-step{width:100%;display:grid;gap:18px;justify-items:center;animation:rise .45s var(--ease-out) both}
 .onb-star{width:112px;height:112px;overflow:visible}
-.onb-star .l-star{fill:var(--nar);fill-opacity:0;stroke:var(--zafaran);stroke-width:.9;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;
+.onb-star .l-star{fill:var(--nar);fill-opacity:0;stroke:var(--firuze);stroke-width:.9;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;
   animation:draw 1.3s var(--ease-in-out) .15s forwards,fill-in .6s var(--ease-out) 1.2s forwards}
-.onb-star .l-ring{fill:var(--ivory);stroke:var(--zafaran);stroke-width:1.6}
-.onb-star .l-dot{fill:var(--lacquer)}
+.onb-star .l-ring{fill:#FFFFFF}
+.onb-star .l-dot{fill:var(--firuze)}
 .onb-star .l-ring,.onb-star .l-dot{transform-box:fill-box;transform-origin:center;animation:pop-in .55s var(--ease-spring) 1.35s both}
 .onb-rug{position:relative;width:min(360px,calc(100% - 24px));height:58px;border-radius:4px;
   background:
