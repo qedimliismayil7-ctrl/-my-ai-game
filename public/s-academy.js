@@ -58,7 +58,7 @@
   function sget(k, fb) { try { var v = App.store.get(k, fb); return v === undefined || v === null ? fb : v; } catch (e) { return fb; } }
   function sset(k, v) { try { App.store.set(k, v); } catch (e) { /* storage blocked */ } }
   function profile() {
-    try { return App.profile(); } catch (e) { return { name: 'Aysel Məmmədova', firstName: 'Aysel', xp: 1840, streak: 12, bestStreak: 31, dailyGoal: 30, initials: 'AM', avatarColor: 'av-nar' }; }
+    try { return App.profile(); } catch (e) { return { name: 'Aysel Məmmədova', firstName: 'Aysel', xp: 1840, streak: 12, bestStreak: 31, dailyGoal: 30, initials: 'AM', avatarColor: 'av-firuze' }; }
   }
   var RANKS_FB = [{ name: 'Şagird', min: 0 }, { name: 'Katib', min: 400 }, { name: 'Münşi', min: 1200 }, { name: 'Mirzə', min: 2500 }, { name: 'Dilmanc', min: 5000 }, { name: 'Ustad', min: 10000 }];
   function ranks() { return (App.data && App.data.RANKS) || App.RANKS || RANKS_FB; }
@@ -2288,7 +2288,7 @@
       { name: 'Murad Əliyev', xp: 515, av: 'av-lacquer', ini: 'MƏ' },
       { name: 'Nigar Quliyeva', xp: 470, av: 'av-benovse', ini: 'NQ' },
       { name: 'Tural Babayev', xp: 355, av: 'av-zeytun', ini: 'TB' },
-      { name: (p.name || 'Siz') + ' (siz)', xp: meXP, av: p.avatarColor || 'av-nar', ini: p.initials || 'AM', me: true }
+      { name: (p.name || 'Siz') + ' (siz)', xp: meXP, av: p.avatarColor || 'av-firuze', ini: p.initials || 'AM', me: true }
     ].sort(function (a, b) { return b.xp - a.xp; });
     var action;
     if (wk >= 5 && !claimed) {

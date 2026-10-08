@@ -917,7 +917,7 @@
     return [h('span', { class: 'sa-star', 'aria-hidden': 'true' }), h('span', { class: 'sa-fill', 'aria-hidden': 'true' }),
       h('span', { class: 'sa-ring', 'aria-hidden': 'true' }), h('b', { 'aria-hidden': 'true', text: text })];
   }
-  function avCls(c) { for (var i = 0; i < AV_COLORS.length; i++) if (AV_COLORS[i].id === c) return c; return 'av-nar'; }
+  function avCls(c) { for (var i = 0; i < AV_COLORS.length; i++) if (AV_COLORS[i].id === c) return c; return 'av-firuze'; }
   function draftName() { return (String(Dr.first || '').trim() + ' ' + String(Dr.last || '').trim()).trim(); }
 
   function buildHero() {
