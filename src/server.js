@@ -16,7 +16,7 @@ const MAX_PROMPT = 30000;
 const SW = "self.addEventListener('install',function(){self.skipWaiting()});self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim())});";
 const MANIFEST = {
   name: "Nuanza — tərcüməçinin iş masası", short_name: "Nuanza", lang: "az", start_url: "/", display: "standalone",
-  background_color: "#10132A", theme_color: "#1E2A5A",
+  background_color: "#0A0B0E", theme_color: "#0A0B0E",
   icons: [{ src: "/icon.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }, { src: "/icon.svg", sizes: "any", type: "image/svg+xml" }]
 };
 const FF = [
