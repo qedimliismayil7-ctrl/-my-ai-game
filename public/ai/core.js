@@ -42,8 +42,13 @@
   };
   function errText(e) { return ERR[e && e.code] || ERR.server_error; }
 
+  /* Ayarlar → Hesab → «Sayt giriş kodu»: App.store key 'code' = localStorage 'nuanza2:code' (JSON).
+     App.store first (it also works when localStorage is blocked), the raw key as a fallback. */
   function accessCode() {
-    try { var v = localStorage.getItem('nuanza2:code'); return v ? JSON.parse(v) : ''; } catch (e) { return ''; }
+    try {
+      if (W.App && W.App.store && typeof W.App.store.get === 'function') { var c = W.App.store.get('code', ''); return c == null ? '' : String(c).trim(); }
+    } catch (e) { /* fall through */ }
+    try { var v = localStorage.getItem('nuanza2:code'); v = v ? JSON.parse(v) : ''; return v == null ? '' : String(v).trim(); } catch (e) { return ''; }
   }
 
   /* One call to the Worker. Throws {code} on failure. */
@@ -51,10 +56,13 @@
     opts = opts || {};
     var speed = opts.speed === 'fast' || opts.speed === 'deep' ? opts.speed : 'normal';
     var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var code = accessCode();
+    /* a header value must be Latin-1; such a code can never match the Worker's — say so, not «network» */
+    if (/[^\x20-\x7e]/.test(code)) return Promise.reject({ code: 'bad_code' });
     var timer = ctl ? setTimeout(function () { ctl.abort(); }, opts.timeout || 90000) : null;
     return fetch('/api', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-access-code': String(accessCode() || '') },
+      headers: { 'content-type': 'application/json', 'x-access-code': code },
       body: JSON.stringify({ prompt: String(prompt), speed: speed }),
       signal: ctl ? ctl.signal : undefined
     }).then(function (r) {

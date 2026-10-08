@@ -536,7 +536,30 @@
     }
     if (S.from === S.to || (S.from !== 'az' && S.to !== 'az')) { S.from = 'en'; S.to = 'az'; }
     var last = sget('translate-last', null);
-    if (last && typeof last === 'object' && Array.isArray(last.segs) && typeof last.src === 'string' && norm(last.src) === norm(S.src)) R = last;
+    if (last && typeof last === 'object' && Array.isArray(last.segs) && typeof last.src === 'string' && norm(last.src) === norm(S.src) && !(last.example && isLive())) R = last;
+  }
+  /* Live engine: successful answers are kept for this session (text + pair + register + variant),
+     so switching back to a register, the four register previews and the variants do not pay for
+     the same Gemini call twice. An explicit «Tərcümə et» / retry always asks the engine again. */
+  var LIVE = [], LIVE_MAX = 24;
+  function isLive() { return !!(App.isLive && App.isLive()); }
+  function liveKey(inp, reg) { return [inp.from || '', inp.to || '', reg || 'auto', inp.style || '', norm(inp.text)].join('|'); }
+  function livePut(k, v) {
+    LIVE = LIVE.filter(function (x) { return x.k !== k; });
+    LIVE.push({ k: k, v: v });
+    if (LIVE.length > LIVE_MAX) LIVE.shift();
+  }
+  function trAI(inp, ms, fresh) {
+    if (!isLive()) return App.fakeAI('translate', inp, ms);
+    var k = liveKey(inp, inp.register);
+    if (!fresh) for (var i = 0; i < LIVE.length; i++) if (LIVE[i].k === k) return Promise.resolve(LIVE[i].v);
+    return App.fakeAI('translate', inp, ms).then(function (res) {
+      if (res && res.ok !== false && String(res.text || '').trim()) {
+        livePut(k, res);
+        if (!inp.register && REG_LABEL[res.registerId]) livePut(liveKey(inp, res.registerId), res); /* auto = the detected register */
+      }
+      return res;
+    });
   }
   function saveState() { if (S) sset('translate-state', { src: S.src, from: S.from, to: S.to, reg: S.reg, quality: S.quality }); }
   function saveLast() { if (R) sset('translate-last', R); }
@@ -595,7 +618,8 @@
     };
   }
   function buildResult(text, res, regReq, from, to) {
-    var m = exMatch(text, from, to);
+    /* live: the engine's answer is the result, even for the sample sentence (its canned answers are demo data) */
+    var m = isLive() ? null : exMatch(text, from, to);
     if (m) return exResult(text, m, regReq, from, to);
     res = res || {};
     var segs = [], tm = 0;
@@ -977,7 +1001,9 @@
     nz('write', 'Yazıram… ' + REG_LABEL[regEff] + ' ' + regWord(regEff, 'loc') + '.');
     var q = QMAP[S.quality] || QMAP.exact;
     var t0 = Date.now();
-    App.fakeAI('translate', { text: text, register: regReq, from: from, to: to, pair: from + '-' + to }, q.ms == null ? undefined : q.ms).then(function (res) {
+    var inp = { text: text, register: regReq, from: from, to: to, pair: from + '-' + to };
+    if (S.quality === 'fast') inp.speed = 'fast';
+    trAI(inp, q.ms == null ? undefined : q.ms, o.reason === 'button' || o.reason === 'retry').then(function (res) {
       if (token !== reqId) return;
       busy = false;
       if (!alive()) return;
@@ -1351,6 +1377,23 @@
       ]);
     }
     var base = { text: r.src, from: r.from, to: r.to };
+    if (isLive()) {
+      /* Live: two real variants of the same register — a close one and a free one — next to the current
+         translation. No closeness / naturalness percentages: nothing measures them. */
+      return Promise.all([
+        trAI(ext({ register: r.reg, style: 'literal' }, base)),
+        trAI(ext({ register: r.reg, style: 'natural' }, base))
+      ]).then(function (a) {
+        var out = [], failed = 0;
+        [['herfi', a[0]], ['tebii', a[1]]].forEach(function (x) {
+          var t = x[1] && x[1].ok !== false ? String(x[1].text || '').trim() : '';
+          if (t) out.push({ key: x[0], t: t }); else failed++;
+        });
+        out.push({ key: 'pesekar', t: textOf(r).trim(), rec: true });
+        out.failed = failed;
+        return out;
+      });
+    }
     return Promise.all([
       App.fakeAI('translate', ext({ register: r.reg === 'neytral' ? 'resmi' : 'neytral' }, base), 600),
       App.fakeAI('translate', ext({ register: 'danisiq' }, base), 800)
@@ -1400,13 +1443,18 @@
               v.rec ? h('span', { class: 'badge gold' }, ie('star'), 'Tövsiyə') : null,
               isCur ? h('span', { class: 'badge navy', text: 'Hazırkı' }) : null)),
           h('p', { class: 'translate-var-t', lang: r.to, text: v.t }),
-          bar('Mənbəyə yaxınlıq', v.near, 'navy'),
-          bar('Təbiilik', v.nat, 'gold'),
+          v.near != null ? bar('Mənbəyə yaxınlıq', v.near, 'navy') : null,
+          v.nat != null ? bar('Təbiilik', v.nat, 'gold') : null,
           h('p', { class: 'translate-var-n', text: M.note }),
           h('div', { class: 'row' },
             h('button', { class: 'btn btn-sm' + (v.rec ? ' btn-secondary' : ''), type: 'button', disabled: isCur, onclick: function () { chooseVariant(r, v); s.close(); } }, ie('check'), isCur ? 'Seçilib' : 'Bunu seç'),
             h('button', { class: 'icon-btn sm ghost', type: 'button', 'aria-label': M.label + ' variantı kopyala', title: 'Kopyala', html: App.icon('copy'), onclick: function () { copyText(v.t, M.label + ' variant kopyalandı'); } }))));
       });
+      if (vs.failed) {
+        grid.appendChild(h('div', { class: 'callout', role: 'note' }, ie('alert'),
+          h('div', { text: (vs.failed > 1 ? 'Hərfi və təbii variantlar' : 'Bir variant') + ' hazırlanmadı — bir az sonra «3 variant»ı yenidən açın.' })));
+        nz('sad', null, 1600);
+      }
     });
   }
   function chooseVariant(r, v) {
@@ -1455,8 +1503,8 @@
     AUD.forEach(function (a) {
       var p;
       if (!text) p = Promise.resolve(REG_EXPLAIN[a.id]);
-      else if (exFwd(text) && S.to === 'az') p = Promise.resolve('«' + joinSegs(EX.reg[a.id].segs) + '»');
-      else p = App.fakeAI('translate', { text: text, register: a.id, from: S.from, to: S.to }, 300 + Math.round(Math.random() * 500)).then(function (res) { return res && res.text ? '«' + short(res.text, 120) + '»' : REG_EXPLAIN[a.id]; });
+      else if (!isLive() && exFwd(text) && S.to === 'az') p = Promise.resolve('«' + joinSegs(EX.reg[a.id].segs) + '»');
+      else p = trAI({ text: text, register: a.id, from: S.from, to: S.to }, 300 + Math.round(Math.random() * 500)).then(function (res) { return res && res.ok !== false && res.text ? '«' + short(res.text, 120) + '»' : REG_EXPLAIN[a.id]; });
       p.then(function (t) { var pv = previews[a.id]; if (!pv || !pv.isConnected) return; pv.textContent = t; });
     });
   }

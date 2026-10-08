@@ -333,11 +333,24 @@
       '"why": one short sentence}], "risky": [numbers of segments that need human attention]}';
   }
 
-  function callRetry(prompt, speed) {
-    return N.call(prompt, { speed: speed }).then(null, function (e) {
-      if (e && RETRY[e.code]) return N.call(prompt, { speed: speed });
+  /* One retry for a bad answer. `valid` rejects a reply of the wrong shape (a string, an object
+     without the expected fields), so it is retried and then reported — never read as «no issues». */
+  function callRetry(prompt, speed, valid) {
+    function once() {
+      return N.call(prompt, { speed: speed }).then(function (d) {
+        if (valid && !valid(d)) throw { code: 'invalid_json' };
+        return d;
+      });
+    }
+    return once().then(null, function (e) {
+      if (e && RETRY[e.code]) return once();
       throw e;
     });
+  }
+  function isQAReply(d) { return Array.isArray(d) || (!!d && typeof d === 'object' && Array.isArray(d.issues)); }
+  function isAnalysisReply(d) {
+    return !!d && typeof d === 'object' && !Array.isArray(d) &&
+      !!(d.domain || d.register || Array.isArray(d.terms) || Array.isArray(d.risks) || (d.brief && typeof d.brief === 'object'));
   }
   /* Runs the batches CONC at a time; stops scheduling new ones after a fatal error (bad code, limit, network…). */
   function runBatches(batches, mk, speed) {
@@ -348,7 +361,7 @@
         while (!fatal && active < CONC && next < batches.length) {
           (function (k) {
             active++;
-            callRetry(mk(batches[k]), speed).then(function (d) { results[k] = { ok: true, data: d }; }, function (e) {
+            callRetry(mk(batches[k]), speed, isQAReply).then(function (d) { results[k] = { ok: true, data: d }; }, function (e) {
               results[k] = { ok: false, error: e };
               if (!firstErr) firstErr = e || { code: 'server_error' };
               if (e && FATAL[e.code]) fatal = true;
@@ -626,6 +639,6 @@
     var sents = sentencesOf(text);
     if (!sents.length) sents = [text];
     var speed = (Number(base.words) || countWords(text)) < 150 ? 'fast' : 'normal';
-    return callRetry(analyzePrompt(P, sents, inp), speed).then(function (d) { return shapeAnalysis(base, d, P, text); });
+    return callRetry(analyzePrompt(P, sents, inp), speed, isAnalysisReply).then(function (d) { return shapeAnalysis(base, d, P, text); });
   };
 })();

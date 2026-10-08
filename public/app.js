@@ -1491,14 +1491,28 @@
      Otherwise (preview, offline) the demo answers below are used. */
   function liveAI() { return !!(W.NUANZA_LIVE && W.NuanzaAI && W.NuanzaAI.kinds); }
   function mockAI(kind, input) { var fn = AI[kind]; return fn ? fn(input) : null; }
+  /* Live errors: one toast per message — parallel calls (3 variants, register previews,
+     QA batches) that fail for the same reason must not stack identical toasts. */
+  var lastErr = { msg: '', t: null };
+  function liveErrToast(e, msg) {
+    var shown = lastErr.t && lastErr.t.el;
+    if (msg === lastErr.msg && shown && shown.isConnected && !shown.classList.contains('out')) return; /* the same toast is still on screen */
+    var opts = null;
+    if (e && e.code === 'bad_code' && screens.settings) {
+      opts = { action: { label: 'Ayarlar', onClick: function () { go('settings', { s: 'account', opt: 'code' }); } } };
+    }
+    try { lastErr = { msg: msg, t: toast(msg, 'err', opts) }; } catch (x) { /* toast not ready */ }
+  }
   function fakeAI(kind, input, ms) {
     if (liveAI() && typeof W.NuanzaAI.kinds[kind] === 'function') {
       return Promise.resolve().then(function () { return W.NuanzaAI.kinds[kind](input || {}); })
         .catch(function (e) {
-          log(e);
+          /* {code} = an expected Worker answer (limit, bad code…); anything else is a bug in an adapter */
+          if (e && e.code && !(e instanceof Error)) { try { console.warn('[Nuanza] ' + kind + ': ' + e.code); } catch (x) { /* ignore */ } }
+          else log(e);
           var msg = (W.NuanzaAI.errText && W.NuanzaAI.errText(e)) || 'Mühərrik cavab vermədi. Yenidən cəhd edin.';
-          try { toast(msg, 'err'); } catch (x) { /* toast not ready */ }
-          return { ok: false, error: msg };
+          liveErrToast(e, msg);
+          return { ok: false, error: msg, code: (e && e.code) || 'server_error' };
         });
     }
     if (liveAI()) {

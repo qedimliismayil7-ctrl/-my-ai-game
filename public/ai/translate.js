@@ -6,7 +6,11 @@
    { text, register, registerId, detected, detectedId, auto, registerConfidence,
      from, to, pair, pairLabel, segments[{src,t,confidence,note?,spans,para,n}],
      situation{domain,purpose,audience,register,tone}, terms[{a,b,domain,note,enforced}],
-     questions[{q,options,why}], stats{words,outWords,segments,high,mid,low,tm}, demo } */
+     questions[{q,options,why}], stats{words,outWords,segments,high,mid,low,tm}, demo }
+   Input: { text, register?, from?, to?, pair?, terms?: [{a,b}] (a project's approved terms, used first),
+            style?: 'literal' | 'natural' (the «3 variant» sheet), speed?: 'fast' }.
+   Every non-empty line of the text is its own paragraph (segment[].para), so a caller can
+   send several editor segments at once and put the translations back by paragraph. */
 (function () {
   'use strict';
   var W = window, N = W.NuanzaAI;
@@ -122,7 +126,7 @@
     var tail = lang === 'en' ? '(?:s|es|d|ed|ing)?(?=$|[^\\p{L}])' : '';
     try { return new RegExp('(^|[^\\p{L}])' + t + tail, 'u'); } catch (e) { return null; }
   }
-  function glossaryHits(text, P) {
+  function glossaryHits(text, P, extra) {
     var A = App(), src = ' ' + mkey(text) + ' ', out = [], seen = {};
     function add(a, b, d, note, user) {
       a = clean(a); b = clean(b);
@@ -132,6 +136,8 @@
       seen[mkey(a)] = 1;
       out.push({ a: a, b: b, domain: d || 'Ümumi', note: note || '', user: !!user });
     }
+    /* the caller's terms first (a project's approved glossary), then the user's own, then the built-in one */
+    N.arr(extra).forEach(function (g) { if (g && typeof g === 'object') add(g.a, g.b, g.d || g.domain, g.note, true); });
     var mine = [];
     try { mine = A && A.store ? A.store.get('glossary-user', []) : []; } catch (e) { mine = []; }
     if (Array.isArray(mine)) mine.forEach(function (g) {
@@ -161,9 +167,14 @@
   }
 
   /* ---------- prompt ---------- */
-  function buildPrompt(P, req, sents, terms) {
+  var STYLE = {
+    literal: function (P) { return 'VARIANT: a close, literal translation — keep the SOURCE sentence structure, the order of ideas and every pronoun wherever ' + P.B + ' grammar allows, and prefer direct equivalents to idioms. It must still be grammatical and correct.'; },
+    natural: function (P) { return 'VARIANT: a free, natural translation — say it the way a native ' + P.B + ' speaker would, restructure sentences and use idiomatic phrasing where it reads better; keep the meaning, numbers and names exactly.'; }
+  };
+  function buildPrompt(P, req, sents, terms, style) {
     var L = [];
     L.push('Translate the SOURCE from ' + P.A + ' to ' + P.B + ': translate meaning, not words — understand each sentence, then rebuild it in natural ' + P.B + ' word order. ' + P.rules);
+    if (STYLE[style]) L.push(STYLE[style](P));
     if (req) {
       L.push('REGISTER: write the whole translation in the ' + regDesc(req, P) + ', even if the SOURCE is written in another register.');
     } else {
@@ -284,9 +295,10 @@
     text.split(/\n+/).map(function (p) { return p.trim(); }).filter(Boolean).forEach(function (p, pi) {
       splitSentences(p).forEach(function (s) { sents.push({ src: s, para: pi }); });
     });
-    var terms = glossaryHits(text, P);
+    var terms = glossaryHits(text, P, inp.terms);
+    var style = inp.style === 'literal' || inp.style === 'natural' ? inp.style : '';
 
-    return N.call(buildPrompt(P, req, sents, terms), { speed: 'normal' }).then(function (data) {
+    return N.call(buildPrompt(P, req, sents, terms, style), { speed: inp.speed === 'fast' ? 'fast' : 'normal' }).then(function (data) {
       data = data && typeof data === 'object' ? data : {};
       var raw = pickSegments(data);
       var whole = Array.isArray(data) ? '' : N.str(data.final || data.translation || data.text).trim();

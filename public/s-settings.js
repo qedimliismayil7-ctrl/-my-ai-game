@@ -126,6 +126,7 @@
     ['account', 'role', 'Rol', 'freelance büro şirkətdaxili tələbə vəzifə'],
     ['account', 'logins', 'Giriş üsulları', 'google telegram e-poçt linki daxil ol parol'],
     ['account', 'sessions', 'Aktiv sessiyalar', 'cihaz çıxış et brauzer təhlükəsizlik'],
+    ['account', 'code', 'Sayt giriş kodu', 'kod giriş açar parol şifrə access ai süni intellekt'],
     ['work', 'pairs', 'Dil cütləri', 'ingilis rus türk en ru tr az dil'],
     ['work', 'specialties', 'İxtisas sahələri', 'hüquq maliyyə neft tibb sahə'],
     ['work', 'rates', 'Tariflər', 'qiymət söz səhifə azn manat notarial'],
@@ -1128,7 +1129,34 @@
     drawSessions();
     var sessCard = card('Aktiv sessiyalar', 'Tanımadığınız cihaz görsəniz, dərhal çıxış edin.', [sList, h('div', { class: 'row' }, allBtn)], { opt: 'sessions' });
 
-    return h('div', { class: 'stack-lg' }, personal, loginsCard, sessCard);
+    /* site access code: the Worker's ACCESS_CODE. Stored as 'code' (App.store → localStorage
+       'nuanza2:code', JSON) and sent by ai/core.js with every AI request (x-access-code).
+       Saved on its own button — it is not part of the profile draft. */
+    var codeIn = h('input', { class: 'input', id: 'st-code', type: 'text', autocomplete: 'off', spellcheck: 'false', autocapitalize: 'off',
+      value: String(sget('code', '') || ''), 'aria-describedby': 'st-code-hint' });
+    var codeSave = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, ie('check'), 'Yadda saxla');
+    function saveCode() {
+      var v = codeIn.value.trim();
+      codeIn.value = v;
+      if (/[^\x20-\x7e]/.test(v)) { /* sent as an HTTP header: Latin letters, digits and signs only */
+        codeIn.setAttribute('aria-invalid', 'true');
+        toast('Kod yadda saxlanmadı', 'warn', { sub: 'Kodda yalnız latın hərfləri, rəqəmlər və işarələr ola bilər (ə, ş, ç… olmadan)' });
+        return;
+      }
+      codeIn.removeAttribute('aria-invalid');
+      if (v) sset('code', v); else { try { App.store.remove('code'); } catch (e) { /* storage blocked */ } }
+      toast(v ? 'Giriş kodu yadda saxlandı' : 'Giriş kodu silindi', 'ok', { sub: v ? 'Növbəti AI sorğusu bu kodla göndəriləcək' : 'AI sorğuları kodsuz göndəriləcək' });
+    }
+    codeSave.addEventListener('click', saveCode);
+    codeIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); saveCode(); } });
+    var codeCard = card('Sayt girişi', 'Süni intellekt sorğuları bu kodla göndərilir.', [
+      h('div', { class: 'field' },
+        h('label', { for: 'st-code' }, 'Sayt giriş kodu'), codeIn,
+        h('span', { class: 'hint', id: 'st-code-hint', text: 'Saytın sahibi kod qoyubsa, buraya yazın' })),
+      h('div', { class: 'row' }, codeSave)
+    ], { opt: 'code' });
+
+    return h('div', { class: 'stack-lg' }, personal, codeCard, loginsCard, sessCard);
   }
 
   /* ------------------------------------------------------------------

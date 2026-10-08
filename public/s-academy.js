@@ -1208,6 +1208,8 @@
       updateSkills(out.rubric);
       logErrors(out.errors);
       if (!out.errors.some(function (e) { return e.type === 'Türk forması'; })) bumpMission('turk', 1);
+      /* the home learning path: «Mətni alın», «Tərcümə edin» and «Nuanza yoxlasın» are done now */
+      var pth = Number(sget('home:path', 2)); if (isFinite(pth) && pth < 3) sset('home:path', 3);
       if (task.domain === 'Hüquq' && out.score >= 85) bumpWeekly();
       if (task.sim) { var b = bestOf('sim'); if (b == null || out.score > b) setBest('sim', out.score); }
     }

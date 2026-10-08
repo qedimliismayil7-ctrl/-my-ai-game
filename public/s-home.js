@@ -245,6 +245,23 @@
     '.home-ex-src{color:var(--soft);font-size:var(--fs-sm)}',
     '.home-ex-tgt{font-family:var(--f-display);font-size:1.0625rem;line-height:1.45}',
     '.home-risks{margin:0;padding-left:1.1em;display:grid;gap:4px;font-size:var(--fs-sm)}',
+    /* the whole lesson sheet */
+    '.home-ls{display:grid;gap:18px}',
+    '.home-ls-sec{display:grid;gap:10px}',
+    '.home-ls-pit{display:grid;gap:4px;padding:12px 14px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--surface)}',
+    '.home-ls-pit s{color:var(--nar);text-decoration-thickness:1.5px}',
+    '.home-ls-pit ins{color:var(--ok);text-decoration:none;font-weight:600}',
+    '.home-lq-q{font-weight:600;line-height:1.45}',
+    '.home-lq-opts{display:grid;gap:8px}',
+    '.home-lq-opts.locked .choice{pointer-events:none}',
+    '.choice.home-lq-opt{align-items:center;padding-block:12px}',
+    '.choice.home-lq-opt b{font-weight:500;line-height:1.45}',
+    '.home-lq-k{flex:none;width:26px;height:26px;display:grid;place-items:center;border-radius:8px;background:var(--surface2);color:var(--soft);font:700 var(--fs-sm)/1 var(--f-body)}',
+    '.choice.home-lq-opt.right{border-color:var(--ok);background:linear-gradient(var(--ok-t),var(--ok-t)),var(--surface);box-shadow:0 0 0 3px var(--ok-t)}',
+    '.choice.home-lq-opt.right::after{background:var(--ok);border-color:var(--ok)}',
+    '.choice.home-lq-opt.wrong{border-color:var(--nar);background:linear-gradient(var(--nar-t),var(--nar-t)),var(--surface)}',
+    '.choice.home-lq-opt.wrong::after{background:var(--nar);border-color:var(--nar)}',
+    '.choice.home-lq-opt.dim{opacity:.55}',
 
     /* academy — top grid */
     '.home-top{display:grid;gap:16px}',
@@ -1279,9 +1296,116 @@
       App.toast('Yeni dərs üçün düyməyə toxunun', 'info', { sub: 'Məclis zəif yerinizə görə başqa mövzu seçəcək' });
     } });
     actions.push({ label: 'Dərsə başla', kind: 'primary', icon: 'play', onClick: function () {
-      setTimeout(function () { goFirst(['lesson', 'lessons', 'academy'], { id: L.id, lesson: L.id }, 'Dərs ekranı hazırlanır'); }, 60);
+      setTimeout(function () {
+        if (hasScreen('lesson') || hasScreen('lessons')) goFirst(['lesson', 'lessons'], { id: L.id, lesson: L.id }, 'Dərs ekranı hazırlanır');
+        else lessonSheet(L);
+      }, 60);
     } });
     App.sheet({ title: L.title, body: body, actions: actions });
+  }
+
+  /* 6.3b the whole lesson: examples, typical mistakes, a quiz with answers and a task the
+     Mirzə Məclisi checks (the live engine's lesson or the demo one — same shape). */
+  function lessonSheet(L) {
+    var exs = (L.examples || []).filter(function (e) { return e && e.src && e.tgt; });
+    var pits = (L.pitfalls || []).filter(function (x) { return x && x.wrong && x.right; });
+    var qz = (L.quiz || []).filter(function (q) { return q && q.q && Array.isArray(q.options) && q.options.length >= 2 && q.answer >= 0 && q.answer < q.options.length; });
+    var task = L.task && L.task.src ? L.task : null;
+    var right = 0, answered = 0;
+    var status = h('p', { class: 'small muted', 'aria-live': 'polite', text: qz.length + ' sual · hər birində bir cavab seçin' });
+    function sec(title, kids) { return h('section', { class: 'home-ls-sec' }, h('span', { class: 'eyebrow plain', text: title }), kids); }
+    function quizRow(q, i) {
+      var fb = h('div', { 'aria-live': 'polite' });
+      var wrap = h('div', { class: 'home-lq-opts', role: 'group', 'aria-label': 'Sual ' + (i + 1) + ' — variantlar' });
+      var btns = q.options.map(function (o, k) {
+        var b = h('button', { class: 'choice home-lq-opt', type: 'button' },
+          h('span', { class: 'home-lq-k', 'aria-hidden': 'true', text: 'ABCDE'.charAt(k) }), h('span', null, h('b', { text: o })));
+        b.addEventListener('click', function () {
+          if (wrap.classList.contains('locked')) return;
+          wrap.classList.add('locked');
+          var ok = k === q.answer;
+          btns.forEach(function (x, j) { x.setAttribute('aria-disabled', 'true'); x.classList.add(j === q.answer ? 'right' : j === k ? 'wrong' : 'dim'); });
+          fb.appendChild(h('div', { class: 'callout ' + (ok ? 'green' : 'red') }, ie(ok ? 'check' : 'info'),
+            h('div', null, h('b', { text: ok ? 'Düzdür! ' : 'Düzgün cavab: ' + 'ABCDE'.charAt(q.answer) + '. ' }), q.explain || '')));
+          answered++; if (ok) right++;
+          status.textContent = right + ' / ' + qz.length + ' düzgün' + (answered < qz.length ? ' · ' + (qz.length - answered) + ' sual qalıb' : '');
+          if (answered === qz.length) quizDone(status);
+        });
+        wrap.appendChild(b);
+        return b;
+      });
+      return h('div', { class: 'stack-sm' }, h('p', { class: 'home-lq-q', text: (i + 1) + '. ' + q.q }), wrap, fb);
+    }
+    function quizDone(el) {
+      var key = 'home:lessondone:' + dayKey(), done = sget(key, {}) || {};
+      if (done[L.id] != null) { App.toast('Dərs təkrarlandı', 'info', { sub: right + ' / ' + qz.length + ' düzgün · XP yalnız ilk dəfə verilir' }); return; }
+      done[L.id] = right; sset(key, done);
+      var ms = sget('home:ms:' + dayKey(), {}) || {}; ms.lesson = 1; sset('home:ms:' + dayKey(), ms);
+      var xp = Math.max(5, Math.round((L.xp || 30) * (qz.length ? 0.5 + 0.5 * right / qz.length : 1)));
+      addXP(xp, pointOf(el));
+      nz(right === qz.length ? 'celebrate' : 'success', right === qz.length ? 'Hamısı düzdür — afərin!' : right + ' / ' + qz.length + '. Səhv olanlara bir də baxın.', 2600);
+    }
+    function taskBox() {
+      var ta = h('textarea', { class: 'textarea', id: 'home-ls-ta', rows: '3', lang: L.to || 'az', placeholder: 'Tərcüməniz…' });
+      var hintsBox = h('div', { class: 'stack-sm' }), res = h('div', { class: 'stack-sm', 'aria-live': 'polite' }), shown = 0;
+      var hints = task.hints || [];
+      var hintBtn = hints.length ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, ie('bulb'), 'İpucu') : null;
+      if (hintBtn) hintBtn.addEventListener('click', function () {
+        if (shown >= hints.length) return;
+        hintsBox.appendChild(h('p', { class: 'small', text: '• ' + hints[shown++] }));
+        if (shown >= hints.length) hintBtn.disabled = true;
+      });
+      var modelBtn = task.model ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, ie('eye'), 'Nümunə') : null;
+      if (modelBtn) modelBtn.addEventListener('click', function () {
+        modelBtn.disabled = true;
+        res.appendChild(h('div', { class: 'home-ex' }, h('span', { class: 'eyebrow plain', text: 'Nümunə tərcümə' }), h('p', { class: 'home-ex-tgt', text: task.model })));
+      });
+      var check = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, ie('shield'), 'Yoxla');
+      check.addEventListener('click', function () {
+        var text = ta.value.trim();
+        if (isBusy(check)) return;
+        if (text.split(/\s+/).length < 2) { ta.setAttribute('aria-invalid', 'true'); try { ta.focus(); } catch (e) { /* ignore */ } return; }
+        ta.removeAttribute('aria-invalid');
+        busy(check, true);
+        res.textContent = ''; res.appendChild(skel(2));
+        App.fakeAI('grade', { src: task.src, text: text, model: task.model || '', level: L.level, from: L.from, to: L.to }, 600).then(function (r) {
+          busy(check, false);
+          if (!res.isConnected) return;
+          res.textContent = '';
+          if (!r || r.ok === false || r.score == null) {
+            res.appendChild(h('div', { class: 'callout' }, ie('alert'), h('div', { text: (r && r.error) || 'Yoxlama alınmadı. Yenidən cəhd edin.' })));
+            return;
+          }
+          res.appendChild(h('div', { class: 'home-qa-top' }, App.ring(r.score, 'bal', null, { size: 'sm' }),
+            h('div', { class: 'stack-sm' }, h('b', { text: (r.errors || []).length ? r.errors.length + ' qeyd' : 'Səhv tapılmadı' }), r.summary ? h('p', { class: 'small', text: r.summary }) : null)));
+          (r.errors || []).slice(0, 3).forEach(function (e) {
+            res.appendChild(h('div', { class: 'home-ls-pit' }, h('b', null, h('s', { text: e.was }), ' → ', h('ins', { text: e.now || '—' })), e.why ? h('small', { class: 'muted', text: e.why }) : null));
+          });
+          if (task.model && modelBtn && !modelBtn.disabled) modelBtn.click();
+        }, function () { busy(check, false); res.textContent = ''; });
+      });
+      return sec('Tapşırıq', [
+        h('p', { class: 'home-ex-src', lang: L.from || 'en', text: task.src }),
+        h('div', { class: 'field' }, h('label', { class: 'sr-only', for: 'home-ls-ta', text: 'Tərcüməniz' }), ta),
+        hintsBox,
+        h('div', { class: 'row' }, check, hintBtn, modelBtn),
+        res]);
+    }
+    var body = h('div', { class: 'home-ls' },
+      h('div', { class: 'chips' }, badge(L.topic || 'Dərs', 'navy'), L.level ? badge(L.level) : null, badge(L.minutes + ' dəqiqə', '', 'clock'), badge('+' + L.xp + ' XP', 'gold', 'star')),
+      L.intro ? h('p', { text: L.intro }) : null,
+      L.rule ? h('div', { class: 'callout' }, ie('bulb'), h('div', null, h('b', { text: 'Qayda: ' }), L.rule)) : null,
+      exs.length ? sec('Nümunələr', exs.map(function (e) {
+        return h('div', { class: 'home-ex' }, h('p', { class: 'home-ex-src', lang: L.from || 'en', text: e.src }), h('p', { class: 'home-ex-tgt', lang: L.to || 'az', text: e.tgt }), e.note ? h('p', { class: 'small muted', text: e.note }) : null);
+      })) : null,
+      pits.length ? sec('Tipik səhvlər', pits.map(function (x) {
+        return h('div', { class: 'home-ls-pit' }, h('b', null, h('s', { text: x.wrong }), ' → ', h('ins', { text: x.right })), x.why ? h('small', { class: 'muted', text: x.why }) : null);
+      })) : null,
+      qz.length ? sec('Suallar', [status].concat(qz.map(quizRow))) : null,
+      task ? taskBox() : null,
+      L.summary ? h('div', { class: 'callout green' }, ie('star'), h('div', null, h('b', { text: 'Yadda saxlayın: ' }), L.summary)) : null);
+    App.sheet({ title: L.title, wide: true, body: body, actions: [{ label: 'Bağla', kind: 'ghost' }] });
+    nz('read', 'Nümunələrə baxın, sonra suallara keçin.', 2200);
   }
 
   /* 6.4 learning path */
@@ -1330,6 +1454,13 @@
   }
   function gradeStep(btn) {
     if (isBusy(btn)) return;
+    if (isLive()) {
+      /* Live: the council grades the student's own translation on the task screen — never a canned sample. */
+      if (goFirst(['task', 'practice'], { from: 'home', step: 3 }, 'Tapşırıq ekranı hazırlanır')) {
+        App.toast('Tərcümənizi yazın və «Yoxla»ya basın', 'info', { sub: 'Mirzə Məclisi sizin variantınızı yoxlayacaq' });
+      }
+      return;
+    }
     busy(btn, true);
     App.fakeAI('grade', {
       src: 'The Contractor shall notify the Employer within 14 days.',

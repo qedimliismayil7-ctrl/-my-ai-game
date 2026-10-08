@@ -494,12 +494,17 @@
         if (typeof s.t === 'string') st.t = s.t;
         st.o = s.o === 'ai' || s.o === 'tm' || s.o === 'human' ? s.o : (st.t ? st.o : null);
         st.ok = !!s.ok && !!st.t; st.ed = !!s.ed; st.ans = s.ans || null; st.note = typeof s.note === 'string' ? s.note : '';
+        if (st.o === 'ai' && (s.c === 'high' || s.c === 'mid' || s.c === 'low')) { st.c = s.c; st.cn = typeof s.cn === 'string' ? s.cn : ''; }
       }
       return st;
     });
   }
   function saveSegs(p, segs) {
-    sset('pj:segs:' + p.id, segs.map(function (s) { return { t: s.t, o: s.o, ok: s.ok, ed: s.ed, ans: s.ans, note: s.note }; }));
+    sset('pj:segs:' + p.id, segs.map(function (s) {
+      var o = { t: s.t, o: s.o, ok: s.ok, ed: s.ed, ans: s.ans, note: s.note };
+      if (s.c && s.o === 'ai') { o.c = s.c; o.cn = s.cn || ''; } /* the live engine's own confidence for its draft */
+      return o;
+    }));
   }
   function progressOf(p, segs) {
     var set = setOf(p), fragOk = 0, seedOk = 0;
@@ -574,6 +579,7 @@
     if (issues.some(function (i) { return i.sev === 'high'; })) return 'low';
     if (issues.length) return 'mid';
     if (st.ed || st.ans) return 'high';
+    if (st.c && st.o === 'ai') return st.c; /* a live AI draft: the engine's confidence, not the sample's */
     return d.c || 'high';
   }
   function scoreOf(issues) {
@@ -1415,7 +1421,7 @@
       var tmr = 0;
       r.ta.addEventListener('input', function () {
         fit(r.ta);
-        r.st.t = r.ta.value; r.st.ed = true;
+        r.st.t = r.ta.value; r.st.ed = true; r.st.c = null;
         if (!r.st.o) r.st.o = 'human';
         if (r.st.ok) r.st.ok = false;
         clearTimeout(tmr); tmr = S.later(function () { updateRow(r); updateAll(); }, 260);
@@ -1445,7 +1451,8 @@
       r.conf.hidden = !conf;
       r.conf.className = 'editor-conf' + (conf ? ' ' + conf : '');
       r.confTx.textContent = conf ? CONF_L[conf] : '';
-      r.conf.title = conf === 'high' ? 'Mühərrik əmindir' : conf === 'mid' ? 'Yoxlamağa dəyər: ' + (r.issues[0] ? r.issues[0].text : (r.d.why || '')) : conf === 'low' ? 'Şübhəli: ' + (r.issues[0] ? r.issues[0].text : '') : '';
+      var cnote = st.c && st.o === 'ai' ? st.cn || '' : '';
+      r.conf.title = conf === 'high' ? 'Mühərrik əmindir' : conf === 'mid' ? 'Yoxlamağa dəyər: ' + (r.issues[0] ? r.issues[0].text : (cnote || r.d.why || '')) : conf === 'low' ? 'Şübhəli: ' + (r.issues[0] ? r.issues[0].text : cnote) : '';
       r.ta.classList.toggle('editor-t-mid', conf === 'mid' && !st.ok);
       r.ta.classList.toggle('editor-t-low', conf === 'low' && !st.ok);
       var high = r.issues.some(function (x) { return x.sev === 'high'; });
@@ -1481,6 +1488,7 @@
       if (list.length > 3) r.hints.appendChild(h('span', { class: 'small muted', text: '+' + (list.length - 3) + ' qeyd daha — QA-da' }));
     }
     function setText(r, text, o) {
+      if (text !== r.st.t) { r.st.c = null; r.st.cn = ''; } /* the engine's confidence described the old text */
       r.ta.value = text; r.st.t = text; fit(r.ta);
       if (o) { r.st.o = o.o || r.st.o; if (o.ed != null) r.st.ed = o.ed; }
       updateRow(r); updateAll(); scheduleSave();
@@ -1700,6 +1708,7 @@
         if (rows.some(isRisk)) setFilter('risk');
         return;
       }
+      if (App.isLive && App.isLive()) { runLiveAI(todo); return; }
       aiBtn.setAttribute('aria-busy', 'true');
       todo.forEach(function (r) { setBusy(r, true); });
       var sim = todo.map(function (r) { return analyze(r.d, { t: r.d.ai || r.d.t, o: 'ai' }, ctx); });
@@ -1737,6 +1746,99 @@
         var first = rows.filter(function (r) { return !r.st.ok; })[0];
         if (first) S.later(function () { focusRow(first, true); }, 300);
       }
+    }
+
+    /* Live engine: the empty segments go to the translate adapter (ai/translate.js), one line per
+       segment, with the project's register and approved terms; the answer comes back per line
+       (segment[].para). Nothing from the sample data is typed in: a segment the engine did not
+       translate stays empty, and a failed call leaves every segment as it was. */
+    function runLiveAI(todo) {
+      aiBtn.setAttribute('aria-busy', 'true');
+      todo.forEach(function (r) { setBusy(r, true); });
+      nz('write', 'Boş seqmentləri tərcümə edirəm…', 2400);
+      var chunks = [], cur = [], size = 0;
+      todo.forEach(function (r) {
+        var len = String(r.d.s).length;
+        if (cur.length && (cur.length >= 20 || size + len > 6000)) { chunks.push(cur); cur = []; size = 0; }
+        cur.push(r); size += len;
+      });
+      if (cur.length) chunks.push(cur);
+      var terms = gl.map(function (g) { return { a: g.a, b: g.b }; });
+      var to = String(p.pair || '').split('-')[1] || 'az';
+      var got = [], failed = false, seq = Promise.resolve();
+      function same(a, b) { return lower(a).replace(/\s+/g, ' ').trim() === lower(b).replace(/\s+/g, ' ').trim(); }
+      chunks.forEach(function (ch) {
+        seq = seq.then(function () {
+          if (failed || S.dead) return null;
+          var text = ch.map(function (r) { return String(r.d.s).replace(/\s*\n+\s*/g, ' ').trim(); }).join('\n');
+          return App.fakeAI('translate', { text: text, register: regNow, from: set.src, to: to, pair: set.src + '-' + to, terms: terms }).then(function (res) {
+            if (!res || res.ok === false || !Array.isArray(res.segments)) { failed = true; return; }
+            var by = {};
+            res.segments.forEach(function (g) { if (g) (by[g.para] = by[g.para] || []).push(g); });
+            ch.forEach(function (r, k) {
+              var gs = by[k] || [];
+              var t = gs.map(function (g) { return String(g.t || '').trim(); }).join(' ').replace(/\s+/g, ' ').trim();
+              if (!t || same(t, r.d.s)) return;
+              var c = 'high', note = '';
+              gs.forEach(function (g) {
+                if (g.confidence === 'low' && c !== 'low') { c = 'low'; note = g.note || note; }
+                else if (g.confidence === 'mid' && c === 'high') { c = 'mid'; note = g.note || note; }
+              });
+              got.push({ r: r, t: t, c: c, note: note });
+            });
+          });
+        });
+      });
+      function release(list) { list.forEach(function (r) { r.ta.classList.remove('editor-sk'); setBusy(r, false); updateRow(r); }); }
+      seq.then(function () {
+        if (S.dead) return;
+        var done = got.map(function (x) { return x.r; });
+        release(todo.filter(function (r) { return done.indexOf(r) < 0; }));
+        if (!got.length) {
+          aiBtn.removeAttribute('aria-busy'); updateAll();
+          if (!failed) toast('Mühərrik tərcümə qaytarmadı', 'warn', { sub: 'Bir az sonra yenidən cəhd edin' });
+          nz('sad', null, 1600);
+          return;
+        }
+        var sim = got.map(function (x) { return analyze(x.r.d, { t: x.t, o: 'ai' }, ctx); });
+        var flagged = 0, turk = 0, all = [];
+        got.forEach(function (x, i) { if (sim[i].length || x.c !== 'high') flagged++; sim[i].forEach(function (iss) { if (iss.type === 'Türk forması') turk++; }); });
+        rows.forEach(function (r) { var j = done.indexOf(r); all = all.concat(j >= 0 ? sim[j] : r.issues); });
+        var left = todo.length - got.length, score = scoreOf(all);
+        var txt = got.length + ' seqment tərcümə edildi: ' + (got.length - flagged) + ' əmin, ' + flagged + ' yoxlanmalı.' +
+          (terms.length ? ' Layihə lüğəti (' + terms.length + ' termin) mühərrikə verildi.' : '') + ' Üslub: ' + REG[regNow] + '.' +
+          (turk ? ' Dilçi Nənə ' + turk + ' türk formasını qeyd etdi — redaktorda göstərilir.' : '') +
+          (left ? ' ' + left + ' seqment boş qaldı — «AI ilkin tərcümə»ni yenidən işə salın.' : '');
+        var job;
+        try { job = App.bigJob('AI ilkin tərcümə — ' + p.name, { score: score, text: txt, seal: left ? 'Qismən hazırdır' : 'Qaralama hazırdır' }); } catch (e) { job = null; }
+        Promise.resolve(job).then(null, function () { return null; }).then(function () {
+          if (S.dead) return;
+          aiBtn.removeAttribute('aria-busy');
+          var k = 0;
+          got.forEach(function (x, idx) {
+            S.later(function () {
+              x.r.ta.classList.remove('editor-sk');
+              typeInto(x.r, x.t, function () {
+                x.r.st.t = x.t; x.r.st.o = 'ai'; x.r.st.ed = false; x.r.st.ok = false; x.r.st.c = x.c; x.r.st.cn = x.note;
+                setBusy(x.r, false); updateRow(x.r);
+                k++;
+                if (k === got.length) finish(); else updateAll();
+              });
+            }, idx * 140);
+          });
+        });
+        function finish() {
+          updateAll(); flushSave();
+          toast('AI qaralaması hazırdır', left ? 'warn' : 'ok', { sub: got.length + ' seqment dolduruldu' + (left ? ' · ' + left + ' seqment boş qaldı' : '') + (flagged ? ' · ' + flagged + ' seqmentə baxın' : ''),
+            action: flagged ? { label: 'Riskliləri göstər', onClick: function () { if (!S.dead) setFilter('risk'); } } : null });
+          var first = rows.filter(function (r) { return !r.st.ok; })[0];
+          if (first) S.later(function () { focusRow(first, true); }, 300);
+        }
+      }, function (e) {
+        if (S.dead) return;
+        try { console.error('[Nuanza] AI ilkin tərcümə', e); } catch (x) { /* ignore */ }
+        release(todo); aiBtn.removeAttribute('aria-busy'); updateAll();
+      });
     }
 
     /* --- TM match sheet --- */
@@ -1804,10 +1906,14 @@
               });
               if (c.score != null) sc = Math.min(sc, c.score);
             }
+            /* live engine failed (fakeAI already showed why): say that only the local checks ran */
+            var liveFail = !!(c && c.ok === false);
             out.textContent = '';
             out.appendChild(h('div', { class: 'editor-check' }, App.ring(sc, 'bal', null, { size: 'sm' }),
-              h('div', { class: 'stack-sm' }, h('b', { text: iss.length ? iss.length + ' qeyd tapıldı' : 'Mirzələr razıdır' }),
-                h('p', { class: 'small muted', text: iss.length ? 'Düzəlişləri birbaşa buradan tətbiq edin.' : 'Məna, terminlər, rəqəmlər və orfoqrafiya qaydasındadır.' }))));
+              h('div', { class: 'stack-sm' }, h('b', { text: iss.length ? iss.length + ' qeyd tapıldı' : liveFail ? 'Yerli yoxlamada qeyd yoxdur' : 'Mirzələr razıdır' }),
+                h('p', { class: 'small muted', text: iss.length ? 'Düzəlişləri birbaşa buradan tətbiq edin.' : liveFail ? 'Rəqəmlər, terminlər və türk formaları yoxlandı.' : 'Məna, terminlər, rəqəmlər və orfoqrafiya qaydasındadır.' }))));
+            if (liveFail) out.appendChild(h('div', { class: 'callout', role: 'note' }, ie('alert'),
+              h('div', { text: 'Mirzələrin dərin yoxlaması alınmadı — burada yalnız yerli yoxlamalar var. Bir az sonra yenidən soruşun.' })));
             iss.forEach(function (x) {
               var b = (x.fix === 'word' || x.fix === 'raw' || x.fix === 'fill') ? h('button', { class: 'btn btn-sm', type: 'button', onclick: function () {
                 var nt = applyFix(d, r.st, x); if (nt == null) return;
@@ -1816,7 +1922,8 @@
               } }, ie('wand'), 'Düzəlt') : null;
               out.appendChild(h('div', { class: 'editor-hint ' + x.sev }, h('span', { class: 'editor-hint-tx' }, h('b', { text: (ELDER[x.type] || 'Nuanza') + ':' }), x.text), b));
             });
-            nz(iss.length ? 'point' : 'success', iss.length ? 'Bax, bunları tapdıq.' : 'Təmizdir!', 1800);
+            if (liveFail) nz('sad', null, 1600);
+            else nz(iss.length ? 'point' : 'success', iss.length ? 'Bax, bunları tapdıq.' : 'Təmizdir!', 1800);
           });
         } },
         { ic: 'book', b: 'Lüğəti tətbiq et', s: 'Layihə terminlərini qoru', run: function () {
@@ -1937,8 +2044,12 @@
         if (S.dead) return;
         againBtn.removeAttribute('aria-busy');
         /* Only the live engine's issues describe these segments; the demo answer stays unused, and {ok:false} leaves the local checks. */
-        aiIss = App.isLive && App.isLive() && r && r.ok !== false && Array.isArray(r.issues) ? r.issues : [];
+        var live = !!(App.isLive && App.isLive());
+        aiIss = live && r && r.ok !== false && Array.isArray(r.issues) ? r.issues : [];
         segs = loadSegs(p); M = model(); build();
+        var note = !live ? '' : !r || r.ok === false ? 'Mirzələrin dərin yoxlaması alınmadı — yalnız yerli yoxlamalar (rəqəm, termin, türk forması, durğu) göstərilir. Bir az sonra «Yenidən yoxla»ya basın.'
+          : r.checked != null && r.segments != null && r.checked < r.segments ? (r.segments - r.checked) + ' seqment dərin yoxlamadan keçmədi — «Yenidən yoxla»ya basın.' : '';
+        if (note) host.insertBefore(h('div', { class: 'callout', role: 'note' }, ie('alert'), h('div', { text: note })), host.firstChild);
         setMap('pj:qa', p.id, M.score);
         nz(M.score >= 85 ? 'success' : 'worried', M.score >= 85 ? M.score + ' bal — təhvilə az qalıb!' : M.score + ' bal. Kritik qeydlərdən başlayaq.', 2800);
       });
