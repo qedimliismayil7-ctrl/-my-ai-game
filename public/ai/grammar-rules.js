@@ -225,6 +225,8 @@
       if (!fix) return;
       var prev = text.slice(Math.max(0, at - 12), at).toLowerCase();
       if (/(than|as|if|and|or)\s+$/.test(prev) && s === 'you') return;
+      /* «you» həm də obyektdir (the man who called you is…): yalnız cümlə/bənd əvvəlində */
+      if (s === 'you' && prev.trim() && !/([.!?;:,]|\b(but|because|so|when|while))\s*$/.test(prev)) return;
       out.push(issue(at, m[0].slice(m[1].length), m[2] + ' ' + fix, v === 'is' || v === 'was' ? 'en.be_verb' : 'en.sv_agreement',
         v === 'is' || v === 'was' ? 'to be felinin forması mübtədaya uyğun olur: I am, you/we/they are; keçmişdə we/you/they were.' : '«' + v + '» yalnız he/she/it ilə işlənir; ' + m[2] + ' ilə «' + fix + '»: I have a car.', 'high'));
     });

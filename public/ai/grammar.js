@@ -129,36 +129,36 @@
   var MAP = {
     'en.article': ['article-missing', 'articles', 'articles-a-an-the', 'a-an-the', 'article-generic', 'articles-advanced'],
     'en.a_an': ['a-an', 'article-a-an', 'articles-a-an', 'articles', 'article-missing'],
-    'en.zero_article': ['article-generic', 'zero-article', 'the-general', 'articles-the', 'articles-advanced'],
-    'en.be_agree': ['am-agree', 'be-agree', 'az-calques'],
+    'en.zero_article': ['article-generic', 'article-geographic', 'zero-article', 'the-general', 'articles-the', 'articles-advanced'],
+    'en.be_agree': ['be-agree', 'am-agree', 'az-calques'],
     'en.be_verb': ['to-be', 'be-forms', 'verb-to-be', 'am-is-are', 'was-were'],
-    'en.sv_agreement': ['subject-verb-agreement', 'sv-agreement', 'people-are', 'every-singular', 'third-person-s'],
-    'en.third_person_s': ['third-person-s', 'present-simple-s', 'present-simple'],
+    'en.sv_agreement': ['people-plural', 'every-singular', 'subject-verb-agreement', 'sv-agreement', 'people-are', 'every-singular', 'third-person-s'],
+    'en.third_person_s': ['third-person-s', 'do-does-base', 'present-simple-s', 'present-simple'],
     'en.did_base': ['did-past-verb', 'did-base', 'past-simple-negative', 'past-simple-questions', 'past-simple'],
     'en.modal_base': ['modal-to', 'modal-base', 'can-to', 'can-cant', 'modals', 'modal-verbs'],
-    'en.past_simple': ['past-simple', 'past-time-marker', 'irregular-v2', 'past-simple-regular', 'past-simple-irregular'],
-    'en.present_perfect': ['tense-since-for', 'since-for', 'present-perfect', 'present-perfect-past', 'present-perfect-vs-past'],
+    'en.past_simple': ['irregular-past', 'past-simple', 'when-past-simple', 'past-time-marker', 'irregular-v2', 'past-simple-regular', 'past-simple-irregular'],
+    'en.present_perfect': ['present-perfect-definite-time', 'tense-since-for', 'yet-present-perfect', 'since-for', 'present-perfect', 'present-perfect-past', 'present-perfect-vs-past'],
     'en.continuous': ['stative-continuous', 'present-continuous', 'present-simple-continuous'],
-    'en.future': ['will-to', 'future-will', 'will-going-to', 'future', 'will-after-if'],
+    'en.future': ['will-to', 'future-will', 'future-will', 'will-going-to', 'future', 'will-after-if'],
     'en.comparative': ['double-comparative', 'more-better', 'comparatives', 'comparative', 'superlatives'],
-    'en.plural': ['plural-after-number', 'plural-nouns', 'plural', 'plurals'],
-    'en.uncountable': ['uncountable', 'much-many', 'countable-uncountable', 'quantifiers'],
-    'en.preposition': ['in-on-at', 'prepositions-time', 'time-prepositions', 'prepositions-place', 'preposition'],
-    'en.verb_pattern': ['dependent-preposition', 'dependent-prepositions'],
-    'en.word_order': ['word-order', 'adverb-position', 'very-like', 'adverbs-frequency'],
-    'en.questions': ['question-order', 'do-support', 'questions', 'question-words'],
-    'en.pronoun': ['he-she', 'pronoun-gender', 'subject-pronouns', 'pronouns'],
+    'en.plural': ['plural-after-number', 'irregular-plural', 'plural-nouns', 'plural', 'plurals'],
+    'en.uncountable': ['uncountable-plural', 'advice-information', 'uncountable-article', 'much-many', 'uncountable', 'much-many', 'countable-uncountable', 'quantifiers'],
+    'en.preposition': ['prep-time', 'prep-place', 'prep-next-last', 'in-on-at', 'prepositions-time', 'time-prepositions', 'prepositions-place', 'preposition'],
+    'en.verb_pattern': ['married-with', 'explain-to', 'discuss-about', 'call-to', 'dependent-preposition', 'gerund-infinitive', 'want-to', 'dependent-prepositions'],
+    'en.word_order': ['word-order-svo', 'adverb-position', 'adverb-between-verb-object', 'place-time-order', 'word-order', 'adverb-position', 'very-like', 'adverbs-frequency'],
+    'en.questions': ['question-word-order', 'question-aux', 'question-order', 'do-support', 'questions', 'question-words'],
+    'en.pronoun': ['pronoun-gender', 'his-her', 'he-she', 'pronoun-gender', 'subject-pronouns', 'pronouns'],
     'en.false_friend': ['false-friends'],
-    'en.calque': ['az-calques', 'make-do', 'make-photo', 'calque'],
-    'en.capital': ['capital-i', 'capitals', 'capital-letters', 'punctuation'],
-    'en.punctuation': ['punctuation', 'comma-splice', 'punctuation-comma-splice'],
+    'en.calque': ['make-photo', 'make-do', 'age-have', 'az-calques', 'make-do', 'make-photo', 'calque'],
+    'en.capital': ['capital-i', 'capitals', 'capital-letters'],
+    'en.punctuation': ['comma-splice', 'however-comma', 'conditional-comma', 'punctuation', 'comma-splice', 'punctuation-comma-splice'],
     'en.style': ['register-informal', 'hedging']
   };
   /* daha dəqiq: səhv mətnindəki açar söz → konkret rule_id */
   var BY_TEXT = [
-    [/married\s+with/i, 'married-to'], [/discuss\w*\s+about/i, 'discuss-about'], [/explain/i, 'explain-to'], [/\b(said|say|says)\s+me\b/i, 'say-tell'],
-    [/\b(make|makes|made|making)\b.*\b(photo|picture)/i, 'make-photo'], [/\b(have|has)\s+\d+\s+years\b/i, 'age-be'], [/\bsince\b/i, 'tense-since-for'], [/\bagree\b/i, 'am-agree'],
-    [/\b(actual|magazine|fabric|sympathetic)\b/i, 'false-friends']
+    [/married\s+with/i, 'married-with'], [/married\s+with/i, 'married-to'], [/discuss\w*\s+about/i, 'discuss-about'], [/explain/i, 'explain-to'], [/\b(said|say|says)\s+me\b/i, 'say-tell'],
+    [/\b(make|makes|made|making)\b.*\b(photo|picture)/i, 'make-photo'], [/\b(have|has)\s+\d+\s+years\b/i, 'age-have'], [/\bin\s+the\s+(last|next)\s+(year|week|month)\b/i, 'prep-next-last'], [/\bmore\s+\w+er\b|\bmost\s+best\b/i, 'double-comparative'], [/\b(can|must|should|could)\s+to\b/i, 'modal-to'], [/\bwill\s+to\b/i, 'will-to'], [/\b(people|police|children)\s+(is|was|has)\b/i, 'people-plural'], [/\bsince\b/i, 'tense-since-for'], [/\bagree\b/i, 'be-agree'], [/\bagree\b/i, 'am-agree'],
+    [/\b(actual|actually|magazine|fabric|sympathetic|eventually|accurate|artist|decade)\b/i, 'false-friends']
   ];
   function units() { var G = W.NUANZA_GRAMMAR; return G && Array.isArray(G.units) ? G.units.filter(function (u) { return u && u.id && u.title; }) : []; }
   function unitById(id) { var u = units(); for (var i = 0; i < u.length; i++) if (u[i].id === id) return u[i]; return null; }
@@ -177,6 +177,7 @@
     tags = tags.concat(MAP[rule] || []);
     for (var i = 0; i < tags.length; i++) { var u = unitByTag(tags[i]); if (u) return u; }
     /* son ehtiyat: qayda açar sözləri vahid id/başlığında */
+    if (rule === 'en.capital' || rule === 'en.spelling') return null;
     var R = rules(), keys = (R && R.RULES[rule] && R.RULES[rule].keys) || [];
     var all = units();
     for (var k = 0; k < keys.length; k++) for (var j = 0; j < all.length; j++) if (all[j].id.indexOf(keys[k]) >= 0) return all[j];
