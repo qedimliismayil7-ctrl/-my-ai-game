@@ -618,6 +618,25 @@
     '.task-mode{display:grid;gap:12px;min-width:0}',
     '.task-mode-row{display:grid;gap:6px;min-width:0}',
     '.task-mode .seg.wrap button{white-space:normal;text-align:center}',
+    '.task-dom-chips{display:flex;gap:6px;min-width:0;margin:0 -4px;padding:2px 4px 4px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch;-webkit-mask:linear-gradient(90deg,transparent,#000 6px,#000 calc(100% - 18px),transparent);mask:linear-gradient(90deg,transparent,#000 6px,#000 calc(100% - 18px),transparent)}',
+    '.task-dom-chips::-webkit-scrollbar{display:none}',
+    '.task-dom-chips .chip{flex:none;scroll-snap-align:start;white-space:nowrap;font-size:var(--fs-sm)}',
+    '.task-dom-chips .chip[aria-pressed="true"] svg{display:none}',
+    '.task-dom-info{display:flex;align-items:flex-start;gap:8px 12px;min-width:0}',
+    '.task-dom-why{flex:1 1 auto;min-width:0;margin:0;color:var(--soft);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}',
+    '.task-dom-why.open{display:block;-webkit-line-clamp:unset}',
+    '.task-dom-gl{flex:none}',
+    '.task-gl{display:grid;gap:6px;min-width:0}',
+    '.task-gl-h{display:flex;align-items:center;gap:8px;margin:12px 0 2px;font-size:var(--fs-sm);color:var(--firuze)}',
+    '.task-gl-h svg{width:16px;height:16px}',
+    '.task-gl-h small{margin-left:auto;color:var(--faint);font-weight:500}',
+    '.task-gl-l{display:grid;gap:0;margin:0;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}',
+    '.task-gl-r{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:4px 12px;padding:9px 12px;border-top:1px solid var(--line)}',
+    '.task-gl-r:first-child{border-top:0}',
+    '.task-gl-r dt{margin:0;color:var(--soft);overflow-wrap:anywhere}',
+    '.task-gl-r dd{margin:0;display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}',
+    '.task-gl-r dd small{color:var(--faint);font-size:var(--fs-xs);line-height:1.4}',
+    '@media (max-width:420px){.task-gl-r{grid-template-columns:1fr}}',
     '.task-credit{margin-top:10px;color:var(--faint);font-size:var(--fs-xs);line-height:1.45;overflow-wrap:anywhere}',
     '.task-hunt{min-width:0}',
     '.task-hunt .task-meta{margin-bottom:0}',
@@ -1056,14 +1075,98 @@
     T.paintCol = function () { cols._paint(T.col); };
     T.paintModeBtns = function () { modes._paint(T.mode); };
     T.modeNote = h('p', { class: 'small muted' });
-    return h('section', { class: 'card task-mode', 'aria-label': 'Tapşırıq növü və mətnlər' }, modes, T.colRow, T.modeNote);
+    return h('section', { class: 'card task-mode', 'aria-label': 'Tapşırıq növü və mətnlər' }, modes, T.colRow, domRow(), T.modeNote);
   }
+
+  /* «Sahə» — horizontally scrolling chip row (Hamısı + domains), a one-line intro and «Lüğət» */
+  function domRow() {
+    var chips = h('div', { class: 'task-dom-chips', role: 'group', 'aria-label': 'Sahə' });
+    var items = [{ key: '', name: 'Hamısı', icon: 'grid' }].concat(DOMAINS);
+    var btns = items.map(function (d) {
+      var b = h('button', { class: 'chip', type: 'button', 'aria-pressed': 'false', title: d.name }, ie(d.icon), h('span', { text: d.name }));
+      b.addEventListener('click', function () { setDom(d.key); });
+      chips.appendChild(b);
+      return b;
+    });
+    var why = h('p', { class: 'task-dom-why small' });
+    why.addEventListener('click', function () { why.classList.toggle('open'); });
+    var gloss = h('button', { class: 'btn btn-ghost btn-sm task-dom-gl', type: 'button', 'aria-haspopup': 'dialog' }, ie('book'), h('span', { text: 'Lüğət' }));
+    gloss.addEventListener('click', function () { glossarySheet(T && T.dom ? T.dom : ''); });
+    var info = h('div', { class: 'task-dom-info' }, why, gloss);
+    T.domRow = h('div', { class: 'task-mode-row task-dom' },
+      h('span', { class: 'eyebrow plain', text: 'Sahə' }), chips, info);
+    if (!DOMAINS.length) T.domRow.hidden = true;
+    T.paintDom = function () {
+      var cur = T.dom || '';
+      btns.forEach(function (b, i) { b.setAttribute('aria-pressed', items[i].key === cur ? 'true' : 'false'); });
+      var d = domByKey(cur);
+      why.textContent = d ? d.why : 'Yeddi peşəkar sahə — hər birində 6 tapşırıq və termin lüğəti. Sahə seçin və ya hamısından növbə ilə alın.';
+      why.classList.remove('open');
+      why.title = d ? 'Tam oxumaq üçün toxunun' : '';
+      gloss.lastChild.textContent = d ? 'Lüğət · ' + d.glossary.length : 'Lüğət';
+      gloss.hidden = d ? !d.glossary.length : !DOMAINS.some(function (x) { return x.glossary.length; });
+    };
+    T.scrollDom = function () {
+      var i = 0; items.forEach(function (d, k) { if (d.key === (T.dom || '')) i = k; });
+      var b = btns[i]; if (!b) return;
+      try { chips.scrollTo({ left: Math.max(0, b.offsetLeft - chips.offsetLeft - 24), behavior: reduced() ? 'auto' : 'smooth' }); } catch (e) { chips.scrollLeft = Math.max(0, b.offsetLeft - chips.offsetLeft - 24); }
+    };
+    T.paintDom();
+    later(function () { if (T && T.scrollDom) T.scrollDom(); }, 60);
+    return T.domRow;
+  }
+  function setDom(k) {
+    if (!T || T.checking) return;
+    if ((T.dom || '') === k && T.col === 'base') return;
+    var prev = { dom: T.dom, col: T.col };
+    T.dom = k; sset('academy:dom', k);
+    if (T.col !== 'base') { T.col = 'base'; sset('academy:col', 'base'); }
+    paintMode();
+    if (T.scrollDom) T.scrollDom();
+    fetchTask(null, false, function () {
+      T.dom = prev.dom; T.col = prev.col; sset('academy:dom', prev.dom); sset('academy:col', prev.col); paintMode();
+    });
+  }
+
+  /* glossary sheet: one domain, or all domains grouped (searchable en → az + note) */
+  function glossarySheet(key) {
+    var only = domByKey(key);
+    var groups = (only ? [only] : DOMAINS).filter(function (d) { return d.glossary.length; });
+    var total = groups.reduce(function (s, d) { return s + d.glossary.length; }, 0);
+    var q = h('input', { class: 'input', type: 'search', placeholder: 'İngiliscə və ya azərbaycanca axtarın…', 'aria-label': 'Termin axtar', autocomplete: 'off', spellcheck: 'false' });
+    var count = h('p', { class: 'small muted', 'aria-live': 'polite' });
+    var list = h('div', { class: 'task-gl' });
+    function paint() {
+      var f = fold(q.value.trim()), n = 0;
+      list.textContent = '';
+      groups.forEach(function (d) {
+        var rows = d.glossary.filter(function (g) { return !f || fold(g.en + ' ' + g.az + ' ' + g.note).indexOf(f) >= 0; });
+        if (!rows.length) return;
+        n += rows.length;
+        if (!only) list.appendChild(h('h3', { class: 'task-gl-h' }, ie(d.icon), h('span', { text: d.name }), h('small', { class: 'tnum', text: String(rows.length) })));
+        list.appendChild(h('dl', { class: 'task-gl-l' }, rows.map(function (g) {
+          return h('div', { class: 'task-gl-r' },
+            h('dt', { lang: 'en', text: g.en }),
+            h('dd', null, h('b', { lang: 'az', text: g.az }), g.note ? h('small', { text: g.note }) : null));
+        })));
+      });
+      if (!n) list.appendChild(h('p', { class: 'muted', text: 'Heç nə tapılmadı — başqa sözlə axtarın.' }));
+      count.textContent = f ? n + ' termin tapıldı' : total + ' termin' + (only ? '' : ' · ' + groups.length + ' sahə');
+    }
+    q.addEventListener('input', paint);
+    paint();
+    App.sheet({ title: only ? 'Lüğət · ' + only.name : 'Sahə lüğətləri', wide: true,
+      body: h('div', { class: 'stack' }, only && only.why ? h('p', { class: 'small muted', text: only.why }) : null, h('label', { class: 'input-ic' }, ie('search'), q), count, list) });
+  }
+  App.academyGlossary = glossarySheet;
   function paintMode() {
     if (!T) return;
     var hunt = T.mode === 'hunt';
     if (T.paintModeBtns) T.paintModeBtns();
     if (T.paintCol) T.paintCol();
     T.colRow.hidden = hunt || COLS.length < 2;
+    if (T.domRow) T.domRow.hidden = hunt || !DOMAINS.length;
+    if (T.paintDom) T.paintDom();
     T.srcSlot.hidden = hunt; T.trCard.hidden = hunt; T.resSlot.hidden = hunt; T.huntSlot.hidden = !hunt;
     if (hunt) T.briefSlot.hidden = true; else T.briefSlot.hidden = !(T.task && T.task.sim);
     T.modeNote.textContent = hunt
@@ -1082,15 +1185,31 @@
   }
   function setCol(c) {
     if (!T || T.col === c || T.checking) return;
-    var prev = T.col;
-    T.col = c; sset('academy:col', c); paintMode();
-    fetchTask(null, false, function () { T.col = prev; sset('academy:col', prev); paintMode(); });
+    var prev = T.col, pdom = T.dom;
+    T.col = c; sset('academy:col', c);
+    if (c !== 'base' && T.dom) { T.dom = ''; sset('academy:dom', ''); }
+    paintMode();
+    fetchTask(null, false, function () { T.col = prev; T.dom = pdom; sset('academy:col', prev); sset('academy:dom', pdom); paintMode(); });
   }
 
   function nextTask(level, domain) {
     var col = (T && T.col) || 'base';
     var base = TASKS.filter(function (t) { return !t.sim && colOf(t) === col; });
     if (!base.length) base = TASKS.filter(function (t) { return !t.sim && !t.col; });
+    var dk = T && T.dom && col === 'base' ? T.dom : '';
+    if (dk) {
+      var inDom = base.filter(function (t) { return t.dkey === dk; });
+      if (inDom.length) {
+        base = inDom;
+        /* respect the level when possible, else the nearest level */
+        if (!base.some(function (t) { return t.level === level; })) {
+          var li = levelIdx(level), best = 99;
+          base.forEach(function (t) { best = Math.min(best, Math.abs(levelIdx(t.level) - li)); });
+          var near = base.filter(function (t) { return Math.abs(levelIdx(t.level) - li) === best; });
+          level = near[0].level;
+        }
+      }
+    }
     var pool = base.filter(function (t) { return t.level === level; });
     if (domain) {
       var d = pool.filter(function (t) { return t.domain === domain; });
@@ -1161,6 +1280,10 @@
     T.srcSlot.textContent = '';
     T.srcSlot.appendChild(sourceCard(task));
     if (T.draftBtn) T.draftBtn.hidden = !task.draft;
+    var pr = pairOf(task);
+    if (T.trEye) T.trEye.textContent = 'Tərcümə · ' + pr.to.toUpperCase();
+    T.ta.setAttribute('lang', pr.to);
+    T.ta.placeholder = pr.to === 'en' ? 'Tərcüməni ingiliscə bura yazın…' : 'Tərcüməni bura yazın…';
     T.ta.disabled = false;
     T.ta.value = o.text || '';
     T.ta.removeAttribute('aria-invalid'); T.err.hidden = true;
@@ -1189,7 +1312,7 @@
   }
 
   function sourceCard(task) {
-    var lv = levelById(task.level);
+    var lv = levelById(task.level), pr = pairOf(task);
     var hintBox = h('div', { class: 'task-hints', 'aria-live': 'polite' });
     var hintBtn = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' });
     var hintCount = h('span', { class: 'small muted tnum' });
@@ -1216,7 +1339,7 @@
     paint();
     return h('section', { class: 'card framed task-src', 'aria-labelledby': 'task-src-h' },
       h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Mənbə · EN → AZ · ' + task.client }), h('h2', { id: 'task-src-h', text: task.title })),
+        h('div', null, h('span', { class: 'eyebrow', text: 'Mənbə · ' + pr.from.toUpperCase() + ' → ' + pr.to.toUpperCase() + ' · ' + task.client }), h('h2', { id: 'task-src-h', text: task.title })),
         h('div', { class: 'actions' }, h('button', { class: 'icon-btn sm ghost', type: 'button', 'aria-label': 'Mənbəni kopyala', title: 'Kopyala', html: App.icon('copy'), onclick: function () { copyText(task.src, 'Mənbə kopyalandı'); } }))),
       h('div', { class: 'task-meta' },
         badge(lv.id + ' · ' + lv.name, 'navy'),
@@ -1224,10 +1347,17 @@
         h('span', { class: 'badge', title: 'Üslubu Nuanza avtomatik təyin etdi' }, ie('sparkle'), (T.reg || task.reg) + ' · avtomatik'),
         badge(words(task.src) + ' söz'),
         badge('~' + task.minutes + ' dəq', '', 'clock')),
-      h('p', { class: 'task-src-tx', lang: 'en', text: task.src }),
+      h('p', { class: 'task-src-tx', lang: pr.from, text: task.src }),
       task.credit ? h('p', { class: 'task-credit', text: task.credit }) : null,
-      h('div', { class: 'task-src-foot' }, hintBtn, hintCount),
+      task.custom ? customCredit(task) : null,
+      task.hints.length ? h('div', { class: 'task-src-foot' }, hintBtn, hintCount) : null,
       hintBox);
+  }
+  function customCredit(task) {
+    var bits = ['Mənbə: ' + (task.source || task.client)];
+    if (task.licence) bits.push('Lisenziya: ' + task.licence);
+    return h('p', { class: 'task-credit' }, bits.join(' · '),
+      task.url ? h('span', null, ' · ', h('a', { href: task.url, target: '_blank', rel: 'noopener noreferrer', text: 'Mənbəni aç' })) : null);
   }
 
   function updateWC() { if (T && T.wc && T.ta) { var n = words(T.ta.value); T.wc.textContent = n + ' söz'; } }
@@ -1256,7 +1386,7 @@
     check.addEventListener('click', runCheck);
     return h('section', { class: 'card task-tr', 'aria-labelledby': 'task-tr-h' },
       h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Tərcümə · AZ' }), h('h2', { id: 'task-tr-h', text: 'Sizin variantınız' })),
+        h('div', null, T.trEye = h('span', { class: 'eyebrow', text: 'Tərcümə · AZ' }), h('h2', { id: 'task-tr-h', text: 'Sizin variantınız' })),
         wc),
       h('div', { class: 'field' },
         h('label', { class: 'sr-only', for: 'task-ta', text: 'Sizin tərcüməniz' }),
@@ -1294,7 +1424,8 @@
     nz('think', 'Mirzələri çağırıram…', 1600);
     var g = gen, out = null, hints = T.hints;
     App.bigJob('Tərcüməniz yoxlanılır', function () {
-      return App.fakeAI('grade', { src: task.src, text: text, model: task.model, register: T.reg || task.reg, domain: task.domain, level: task.level }, 700).then(function (r) {
+      var pr = pairOf(task);
+      return App.fakeAI('grade', { src: task.src, text: text, model: task.model, register: T.reg || task.reg, domain: task.domain, level: task.level, from: pr.from, to: pr.to, pair: pr.from + '-' + pr.to }, 700).then(function (r) {
         if (r && r.ok === false) throw r; /* live engine failed — fakeAI already showed the toast */
         out = evaluate(task, text, r || {}, hints);
         return out.verdict;
@@ -1423,11 +1554,11 @@
           h('div', { class: 'progress' + cls, role: 'progressbar', 'aria-label': r.name, 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: 'width:' + pct + '%' })));
       })));
 
-    var model = h('section', { class: 'card framed task-model', 'aria-labelledby': 'task-m-h' },
+    var model = !task.model ? null : h('section', { class: 'card framed task-model', 'aria-labelledby': 'task-m-h' },
       h('div', { class: 'card-h' },
         h('div', null, h('span', { class: 'eyebrow', text: 'Nümunə' }), h('h2', { id: 'task-m-h', text: task.modelLabel || 'Məclisin variantı' })),
         h('div', { class: 'actions' }, h('button', { class: 'icon-btn sm ghost', type: 'button', 'aria-label': 'Variantı kopyala', title: 'Kopyala', html: App.icon('copy'), onclick: function () { copyText(task.model, (task.modelLabel || 'Məclisin variantı') + ' kopyalandı'); } }))),
-      h('p', { class: 'task-model-tx', lang: 'az', text: task.model }),
+      h('p', { class: 'task-model-tx', lang: pairOf(task).to, text: task.model }),
       h('p', { class: 'muted', text: task.modelNote || 'Yeganə düzgün variant deyil — amma terminlər, rəqəmlər və üslub burada qorunub.' }),
       task.credit ? h('p', { class: 'task-credit', text: task.credit }) : null);
 
@@ -1452,7 +1583,7 @@
       h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { scrollToEl(T.ta.closest('.card') || T.ta); later(function () { focusSoft(T.ta); }, reduced() ? 0 : 380); } }, ie('edit'), 'Yenidən yaz'),
       h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { fetchTask(null, true); scrollToEl(T.getCard); } }, 'Növbəti mətn', ie('arrow')));
 
-    return h('div', { class: 'task-res' }, verdict, h('div', { class: 'grid-2' }, skills, model), errSec, next);
+    return h('div', { class: 'task-res' }, verdict, model ? h('div', { class: 'grid-2' }, skills, model) : skills, errSec, next);
   }
 
   function sentenceWith(text, frag) {

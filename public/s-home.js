@@ -858,7 +858,7 @@
       { t: 'Tapşırıq', s: 'Mətn tərcümə edin', ic: 'edit', cls: 'fir', run: function () { goFirst(['task', 'practice'], {}, 'Tapşırıq bölməsi hazırlanır'); } },
       { t: 'Məşq', s: 'Qısa oyunlar', ic: 'target', cls: 'navy', run: function () { goFirst(['practice'], {}, 'Məşq bölməsi hazırlanır'); } },
       { t: 'Səhv kartları', s: 'Təkrar', ic: 'cards', cls: 'gold', run: function () { goFirst(['cards'], {}, 'Kartlar bölməsi hazırlanır'); } },
-      { t: 'Termin lüğəti', s: 'Axtarış', ic: 'tag', cls: 'green', run: termSheet }
+      { t: 'Termin lüğəti', s: '7 sahə · 265 termin', ic: 'tag', cls: 'green', run: function () { if (App.academyGlossary) App.academyGlossary(''); else termSheet(); } }
     ], 'Alətlər');
   }
 
