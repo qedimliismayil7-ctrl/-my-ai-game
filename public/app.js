@@ -1835,8 +1835,7 @@
     else rememberProduct();
     if (opts.route !== false) go(homeId(m));
     if (!opts.silent) {
-      if (m === 'grammar') { toast('Tenso · Qrammatika', 'ok', { sub: 'İngilis dili: yaz, yoxla, səhvdən öyrən', icon: 'check' }); later(function () { chatter('wave', 'Salam! Mən Tensoyam. Bir cümlə yaz — birlikdə yoxlayaq.'); }, 500); }
-      else toast('Nuanza · Tərcümə', 'ok', { sub: m === 'academy' ? 'Akademiya rejimi' : 'Peşəkar masa', icon: 'translate' });
+      later(function () { chatter('wave', m === 'grammar' ? 'Salam! Mən Tensoyam. Bir cümlə yaz — birlikdə yoxlayaq.' : 'Tərcümə masası hazırdır. Nə tərcümə edirik?'); }, 500);
     }
   }
   function mode() { return curMode; }
@@ -2400,8 +2399,8 @@
         go('hub', {}, { focus: false });
         restoreFocus(restore && restore !== D.body ? restore : null);
         if (!skipped) {
-          toast(first ? 'Xoş gəldiniz, ' + first + '!' : 'Xoş gəldiniz!', 'ok', { sub: curMode === 'academy' ? 'Akademiya masanız hazırdır' : 'Peşəkar masanız hazırdır', icon: 'sparkle' });
-          later(function () { companion.set('wave', { say: 'Mən buradayam — lazım olsam, toxunun.', ms: 3200 }); }, 700);
+          toast(first ? 'Xoş gəldiniz, ' + first + '!' : 'Xoş gəldiniz!', 'ok', { sub: 'Məhsulu seçin: Tərcümə və ya Qrammatika', icon: 'sparkle' });
+          later(function () { if (current && current.id === 'hub') return; companion.set('wave', { say: 'Mən buradayam — lazım olsam, toxunun.', ms: 3200 }); }, 700);
         }
       }, skipped ? 0 : 950);
     }
