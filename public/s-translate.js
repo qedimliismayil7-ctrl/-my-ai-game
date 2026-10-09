@@ -310,12 +310,6 @@
     { id: 'tr', t: 'Türk dilindən: iclas', s: 'Türk formalarına diqqət', ic: 'file', cls: ' gold', get: function () { return sampleText('tr'); } }
   ];
 
-  var DEMO_HIST = [
-    { src: 'Please find attached the signed copy of the contract.', out: 'Müqavilənin imzalanmış nüsxəsi əlavə olunur.', reg: 'resmi', from: 'en', to: 'az', ago: 2 * 3600e3 },
-    { src: 'Срок поставки составляет 45 календарных дней.', out: 'Təchizat müddəti 45 təqvim günüdür.', reg: 'huquqi', from: 'ru', to: 'az', ago: 26 * 3600e3 },
-    { src: "Toplantı yarın saat 10:00'da yapılacaktır.", out: 'İclas sabah saat 10:00-da keçiriləcək.', reg: 'resmi', from: 'tr', to: 'az', ago: 3 * 86400e3 },
-    { src: "Don't miss the sunset over the Caspian Sea from the Boulevard.", out: 'Dənizkənarı bulvardan Xəzər üzərində gün batımını qaçırmayın.', reg: 'neytral', from: 'en', to: 'az', ago: 5 * 86400e3 }
-  ];
 
   /* ------------------------------------------------------------------
      4. CSS (tokens only, prefixed .translate-)
@@ -788,12 +782,13 @@
       V.sitBody);
     V.hist = h('div', { class: 'list' });
     V.histClear = h('button', { class: 'link small', type: 'button', onclick: clearHistory }, 'Təmizlə');
-    var hist = h('section', { class: 'card' },
+    V.histCard = h('section', { class: 'card', hidden: true },
       h('div', { class: 'card-h' },
         h('div', null, h('span', { class: 'eyebrow', text: 'Tarixçə' }), h('h2', { text: 'Son tərcümələr' })),
         h('div', { class: 'actions' }, V.histClear)),
       V.hist);
-    return h('div', { class: 'grid-2' }, sit, hist);
+    V.lower = h('div', { class: 'grid-2' }, sit, V.histCard);
+    return V.lower;
   }
 
   /* ------------------------------------------------------------------
@@ -1779,13 +1774,10 @@
   }
   function renderHistory() {
     if (!V.hist) return;
-    var real = histList();
-    var items = real.slice(0, 4).map(function (x) { return x; });
-    DEMO_HIST.forEach(function (d) {
-      if (items.length >= 4) return;
-      if (items.some(function (x) { return x && norm(x.src) === norm(d.src); })) return;
-      items.push(ext({ at: Date.now() - d.ago, demo: true }, d));
-    });
+    /* only the user's own translations — the card stays hidden until there is one */
+    var items = histList().filter(function (x) { return x && x.src; }).slice(0, 4);
+    if (V.histCard) V.histCard.hidden = !items.length;
+    if (V.lower) V.lower.className = items.length ? 'grid-2' : 'stack';
     V.hist.textContent = '';
     items.forEach(function (it) {
       if (!it || !it.src) return;
@@ -1796,7 +1788,7 @@
           h('span', { class: 'badge', text: (CODE[it.from] || '?') + ' → ' + (CODE[it.to] || '?') }),
           h('small', { text: (REG_LABEL[it.reg] || '') + ' · ' + rel(it.at) }))));
     });
-    V.histClear.hidden = !real.length;
+    V.histClear.hidden = !items.length;
   }
   function loadHistory(it) {
     if (LANG_NAME[it.from] && LANG_NAME[it.to] && it.from !== it.to) { S.from = it.from; S.to = it.to; syncLangs(); }

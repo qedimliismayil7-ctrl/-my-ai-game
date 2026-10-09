@@ -225,16 +225,16 @@
   var SETS = {
     'legal-en': { src: 'en', title: 'Bölmə 1 · Ümumi müddəalar', names: [], segs: [
       { s: 'SERVICE AGREEMENT No. CL-2026/114', t: 'XİDMƏT MÜQAVİLƏSİ № CL-2026/114', o: 'tm', ok: true, c: 'high',
-        tm: { pct: 96, src: 'SERVICE AGREEMENT No. CL-2025/087', tgt: 'XİDMƏT MÜQAVİLƏSİ № CL-2025/087', from: 'Caspian Logistics — Xidmət müqaviləsi (2025)', date: '2025-11-20' },
+        tm: { pct: 96, src: 'SERVICE AGREEMENT No. CL-2025/087', tgt: 'XİDMƏT MÜQAVİLƏSİ № CL-2025/087', from: 'Nümunə TM — xidmət müqaviləsi (2025)', date: '2025-11-20' },
         why: 'Başlıq tərcümə yaddaşından götürüldü; müqavilənin nömrəsini Möhürdar Mirzə avtomatik yenilədi.',
         alts: [['XİDMƏTLƏRİN GÖSTƏRİLMƏSİ HAQQINDA MÜQAVİLƏ № CL-2026/114', 'Tam rəsmi forma']] },
-      { s: 'This Agreement is made in Baku on 3 October 2026 between Caspian Logistics LLC (the "Employer") and Absheron Freight Services LLC (the "Contractor").',
-        t: 'Bu Müqavilə 3 oktyabr 2026-cı il tarixində Bakı şəhərində «Caspian Logistics» MMC (bundan sonra — «Sifarişçi») ilə «Absheron Freight Services» MMC (bundan sonra — «İcraçı») arasında bağlanmışdır.',
+      { s: 'This Agreement is made in Baku on 3 October 2026 between Orion Logistics LLC (the "Employer") and Delta Freight Services LLC (the "Contractor").',
+        t: 'Bu Müqavilə 3 oktyabr 2026-cı il tarixində Bakı şəhərində «Orion Logistics» MMC (bundan sonra — «Sifarişçi») ilə «Delta Freight Services» MMC (bundan sonra — «İcraçı») arasında bağlanmışdır.',
         o: 'human', ok: true, c: 'high',
         why: 'Azərbaycan müqavilələrində tərəflər «bundan sonra — …» düsturu ilə təqdim olunur. Tarix müştərinin tələbinə görə sözlə yazılıb.',
-        alts: [['Bakı şəhəri, 3 oktyabr 2026-cı il. «Caspian Logistics» MMC (bundan sonra — «Sifarişçi») və «Absheron Freight Services» MMC (bundan sonra — «İcraçı») aşağıdakılar barədə bu Müqaviləni bağladılar:', 'Klassik giriş düsturu']] },
+        alts: [['Bakı şəhəri, 3 oktyabr 2026-cı il. «Orion Logistics» MMC (bundan sonra — «Sifarişçi») və «Delta Freight Services» MMC (bundan sonra — «İcraçı») aşağıdakılar barədə bu Müqaviləni bağladılar:', 'Klassik giriş düsturu']] },
       { s: 'This Agreement shall enter into force on the date of its signature.', t: 'Bu Müqavilə imzalandığı tarixdən qüvvəyə minir.', o: 'tm', c: 'high',
-        tm: { pct: 87, src: 'This Contract shall enter into force on the date of its signing.', tgt: 'Bu Müqavilə imzalandığı tarixdən qüvvəyə minir.', from: 'AzerGold — Təchizat müqaviləsi', date: '2026-08-14', diff: '«Contract» → «Agreement», «signing» → «signature». Mənaya təsir etmir.' },
+        tm: { pct: 87, src: 'This Contract shall enter into force on the date of its signing.', tgt: 'Bu Müqavilə imzalandığı tarixdən qüvvəyə minir.', from: 'Nümunə TM — təchizat müqaviləsi', date: '2026-08-14', diff: '«Contract» → «Agreement», «signing» → «signature». Mənaya təsir etmir.' },
         why: '«shall» burada gələcək zaman deyil, hüquqi normadır — Azərbaycan dilində indiki zamanla verilir: «qüvvəyə minir».',
         alts: [['Bu Müqavilə Tərəflər tərəfindən imzalandığı gündən qüvvəyə minir.', 'Dəqiq: kim imzalayır'], ['Müqavilə imzalandığı tarixdən qüvvəyə minir.', 'Qısa']] },
       { s: 'The Contractor shall provide freight forwarding and customs brokerage services (the "Services") in accordance with Annex 1.',
@@ -262,7 +262,7 @@
                  ['İcraçı', 'Sifarişçi hər hansı hesab-fakturanı otuz (30) gün ərzində ödəmədikdə, İcraçı Xidmətlərin göstərilməsini dayandırmaq hüququna malikdir.']] } },
       { s: 'Either Party may terminate this Agreement by giving the other Party sixty (60) days\' prior written notice.',
         t: 'Tərəflərdən hər biri digər Tərəfə altmış (60) gün əvvəl yazılı bildiriş göndərməklə bu Müqaviləyə xitam verə bilər.', o: 'tm', c: 'high',
-        tm: { pct: 92, src: 'Either Party may terminate this Contract by giving the other Party thirty (30) days\' prior written notice.', tgt: 'Tərəflərdən hər biri digər Tərəfə otuz (30) gün əvvəl yazılı bildiriş göndərməklə bu Müqaviləyə xitam verə bilər.', from: 'AzerGold — Təchizat müqaviləsi', date: '2026-08-14', diff: 'Yalnız müddət fərqlidir: Möhürdar Mirzə rəqəmi yenilədi (30 → 60).' },
+        tm: { pct: 92, src: 'Either Party may terminate this Contract by giving the other Party thirty (30) days\' prior written notice.', tgt: 'Tərəflərdən hər biri digər Tərəfə otuz (30) gün əvvəl yazılı bildiriş göndərməklə bu Müqaviləyə xitam verə bilər.', from: 'Nümunə TM — təchizat müqaviləsi', date: '2026-08-14', diff: 'Yalnız müddət fərqlidir: Möhürdar Mirzə rəqəmi yenilədi (30 → 60).' },
         why: 'TM uyğunluğu 92%. «terminate» bütün sənəddə «xitam vermək» kimi verilir — ardıcıllıq qorunub.',
         alts: [['Hər bir Tərəf digər Tərəfə altmış (60) gün əvvəl yazılı bildiriş göndərməklə bu Müqaviləyə birtərəfli qaydada xitam verə bilər.', 'Dəqiq: «birtərəfli qaydada»']] },
       { s: 'Neither Party shall be liable for any failure to perform its obligations caused by Force Majeure.',
@@ -282,7 +282,7 @@
         why: 'Məbləğ əl ilə dəyişdirilib və mənbə ilə üst-üstə düşmür. Möhürdar Mirzə rəqəmləri hər dəfə mənbə ilə tutuşdurur.',
         alts: [['Bu Müqavilə üzrə Sifarişçinin ümumi məsuliyyəti 250 000 (iki yüz əlli min) manatdan artıq ola bilməz.', 'Rəqəm və sözlə']] },
       { s: 'This Agreement shall be governed by the laws of the Republic of Azerbaijan.', t: 'Bu Müqavilə Azərbaycan Respublikasının qanunvericiliyi ilə tənzimlənir.', o: 'tm', ok: true, c: 'high',
-        tm: { pct: 100, src: 'This Agreement shall be governed by the laws of the Republic of Azerbaijan.', tgt: 'Bu Müqavilə Azərbaycan Respublikasının qanunvericiliyi ilə tənzimlənir.', from: 'AzerGold — Təchizat müqaviləsi', date: '2026-08-14' },
+        tm: { pct: 100, src: 'This Agreement shall be governed by the laws of the Republic of Azerbaijan.', tgt: 'Bu Müqavilə Azərbaycan Respublikasının qanunvericiliyi ilə tənzimlənir.', from: 'Nümunə TM — təchizat müqaviləsi', date: '2026-08-14' },
         why: 'Tərcümə yaddaşından tam uyğunluq. «laws» burada «qanunlar» yox, «qanunvericilik»dir.' },
       { s: 'Any dispute arising out of this Agreement shall be settled by the competent courts of the Republic of Azerbaijan.', t: '',
         ai: 'Bu Müqavilədən irəli gələn istənilən mübahisə Azərbaycan Respublikasının səlahiyyətli məhkəmələrində həll edilir.', c: 'high',
@@ -294,14 +294,14 @@
     ] },
     'legal-ru': { src: 'ru', title: 'Əlavə saziş · əsas şərtlər', names: [['Gyandja', 'Gəncə'], ['Guseynov', 'Hüseynov'], ['Mamedov', 'Məmmədov']], segs: [
       { s: 'ДОПОЛНИТЕЛЬНОЕ СОГЛАШЕНИЕ № 2 к Кредитному договору № KB-0417/2025', t: 'KB-0417/2025 №-li Kredit müqaviləsinə 2 №-li Əlavə saziş', o: 'tm', ok: true, c: 'high',
-        tm: { pct: 95, src: 'ДОПОЛНИТЕЛЬНОЕ СОГЛАШЕНИЕ № 1 к Кредитному договору № KB-0417/2025', tgt: 'KB-0417/2025 №-li Kredit müqaviləsinə 1 №-li Əlavə saziş', from: 'Kapital Bank — Əlavə saziş №1', date: '2026-02-09' },
+        tm: { pct: 95, src: 'ДОПОЛНИТЕЛЬНОЕ СОГЛАШЕНИЕ № 1 к Кредитному договору № KB-0417/2025', tgt: 'KB-0417/2025 №-li Kredit müqaviləsinə 1 №-li Əlavə saziş', from: 'Nümunə TM — əlavə saziş №1', date: '2026-02-09' },
         why: 'Rus başlığında nömrə əvvəldə gəlir; Azərbaycan dilində «…№-li … müqaviləsinə Əlavə saziş» düsturu işlənir.' },
       { s: 'г. Баку, 6 октября 2026 года', t: 'Bakı şəhəri, 6 oktyabr 2026-cı il', o: 'tm', ok: true, c: 'high', why: 'Tarix sözlə, ay adı kiçik hərflə yazılır.' },
       { s: 'Банк предоставляет Заёмщику кредит в размере 1 250 000,00 (один миллион двести пятьдесят тысяч) манатов.',
         t: 'Bank Borcalana 1 250 000,00 (bir milyon iki yüz əlli min) manat məbləğində kredit verir.', o: 'ai', ok: true, c: 'high',
         why: 'Məbləğ rəqəm və sözlə, mənbədəki kimi verilib. «Заёмщик» — «Borcalan».' },
       { s: 'Процентная ставка по кредиту составляет 14,5% годовых.', t: 'Kredit üzrə faiz dərəcəsi illik 14,5% təşkil edir.', o: 'tm', c: 'high',
-        tm: { pct: 94, src: 'Процентная ставка по кредиту составляет 16% годовых.', tgt: 'Kredit üzrə faiz dərəcəsi illik 16% təşkil edir.', from: 'Kapital Bank — Kredit müqaviləsi', date: '2025-12-02', diff: 'Faiz dərəcəsi yeniləndi: 16% → 14,5%.' },
+        tm: { pct: 94, src: 'Процентная ставка по кредиту составляет 16% годовых.', tgt: 'Kredit üzrə faiz dərəcəsi illik 16% təşkil edir.', from: 'Nümunə TM — kredit müqaviləsi', date: '2025-12-02', diff: 'Faiz dərəcəsi yeniləndi: 16% → 14,5%.' },
         why: '«годовых» — «illik». Onluq kəsr vergüllə qalır.' },
       { s: 'Заёмщик обязуется погашать кредит ежемесячно не позднее 25-го числа каждого месяца.', t: 'Borcalan krediti hər ay, ayın 25-dən gec olmayaraq ödəməyi öhdəsinə götürür.', o: 'ai', c: 'high',
         why: '«обязуется» — «öhdəsinə götürür»; «не позднее» — «…dən gec olmayaraq».',
@@ -313,7 +313,7 @@
       { s: 'Настоящее Дополнительное соглашение вступает в силу с момента его подписания Сторонами.', t: '',
         ai: 'Bu Əlavə saziş Tərəflər tərəfindən imzalandığı andan qüvvəyə minir.', c: 'high', why: '«с момента подписания» — «imzalandığı andan».' },
       { s: 'Все остальные условия Кредитного договора остаются неизменными.', t: 'Kredit müqaviləsinin bütün digər şərtləri dəyişməz qalır.', o: 'ai', c: 'high', why: 'Standart yekun müddəa.' },
-      { s: 'Подписи Сторон: Банк — ОАО «Капитал Банк»; Заёмщик — ООО «Гянджа Агро».', t: 'Tərəflərin imzaları: Bank — «Kapital Bank» ASC; Borcalan — «Gyandja Aqro» MMC.', o: 'ai', c: 'high',
+      { s: 'Подписи Сторон: Банк — ОАО «Орион Банк»; Заёмщик — ООО «Гянджа Агро».', t: 'Tərəflərin imzaları: Bank — «Orion Bank» ASC; Borcalan — «Gyandja Aqro» MMC.', o: 'ai', c: 'high',
         why: 'Rus dilindən keçən Azərbaycan toponimləri orijinal yazılışa qaytarılır: «Гянджа» — «Gəncə». ОАО — ASC, ООО — MMC.' }
     ] },
     'report-en': { src: 'en', title: 'Fəsil 3 · Maliyyə göstəriciləri', names: [], segs: [
@@ -321,10 +321,10 @@
       { s: 'In 2025, crude oil production totalled 29.6 million tonnes, up 1.4% year on year.',
         t: '2025-ci ildə xam neft hasilatı 29,6 milyon ton təşkil edib ki, bu da ötən illə müqayisədə 1,4% çoxdur.', o: 'ai', ok: true, c: 'high', why: 'Onluq kəsrlər vergüllə yazılıb.' },
       { s: 'Net profit increased by 12.4% to AZN 4.1 billion.', t: 'Təmiz mənfəət 12.4% artaraq 4,1 milyard manata çatıb.', o: 'ai', c: 'high',
-        why: '«net profit» SOCAR lüğətində «xalis mənfəət»dir. «12.4%» ingilis yazılışıdır — vergüllə olmalıdır.',
+        why: '«net profit» şirkət lüğətində «xalis mənfəət»dir. «12.4%» ingilis yazılışıdır — vergüllə olmalıdır.',
         alts: [['Xalis mənfəət 12,4% artaraq 4,1 milyard manata çatıb.', 'Düzəldilmiş'], ['Xalis mənfəət 12,4% artımla 4,1 milyard manat təşkil edib.', 'Rəsmi hesabat dili']] },
       { s: 'Capital expenditure on upstream projects amounted to AZN 2.3 billion.', t: 'Hasilat layihələrinə yönəldilmiş əsaslı xərclər 2,3 milyard manat təşkil edib.', o: 'tm', c: 'high',
-        tm: { pct: 89, src: 'Capital expenditure on upstream projects amounted to AZN 1.9 billion.', tgt: 'Hasilat layihələrinə yönəldilmiş əsaslı xərclər 1,9 milyard manat təşkil edib.', from: 'SOCAR — İllik hesabat 2024', date: '2025-05-30', diff: 'Yalnız məbləğ fərqlidir: 1,9 → 2,3.' },
+        tm: { pct: 89, src: 'Capital expenditure on upstream projects amounted to AZN 1.9 billion.', tgt: 'Hasilat layihələrinə yönəldilmiş əsaslı xərclər 1,9 milyard manat təşkil edib.', from: 'Nümunə TM — illik hesabat 2024', date: '2025-05-30', diff: 'Yalnız məbləğ fərqlidir: 1,9 → 2,3.' },
         why: '«upstream» — «hasilat seqmenti»; «capital expenditure» — «əsaslı xərclər».' },
       { s: 'The Company continued to implement its 2035 Low-Carbon Development Strategy.', t: 'Şirkət 2035-ci ilədək Aşağı Karbonlu İnkişaf Strategiyasını həyata keçirməyə davam edib.', o: 'ai', c: 'mid',
         why: 'Strategiyanın rəsmi Azərbaycan adı lüğətdə yoxdur — müştəri ilə dəqiqləşdirin.',
@@ -337,7 +337,7 @@
         alts: [['Ətraflı məlumat Davamlı inkişaf hesabatında verilir.', 'Lüğətə uyğun']] }
     ] },
     'guide-en': { src: 'en', title: 'Bölmə 1 · Kampusa xoş gəldiniz', names: [], segs: [
-      { s: 'Welcome to ADA University!', t: 'ADA Universitetinə xoş gəlmisiniz!', o: 'tm', ok: true, c: 'high', why: 'Keçən ilin bələdçisindən tam uyğunluq.' },
+      { s: 'Welcome to the University!', t: 'Universitetə xoş gəlmisiniz!', o: 'tm', ok: true, c: 'high', why: 'Keçən ilin bələdçisindən tam uyğunluq.' },
       { s: 'Your student ID card gives you access to the library, sports centre and campus buildings.',
         t: 'Tələbə vəsiqəniz kitabxanaya, idman mərkəzinə və kampus binalarına giriş imkanı verir.', o: 'ai', ok: true, c: 'high', why: '«student ID card» — «tələbə vəsiqəsi».' },
       { s: 'Course registration opens on 1 September and closes on 12 September.', t: 'Kurslara qeydiyyat 1 sentyabrda başlayır və 12 sentyabrda başa çatır.', o: 'ai', ok: true, c: 'high', why: 'Tarixlər Azərbaycan qaydası ilə: gün, ay kiçik hərflə.' },
@@ -345,7 +345,7 @@
         why: '«buraxmaq» cümlədə iki fərqli mənada işlənib. Məna düzgündür, amma oxucu çaşa bilər — üslubu yoxlayın.',
         alts: [['Dərslərin 20%-dən çoxunda iştirak etməsəniz, yekun imtahana buraxılmaya bilərsiniz.', 'Aydın'], ['Dərslərin 20%-dən çoxunu qaçırsanız, yekun imtahana qəbul edilməyə bilərsiniz.', 'Səmimi']] },
       { s: 'Need help? Contact the Student Services office on the ground floor of Building A.', t: 'Köməyə ehtiyacınız var? A binasının birinci mərtəbəsindəki Tələbə xidmətləri ofisinə müraciət edin.', o: 'tm', c: 'high',
-        tm: { pct: 91, src: 'Need help? Contact the Student Services office on the ground floor of Building B.', tgt: 'Köməyə ehtiyacınız var? B binasının birinci mərtəbəsindəki Tələbə xidmətləri ofisinə müraciət edin.', from: 'ADA Universiteti — Tələbə bələdçisi 2025/26', date: '2025-08-21', diff: 'Bina dəyişib: B → A.' },
+        tm: { pct: 91, src: 'Need help? Contact the Student Services office on the ground floor of Building B.', tgt: 'Köməyə ehtiyacınız var? B binasının birinci mərtəbəsindəki Tələbə xidmətləri ofisinə müraciət edin.', from: 'Nümunə TM — tələbə bələdçisi', date: '2025-08-21', diff: 'Bina dəyişib: B → A.' },
         why: '«ground floor» Azərbaycanda «birinci mərtəbə»dir.' },
       { s: 'Please keep your password safe and do not share it with anyone.', t: '', ai: 'Şifrənizi etibarlı yerdə saxlayın və heç kimlə paylaşmayın.', c: 'high', why: 'Təlimat üslubu: əmr forması, «siz» müraciəti.' },
       { s: 'Your timetable is available in the student portal for your own information.', t: 'Dərs cədvəliniz bilginiz için tələbə portalında yerləşdirilib.', o: 'ai', c: 'high',
@@ -374,18 +374,12 @@
     ] }
   };
 
+  /* Situation + requirements of the one built-in sample project (generic, no real client). */
   var SIT = {
-    caspian: { purpose: 'İmza üçün. Azərbaycan nüsxəsi ingilis nüsxəsi ilə eyni hüquqi qüvvəyə malikdir.', audience: 'Sifarişçinin hüquq şöbəsi və İcraçının rəhbərliyi', note: '«Tərəflərin adları bütün mətndə eyni yazılsın. Tarixləri sözlə verin.» — müştərinin hüquq şöbəsi' },
-    kapital: { purpose: 'Kredit sənədləri paketinə əlavə; Borcalan imzalayır.', audience: 'Borcalanın direktoru və bankın kredit komitəsi', note: '«Məbləğlər rəqəm və sözlə, mənbədəki kimi.»' },
-    socar: { purpose: 'İllik hesabatın Azərbaycan versiyası — saytda dərc olunacaq.', audience: 'İnvestorlar, tərəfdaşlar, geniş ictimaiyyət', note: '«Rəqəmlər ingilis versiyası ilə eyni olmalıdır. Onluq kəsr — vergüllə.»' },
-    ada: { purpose: 'Birinci kurs tələbələri üçün bələdçi — çap və sayt.', audience: 'Yeni tələbələr və valideynlər', note: 'Səmimi ton, «siz» müraciəti; uzun cümlələrdən qaçın.' },
-    'sim-nda': { purpose: 'Məşq: iki şirkət danışıqlardan əvvəl məxfilik sazişi imzalayır.', audience: 'Hüquq şöbəsi', note: 'Akademiya tapşırığı · Münşi səviyyəsi' },
-    azergold: { purpose: 'Təchizat müqaviləsinin imza üçün nüsxəsi.', audience: 'Alıcının satınalma və hüquq şöbələri', note: 'Təhvil verilib, müştəri qəbul edib.' }
+    sample: { purpose: 'İmza üçün. Azərbaycan nüsxəsi ingilis nüsxəsi ilə eyni hüquqi qüvvəyə malikdir.', audience: 'Sifarişçinin hüquq şöbəsi və İcraçının rəhbərliyi', note: '«Tərəflərin adları bütün mətndə eyni yazılsın. Tarixləri sözlə verin.»' }
   };
   var REQS = {
-    caspian: [['«Employer» — «Sifarişçi», «Contractor» — «İcraçı»', 'terms'], ['Dırnaq işarələri: «…»', 'punct'], ['Məbləğlər mənbə ilə eyni, rəqəm və sözlə', 'numbers'], ['Türk formaları olmamalıdır', 'turkish'], ['Bütün seqmentlər tərcümə edilməli', 'complete'], ['Əvəzlik yox — tərəfin adı yazılsın', 'meaning'], ['İki dilli cədvəl də təhvil verilsin', null]],
-    kapital: [['«Заёмщик» — «Borcalan», «неустойка» — «dəbbə pulu»', 'terms'], ['Məbləğlər rəqəm və sözlə, mənbədəki kimi', 'numbers'], ['Adlar Azərbaycan yazılışında', 'names'], ['Türk formaları olmamalıdır', 'turkish'], ['Bütün seqmentlər tərcümə edilməli', 'complete'], ['Bankın şablonu: Times New Roman, 12 pt', null]],
-    socar: [['Rəqəmlər ingilis versiyası ilə eyni', 'numbers'], ['Onluq kəsr vergüllə: 12,4%', 'punct'], ['Şirkət lüğəti məcburi', 'terms'], ['Türk formaları olmamalıdır', 'turkish'], ['Bütün seqmentlər tərcümə edilməli', 'complete'], ['Qrafik başlıqları da tərcümə edilsin', null]]
+    sample: [['«Employer» — «Sifarişçi», «Contractor» — «İcraçı»', 'terms'], ['Dırnaq işarələri: «…»', 'punct'], ['Məbləğlər mənbə ilə eyni, rəqəm və sözlə', 'numbers'], ['Türk formaları olmamalıdır', 'turkish'], ['Bütün seqmentlər tərcümə edilməli', 'complete'], ['Əvəzlik yox — tərəfin adı yazılsın', 'meaning']]
   };
   var DEFAULT_REQS = [['Layihə lüğəti məcburi', 'terms'], ['Rəqəm və tarixlər mənbə ilə eyni', 'numbers'], ['Türk formaları olmamalıdır', 'turkish'], ['Dırnaq və onluq kəsr Azərbaycan normasına uyğun', 'punct'], ['Bütün seqmentlər tərcümə edilməli', 'complete']];
   var REQ_CHIPS = [['Müştəri lüğəti məcburi', 'terms'], ['Rəqəmlər mənbədəki kimi', 'numbers'], ['Türk formaları olmasın', 'turkish'], ['Tarixlər sözlə', null], ['Formatı qoru', null], ['İki dilli cədvəl', null]];
@@ -394,18 +388,25 @@
   /* ------------------------------------------------------------------
      3. PROJECTS MODEL
      ------------------------------------------------------------------ */
-  function roundUp30(d) { var ms = 30 * 60000; return new Date(Math.ceil(d.getTime() / ms) * ms); }
-  function at(daysFromToday, hour, minute) { var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate() + daysFromToday, hour, minute || 0, 0, 0); }
-  function baseProjects() {
-    var now = new Date();
-    return [
-      { id: 'kapital', name: 'Kredit müqaviləsi — əlavə №2', client: 'Kapital Bank', pair: 'ru-az', field: 'Bank-maliyyə', reg: 'huquqi', words: 1860, segs: 74, done: 22, due: roundUp30(new Date(now.getTime() + 190 * 60000)), qa: 84, kind: 'real', set: 'legal-ru', status: 'active' },
-      { id: 'caspian', name: 'Xidmət müqaviləsi', client: 'Caspian Logistics', pair: 'en-az', field: 'Hüquq', reg: 'huquqi', words: 3420, segs: 186, done: 68, due: at(1, 18), qa: 91, kind: 'real', set: 'legal-en', status: 'active' },
-      { id: 'ada', name: 'Tələbə bələdçisi 2026/27', client: 'ADA Universiteti', pair: 'en-az', field: 'Təhsil', reg: 'neytral', words: 5240, segs: 188, done: 86, due: at(4, 17), qa: 94, kind: 'real', set: 'guide-en', status: 'active' },
-      { id: 'sim-nda', name: 'Məxfilik sazişi (NDA)', client: 'Nuanza Akademiya', pair: 'en-az', field: 'Hüquq', reg: 'huquqi', words: 640, segs: 28, done: 35, due: at(5, 20), qa: null, kind: 'sim', set: 'nda-en', status: 'active' },
-      { id: 'socar', name: 'İllik hesabat 2025 — 3-cü fəsil', client: 'SOCAR', pair: 'en-az', field: 'Neft-qaz', reg: 'resmi', words: 12480, segs: 512, done: 41, due: at(9, 12), qa: 88, kind: 'real', set: 'report-en', status: 'active' },
-      { id: 'azergold', name: 'Təchizat müqaviləsi', client: 'AzerGold', pair: 'en-az', field: 'Hüquq', reg: 'huquqi', words: 2140, segs: 96, done: 100, due: at(-2, 16), qa: 97, kind: 'real', set: 'supply-en', status: 'delivered' }
-    ];
+  /* The user's projects live in store key 'pj:created' (nuanza2:pj:created). The single sample
+     («Nümunə layihə») is not stored as a project: it is shown only while 'pj:sample' is true —
+     switched on by «Nümunəyə bax», off when the user deletes it. It never counts in stats. */
+  var SAMPLE_ID = 'sample';
+  function sampleOn() { return sget('pj:sample', false) === true; }
+  function sampleProject() {
+    var set = SETS['legal-en'], ok = 0;
+    set.segs.forEach(function (d) { if (d.ok) ok++; });
+    return { id: SAMPLE_ID, name: 'Xidmət müqaviləsi', client: 'Nümunə müştəri', pair: 'en-az', field: 'Hüquq', reg: 'huquqi', words: setWords('legal-en'),
+      segs: set.segs.length, done: Math.round(ok / set.segs.length * 100), due: null, qa: null, kind: 'real', set: 'legal-en', status: 'active', sample: true };
+  }
+  function openSample() {
+    sset('pj:sample', true); setMap('pj:removed', SAMPLE_ID);
+    App.go('editor', { project: SAMPLE_ID });
+  }
+  function removeSample() {
+    sset('pj:sample', false);
+    ['pj:segs:', 'pj:reg:', 'pj:sit:', 'pj:gl:', 'pj:qaign:', 'pj:req:', 'pj:deliv:', 'pj:deep:'].forEach(function (k) { try { App.store.remove(k + SAMPLE_ID); } catch (e) { /* storage blocked */ } });
+    ['pj:prog', 'pj:qa', 'pj:status'].forEach(function (k) { setMap(k, SAMPLE_ID); });
   }
   function setKeyFor(pair, field, name) {
     if (/^ru-/.test(pair)) return 'legal-ru';
@@ -428,11 +429,12 @@
     p.fresh = true; p.created = c.created || Date.now();
     return p;
   }
-  function allProjects() {
+  function allProjects(noSample) {
     var removed = getMap('pj:removed'), prog = getMap('pj:prog'), qa = getMap('pj:qa'), status = getMap('pj:status');
     var created = sget('pj:created', []);
     if (!Array.isArray(created)) created = [];
-    var list = created.map(normCreated).filter(Boolean).concat(baseProjects());
+    var list = created.map(normCreated).filter(Boolean);
+    if (!noSample && sampleOn()) list.push(sampleProject());
     return list.filter(function (p) { return !removed[p.id]; }).map(function (p) {
       p.done0 = p.done;
       if (typeof prog[p.id] === 'number') p.done = prog[p.id];
@@ -441,18 +443,34 @@
       return p;
     });
   }
+  /* Real user projects only (no sample) — what stats and other screens should count. */
+  function realProjects() { return allProjects(true); }
   function findProject(id) { var l = allProjects(); for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i]; return null; }
   function resolveProject(params) {
     params = params || {};
-    var id = params.project || params.id, p = id ? findProject(String(id)) : null;
+    var id = params.project || params.id;
+    if (id === SAMPLE_ID && !sampleOn()) { sset('pj:sample', true); setMap('pj:removed', SAMPLE_ID); }
+    var p = id ? findProject(String(id)) : null;
     if (!p && params.name) {
       var nm = lower(params.name);
       allProjects().some(function (x) { if (lower(x.name) === nm || lower(x.client + ' — ' + x.name) === nm) { p = x; return true; } return false; });
     }
-    if (!p) p = findProject(sget('pj:last', 'caspian')) || findProject('caspian') || allProjects()[0] || null;
+    if (!p) { var last = sget('pj:last', null); p = (last && findProject(last)) || realProjects()[0] || null; }
     return p;
   }
-  function setOf(p) { return SETS[p && p.set] || SETS['legal-en']; }
+  /* User projects reuse a segment set as their working text; the sample's translation-memory
+     matches are sample content, so they are stripped for user projects (no invented TM history). */
+  var PLAIN = {};
+  function setOf(p) {
+    var key = SETS[p && p.set] ? p.set : 'legal-en', s = SETS[key];
+    if (p && p.sample) return s;
+    if (!PLAIN[key]) {
+      PLAIN[key] = { src: s.src, title: s.title, names: s.names, segs: s.segs.map(function (d) {
+        var c = {}; for (var k in d) if (k !== 'tm' && Object.prototype.hasOwnProperty.call(d, k)) c[k] = d[k]; return c;
+      }) };
+    }
+    return PLAIN[key];
+  }
   function glossOf(p) {
     var base = (GL[p.set] || []).slice();
     var extra = sget('pj:gl:' + p.id, []);
@@ -484,6 +502,7 @@
   function seedState(d, p) {
     var delivered = p.status === 'delivered' && !p.fresh;
     if (p.fresh) return { t: '', o: null, ok: false, ed: false, ans: null, note: '' };
+    if (!p.sample) return { t: '', o: null, ok: false, ed: false, ans: null, note: '' };
     return { t: d.t || '', o: d.t ? (d.o || 'ai') : null, ok: delivered ? !!d.t : !!d.ok, ed: d.o === 'human', ans: null, note: '' };
   }
   function loadSegs(p) {
@@ -857,12 +876,14 @@
      ------------------------------------------------------------------ */
   function dueTone(p) {
     if (p.status === 'delivered') return 'ok';
+    if (!p.due) return '';
     var ms = p.due.getTime() - Date.now();
     if (ms < DAY) return 'late';
     if (ms < 3 * DAY) return 'soon';
     return '';
   }
   function dueChip(p, cls) {
+    if (!p.due) return null;
     var tone = dueTone(p), ms = p.due.getTime() - Date.now();
     var txt = p.status === 'delivered' ? 'Təhvil verildi · ' + p.due.getDate() + ' ' + MONTHS[p.due.getMonth()]
       : dueLabel(p.due) + (ms < DAY ? ' · ' + leftLabel(ms) : '');
@@ -874,9 +895,10 @@
     return b;
   }
   function kindTag(p) {
+    if (p.sample) return h('span', { class: 'badge gold', title: 'Nümunə layihə: redaktor və QA-nı sınamaq üçün. Statistikaya düşmür, silə bilərsiniz.' }, ie('sparkle'), 'Nümunə');
     return p.kind === 'sim'
       ? h('span', { class: 'badge navy', title: 'Məşq layihəsi: real müştəri yoxdur, təsdiqlər Akademiyada XP qazandırır' }, ie('cap'), 'Simulyasiya')
-      : h('span', { class: 'badge green dot', title: 'Real müştəri sifarişi' }, 'Real');
+      : null;
   }
   function fieldIc(p) { return p.kind === 'sim' ? ['cap', ''] : p.status === 'delivered' ? ['stamp', 'green'] : p.field === 'Hüquq' || p.field === 'Bank-maliyyə' ? ['file', 'projects-fir'] : p.field === 'Neft-qaz' ? ['chart', 'gold'] : ['book', 'gold']; }
   function emptyBox(S, o) {
@@ -924,7 +946,8 @@
       h('div', { class: 'actions' }, newBtn)));
 
     var stats = h('div', { class: 'stats projects-stats' });
-    page.appendChild(h('section', { class: 'card projects-statcard', 'aria-label': 'Ümumi göstəricilər' }, stats));
+    var statCard = h('section', { class: 'card projects-statcard', 'aria-label': 'Ümumi göstəricilər', hidden: true }, stats);
+    page.appendChild(statCard);
 
     var search = h('input', { class: 'input', id: 'projects-q', type: 'search', placeholder: 'Layihə, müştəri və ya sahə axtar', autocomplete: 'off', 'aria-label': 'Layihə axtar' });
     var viewBtns = {};
@@ -938,9 +961,10 @@
       var b = h('button', { type: 'button', role: 'tab', 'aria-selected': st.tab === t.id ? 'true' : 'false', onclick: function () { st.tab = t.id; sset('projects:tab', t.id); syncTabs(); draw(); } }, t.label, c);
       tabBtns[t.id] = { b: b, c: c }; return b;
     }));
-    page.appendChild(h('div', { class: 'projects-tools' },
+    var tools = h('div', { class: 'projects-tools', hidden: true },
       h('div', { class: 'projects-tools-row' }, h('label', { class: 'input-ic', html: App.icon('search') }, search), viewSeg),
-      tabs));
+      tabs);
+    page.appendChild(tools);
     var host = h('div', { class: 'projects-host' });
     page.appendChild(host);
 
@@ -962,30 +986,50 @@
     function sortList(l) {
       return l.slice().sort(function (a, b) {
         if (hl && a.id === hl) return -1; if (hl && b.id === hl) return 1;
+        if (!!a.sample !== !!b.sample) return a.sample ? 1 : -1;
         var da = a.status === 'delivered' ? 1 : 0, db = b.status === 'delivered' ? 1 : 0;
         if (da !== db) return da - db;
-        return da ? b.due - a.due : a.due - b.due;
+        var ta = a.due ? a.due.getTime() : Infinity, tb = b.due ? b.due.getTime() : Infinity;
+        return da ? tb - ta : ta - tb;
       });
     }
     function draw() {
       var P = allProjects();
-      var active = P.filter(function (p) { return p.status !== 'delivered'; });
-      var week = active.filter(function (p) { return p.due.getTime() - Date.now() < 7 * DAY; }).length;
-      var queue = 0; active.forEach(function (p) { queue += Math.round(p.words * (100 - p.done) / 100); });
-      var qs = P.filter(function (p) { return p.qa != null; }), avg = qs.length ? Math.round(qs.reduce(function (s, p) { return s + p.qa; }, 0) / qs.length) : 0;
-      var late = active.filter(function (p) { return p.due.getTime() - Date.now() < DAY; }).length;
-      subP.textContent = P.length + ' layihə · ' + active.length + ' aktiv' + (late ? ' · ' + late + ' təhvil 24 saat ərzində' : '') + '. Gecikənlər yuxarıdadır.';
+      var R = P.filter(function (p) { return !p.sample; }); /* real projects — the only ones that count */
+      var active = R.filter(function (p) { return p.status !== 'delivered'; });
+      var delivered = R.length - active.length;
+      var week = active.filter(function (p) { return p.due && p.due.getTime() - Date.now() < 7 * DAY; }).length;
+      var queue = 0; active.forEach(function (p) { queue += Math.round((p.words || 0) * (100 - p.done) / 100); });
+      var qs = R.filter(function (p) { return p.qa != null; }), avg = qs.length ? Math.round(qs.reduce(function (s, p) { return s + p.qa; }, 0) / qs.length) : 0;
+      var late = active.filter(function (p) { return p.due && p.due.getTime() - Date.now() < DAY; }).length;
+      subP.textContent = !R.length ? 'Sənədi yükləyin — terminləri və üslubu Nuanza özü tapacaq.'
+        : R.length + ' layihə' + (active.length && active.length !== R.length ? ' · ' + active.length + ' aktiv' : '') + (late ? ' · ' + late + ' təhvil 24 saat ərzində' : '');
+      newBtn.hidden = !P.length;
+      /* stats: only from real projects, only non-zero values */
       stats.textContent = '';
-      [[active.length, 'aktiv layihə'], [week, 'bu həftə təhvil'], [num(queue), 'söz növbədə'], [avg || '—', 'orta QA balı']].forEach(function (s) {
-        stats.appendChild(h('div', { class: 'stat' }, h('b', { class: 'tnum', text: String(s[0]) }), h('span', { text: s[1] })));
+      var items = [[active.length, 'aktiv layihə'], [delivered, 'təhvil verilib'], [week, 'bu həftə təhvil'], [queue, 'söz növbədə'], [avg, 'orta QA balı']]
+        .filter(function (x) { return x[0] > 0; }).slice(0, 4);
+      items.forEach(function (x) { stats.appendChild(h('div', { class: 'stat' }, h('b', { class: 'tnum', text: num(x[0]) }), h('span', { text: x[1] }))); });
+      statCard.hidden = !R.length || items.length < 2;
+      tools.hidden = P.length < 4;
+      TABS.forEach(function (t) {
+        var n = P.filter(function (p) { return inTab(p, t.id); }).length;
+        tabBtns[t.id].c.textContent = String(n);
+        tabBtns[t.id].b.hidden = t.id !== 'all' && !n;
       });
-      TABS.forEach(function (t) { tabBtns[t.id].c.textContent = String(P.filter(function (p) { return inTab(p, t.id); }).length); });
+      if (tools.hidden || tabBtns[st.tab].b.hidden) { st.tab = 'all'; syncTabs(); }
       var list = sortList(P.filter(function (p) { return inTab(p, st.tab) && matchQ(p, st.q); }));
       host.textContent = '';
+      if (!P.length) {
+        host.appendChild(emptyBox(S, { title: 'İlk layihənizi yaradın', text: 'Sənədi yükləyin — Mirzə Məclisi ilkin tərcüməni hazırlayacaq, siz isə hər seqmenti təsdiqləyəcəksiniz.', state: 'wave',
+          actions: [h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { newBtn.click(); } }, ie('plus'), 'Yeni layihə'),
+            h('button', { class: 'btn btn-ghost', type: 'button', onclick: openSample }, 'Nümunəyə bax')] }));
+        return;
+      }
       if (!list.length) {
         host.appendChild(emptyBox(S, st.q
-          ? { title: 'Heç nə tapılmadı', text: '«' + st.q + '» üzrə layihə yoxdur. Müştəri adını və ya dil cütünü yoxlayın.', state: 'think', actions: [h('button', { class: 'btn', type: 'button', onclick: function () { search.value = ''; st.q = ''; draw(); search.focus(); } }, 'Axtarışı təmizlə')] }
-          : { title: 'Bu bölmədə layihə yoxdur', text: 'İlk sənədi yükləyin — terminləri və üslubu Nuanza özü tapacaq.', state: 'wave', actions: [h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { newBtn.click(); } }, ie('plus'), 'Layihə yarat')] }));
+          ? { title: 'Heç nə tapılmadı', text: '«' + st.q + '» üzrə layihə yoxdur.', state: 'think', actions: [h('button', { class: 'btn', type: 'button', onclick: function () { search.value = ''; st.q = ''; draw(); search.focus(); } }, 'Axtarışı təmizlə')] }
+          : { title: 'Bu bölmədə layihə yoxdur', text: 'Başqa bölməyə keçin və ya yeni layihə yaradın.', state: 'wave', actions: [h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { newBtn.click(); } }, ie('plus'), 'Yeni layihə')] }));
         return;
       }
       if (st.view === 'table') host.appendChild(tableView(list)); else host.appendChild(h('div', { class: 'projects-grid' }, list.map(card)));
@@ -1005,7 +1049,7 @@
       open.addEventListener('click', function () { openEditor(p); });
       var c = h('article', { class: 'card projects-card' + (hl === p.id ? ' is-new' : ''), 'data-id': p.id },
         h('div', { class: 'projects-top' }, icTile(fi[0], fi[1]),
-          h('div', { class: 'projects-who' }, h('span', { text: p.client }), h('div', { class: 'projects-tags' }, kindTag(p), hl === p.id ? badge('Yeni', 'gold', 'sparkle') : null)),
+          h('div', { class: 'projects-who' }, h('span', { text: p.client }), h('div', { class: 'projects-tags' }, kindTag(p), hl === p.id && !p.sample ? badge('Yeni', 'gold', 'sparkle') : null)),
           more),
         open,
         h('div', { class: 'projects-meta' }, badge(pairLabel(p.pair), 'navy', 'globe'), badge(p.field), badge(REG[p.reg] || 'Neytral', '', 'sliders')),
@@ -1018,7 +1062,7 @@
     function tableView(list) {
       var rows = list.map(function (p) {
         var tr = h('tr', { class: 'clickable', tabindex: '0', 'data-id': p.id, 'aria-label': p.name + ' — redaktorda aç' },
-          h('td', null, h('span', { class: 'tx' }, h('b', { text: p.name }), h('small', { text: p.client + (p.kind === 'sim' ? ' · Simulyasiya' : '') }))),
+          h('td', null, h('span', { class: 'tx' }, h('b', { text: p.name }), h('small', { text: p.client + (p.sample ? ' · Nümunə' : p.kind === 'sim' ? ' · Simulyasiya' : '') }))),
           h('td', null, badge(pairLabel(p.pair), 'navy')),
           h('td', { class: 'num', text: num(p.words) }),
           h('td', null, h('div', { class: 'projects-mini' }, h('div', { class: 'progress thin' + (p.status === 'delivered' ? ' green' : '') }, h('i', { style: 'width:' + p.done + '%' })), h('span', { class: 'small tnum', text: p.done + '%' }))),
@@ -1037,14 +1081,21 @@
       var rows = [
         { ic: 'edit', cls: 'projects-fir', b: 'Redaktorda aç', s: num(p.segs) + ' seqment · ' + p.done + '% təsdiqlənib', run: function () { openEditor(p); } },
         { ic: 'shield', b: 'QA yoxlaması', s: p.qa == null ? 'Hələ yoxlanmayıb' : 'Son bal: ' + p.qa, run: function () { App.go('qa', { project: p.id }); } },
-        p.status === 'delivered'
+        p.sample ? null : p.status === 'delivered'
           ? { ic: 'refresh', b: 'Yenidən aç', s: 'Müştəri düzəliş istəyibsə', run: function () { setMap('pj:status', p.id, 'active'); toast('Layihə yenidən açıldı', 'info', { sub: p.name }); draw(); } }
           : { ic: 'stamp', cls: 'gold', b: 'Təhvil verildi kimi qeyd et', s: 'Layihə arxivə keçir', run: function () {
             setMap('pj:status', p.id, 'delivered'); setMap('pj:prog', p.id, 100);
             toast('Təhvil verildi', 'ok', { sub: p.client + ' — ' + p.name });
             nz('celebrate', 'Təbriklər! Daha bir layihə təhvil verildi.', 2600); draw();
           } },
-        { ic: 'trash', b: 'Layihəni sil', s: 'Geri qaytarmaq mümkündür', danger: true, run: function () {
+        p.sample ? { ic: 'trash', b: 'Nümunəni sil', s: 'İstənilən vaxt yenidən baxa bilərsiniz', danger: true, run: function () {
+          var node = host.querySelector('[data-id="' + p.id + '"]');
+          if (node) node.classList.add('is-gone');
+          S.later(function () {
+            removeSample(); draw();
+            toast('Nümunə silindi', 'info', { action: { label: 'Geri qaytar', onClick: function () { sset('pj:sample', true); if (!S.dead) draw(); } } });
+          }, 200);
+        } } : { ic: 'trash', b: 'Layihəni sil', s: 'Geri qaytarmaq mümkündür', danger: true, run: function () {
           App.confirm({ title: 'Layihə silinsin?', text: '«' + p.client + ' — ' + p.name + '» və onun ' + num(p.segs) + ' seqmenti siyahıdan silinəcək.', okLabel: 'Sil', danger: true }).then(function (yes) {
             if (!yes) return;
             var node = host.querySelector('[data-id="' + p.id + '"]');
@@ -1056,6 +1107,7 @@
           });
         } }
       ];
+      rows = rows.filter(Boolean);
       var list = h('div', { class: 'list' }, rows.map(function (r) {
         return h('button', { class: 'list-row' + (r.danger ? ' danger' : ''), type: 'button', onclick: function () { if (s) s.close(); S.later(r.run, 80); } },
           icTile(r.ic, r.cls), h('span', { class: 'tx' }, h('b', { text: r.b }), h('small', { text: r.s })), h('span', { class: 'end', html: App.icon('chevron') }));
@@ -1075,7 +1127,7 @@
     var d0 = new Date(Date.now() + 3 * DAY);
     var name = h('input', { class: 'input', id: 'pj-new-name', placeholder: 'Məs.: Təchizat müqaviləsi — əlavə №3', autocomplete: 'off' });
     var nameErr = h('span', { class: 'err', hidden: true }, ie('alert'), 'Layihənin adını yazın');
-    var client = h('input', { class: 'input', id: 'pj-new-client', placeholder: 'Məs.: AzerGold', autocomplete: 'off' });
+    var client = h('input', { class: 'input', id: 'pj-new-client', placeholder: 'Məs.: müştərinin adı', autocomplete: 'off' });
     var pairSel = h('select', { class: 'select', id: 'pj-new-pair' }, (App.PAIRS || [{ id: 'en-az', label: 'EN → AZ' }, { id: 'ru-az', label: 'RU → AZ' }]).map(function (pp) { return h('option', { value: pp.id, text: pp.label + (pp.name ? ' · ' + pp.name : '') }); }));
     pairSel.value = (prof.pairs && prof.pairs[0]) || 'en-az';
     var fieldSel = h('select', { class: 'select', id: 'pj-new-field' }, FIELDS.map(function (f) { return h('option', { value: f, text: f }); }));
@@ -1105,8 +1157,6 @@
     var dz = h('label', { class: 'dropzone projects-dz', for: 'pj-new-file', tabindex: '0', 'aria-describedby': 'pj-new-dzh' },
       fileIn, icTile('upload', 'projects-fir'), h('b', { text: 'Faylı bura atın və ya seçin' }), h('span', { id: 'pj-new-dzh', text: 'DOCX, PDF, TXT, XLIFF · 50 MB-a qədər' }));
     var fl = h('div', { class: 'projects-files', 'aria-live': 'polite' });
-    var sample = h('button', { class: 'link small projects-sample', type: 'button' }, 'Nümunə fayl əlavə et');
-    sample.addEventListener('click', function () { addFile({ name: 'Caspian_Service_Agreement_v3.docx', size: 48213 }); });
 
     dz.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileIn.click(); } });
     ['dragenter', 'dragover'].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.add('over'); }); });
@@ -1170,7 +1220,7 @@
         h('div', { class: 'field' }, h('label', { for: 'pj-new-field' }, 'Sahə'), fieldSel),
         h('div', { class: 'field' }, h('span', { class: 'label' }, 'Təhvil'), h('div', { class: 'grid-2', style: 'gap:8px;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)' }, dueD, dueT))),
       h('div', { class: 'field' }, h('span', { class: 'label' }, 'Üslub'), regSeg, regHint),
-      h('section', { class: 'projects-sec' }, h('h3', { text: 'Sənəd' }), dz, fl, sample),
+      h('section', { class: 'projects-sec' }, h('h3', { text: 'Sənəd' }), dz, fl),
       h('section', { class: 'projects-sec' }, h('h3', { text: 'Situasiya' }),
         h('div', { class: 'field' }, h('label', { for: 'pj-new-sit' }, 'Sənəd nə üçündür, kim oxuyacaq?'), sitChips, sitTa, h('span', { class: 'hint', text: 'Məqsəd və oxucu üslubu, termin seçimini və hətta söz sırasını dəyişir.' }))),
       h('section', { class: 'projects-sec' }, h('h3', { text: 'Müştərinin tələbləri' }), reqChips,
@@ -1215,8 +1265,13 @@
   var FILTERS = [{ id: 'all', label: 'Hamısı' }, { id: 'empty', label: 'Boş' }, { id: 'unrev', label: 'Yoxlanmamış' }, { id: 'risk', label: 'Riskli' }];
   var greeted = {};
   function noProject(S) {
-    return h('div', { class: 'page' }, emptyBox(S, { title: 'Layihə tapılmadı', text: 'Bu layihə silinib və ya hələ yaradılmayıb.', state: 'sad',
-      actions: [h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { App.go('projects'); } }, 'Layihələrə qayıt')] }));
+    var none = !realProjects().length;
+    return h('div', { class: 'page' }, emptyBox(S, none
+      ? { title: 'Hələ layihə yoxdur', text: 'Redaktor və QA layihə daxilində işləyir. İlk layihənizi yaradın və ya nümunəyə baxın.', state: 'wave',
+        actions: [h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { newProjectSheet(null); } }, ie('plus'), 'Yeni layihə'),
+          h('button', { class: 'btn btn-ghost', type: 'button', onclick: openSample }, 'Nümunəyə bax')] }
+      : { title: 'Layihə tapılmadı', text: 'Bu layihə silinib və ya hələ yaradılmayıb.', state: 'sad',
+        actions: [h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { App.go('projects'); } }, 'Layihələrə qayıt')] }));
   }
 
   function renderEditor(el, params) {
@@ -1237,7 +1292,7 @@
     var aiBtn = h('button', { class: 'btn btn-secondary', type: 'button' }, ie('sparkle'), 'AI ilkin tərcümə');
     aiBtn.addEventListener('click', runAI);
     var qaBtn = h('button', { class: 'btn', type: 'button', onclick: function () { flushSave(); App.go('qa', { project: p.id }); } }, ie('shield'), 'QA');
-    var dueTxt = p.status === 'delivered' ? 'təhvil verilib' : 'təhvil ' + lcFirst(dueLabel(p.due));
+    var dueTxt = p.status === 'delivered' ? 'təhvil verilib' : p.due ? 'təhvil ' + lcFirst(dueLabel(p.due)) : 'nümunə layihə';
     page.appendChild(h('div', { class: 'editor-top' },
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: function () { App.go('projects'); } }, ie('back'), 'Layihələr'),
       h('div', { class: 'row' }, kindTag(p), dueChip(p))));
@@ -1936,7 +1991,7 @@
         } },
         { ic: 'message', b: st.note ? 'Qeydi dəyiş' : 'Redaktora qeyd', s: 'Komanda və ya müştəri üçün şərh', run: function () {
           out.textContent = '';
-          var ta = h('textarea', { class: 'textarea', id: 'editor-note-' + r.n, rows: '3', placeholder: 'Məs.: Müştəri ilə «Absheron» yazılışını dəqiqləşdirmək', value: r.st.note || '' });
+          var ta = h('textarea', { class: 'textarea', id: 'editor-note-' + r.n, rows: '3', placeholder: 'Məs.: Müştəri ilə «Delta» yazılışını dəqiqləşdirmək', value: r.st.note || '' });
           out.appendChild(h('div', { class: 'field' }, h('label', { for: 'editor-note-' + r.n }, 'Qeyd'), ta));
           out.appendChild(h('div', { class: 'row' },
             h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: function () { r.st.note = ta.value.trim(); updateRow(r); scheduleSave(); done(r.st.note ? 'Qeyd saxlanıldı' : 'Qeyd silindi', '#' + r.n); } }, 'Saxla'),
@@ -2377,7 +2432,7 @@
   App.register('projects', {
     title: 'Layihələr', icon: 'folder', group: 'Peşəkar', mode: 'pro', order: 2,
     badge: function () {
-      try { return allProjects().filter(function (p) { return p.status !== 'delivered' && p.due.getTime() - Date.now() < 2 * DAY; }).length || null; } catch (e) { return null; }
+      try { return realProjects().filter(function (p) { return p.status !== 'delivered' && p.due && p.due.getTime() - Date.now() < 2 * DAY; }).length || null; } catch (e) { return null; }
     },
     render: renderProjects,
     leave: function () { endScope('projects'); }
@@ -2393,7 +2448,23 @@
     leave: function () { endScope('qa'); }
   });
 
-  /* Small public hook so other screens can open the same «Yeni layihə» sheet. */
-  App.projects = { open: function (id) { App.go('editor', { project: id }); }, create: function () { newProjectSheet(null); }, list: allProjects,
-    qaInput: function (id) { var p = id ? findProject(String(id)) : null; return p ? qaInput(p, loadSegs(p)) : null; } };
+  /* Public hook for other screens (home etc.).
+     App.projects()            → the user's REAL projects (sample excluded), newest first:
+                                 [{ id, name, client, pair, field, reg, words, segs, done (0-100), due (Date), qa (number|null), status ('active'|'delivered'), kind ('real'|'sim'), created }]
+     App.projects.list()       → same as App.projects()
+     App.projects.count()      → number of real projects
+     App.projects.create()     → opens the «Yeni layihə» sheet
+     App.projects.open(id)     → opens a project in the editor
+     App.projects.openSample() → shows the «Nümunə» project and opens it in the editor
+     App.projects.qaInput(id)  → QA-engine input for a project
+     Raw storage: App.store key 'pj:created' (localStorage 'nuanza2:pj:created'), minus ids in 'pj:removed'. */
+  var api = function () { return realProjects(); };
+  api.list = realProjects;
+  api.count = function () { try { return realProjects().length; } catch (e) { return 0; } };
+  api.all = function () { return allProjects(); };
+  api.open = function (id) { App.go('editor', { project: id }); };
+  api.create = function () { newProjectSheet(null); };
+  api.openSample = openSample;
+  api.qaInput = function (id) { var p = id ? findProject(String(id)) : null; return p ? qaInput(p, loadSegs(p)) : null; };
+  App.projects = api;
 })();

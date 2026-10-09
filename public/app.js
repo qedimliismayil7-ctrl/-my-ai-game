@@ -330,22 +330,46 @@
   /* ------------------------------------------------------------------
      5. PROFILE
      ------------------------------------------------------------------ */
+  /* A new user's real, empty profile: nothing invented, no plan/billing fields.
+     memberSince is the first-run date, stored once (see firstRun()). */
   var PROFILE_DEFAULTS = {
-    name: 'Aysel Məmmədova', email: 'aysel.mammadova@nuanza.az', phone: '+994 50 412 36 18', telegram: '@aysel_tercume',
-    role: 'Freelance tərcüməçi', city: 'Bakı', pairs: ['en-az', 'ru-az'], specialties: ['Hüquq', 'Maliyyə', 'Neft-qaz'],
-    avatarColor: 'av-firuze', plan: 'Peşəkar', planPrice: 29, planRenews: '2026-11-07', rate: 0.06, currency: 'AZN',
-    memberSince: '2024-03-11', xp: 1840, streak: 12, bestStreak: 31, dailyGoal: 30,
-    school: 'Bakı Dövlət Universiteti · Tərcümə fakültəsi',
-    bio: 'Hüquqi və maliyyə tərcüməsi üzrə 7 illik təcrübə. SOCAR, Kapital Bank və ADA Universiteti ilə əməkdaşlıq.'
+    name: '', email: '', phone: '', telegram: '', role: '', city: '', school: '', bio: '',
+    pairs: ['en-az'], specialties: [], avatarColor: 'av-firuze', rate: null, currency: 'AZN',
+    memberSince: '', xp: 0, streak: 0, bestStreak: 0, dailyGoal: 30
   };
+  /* Values the old demo profile ("Aysel") shipped with — scrubbed from stored data once. */
+  var LEGACY_FAKE = {
+    name: 'Aysel Məmmədova', email: 'aysel.mammadova@nuanza.az', phone: '+994 50 412 36 18', telegram: '@aysel_tercume',
+    role: 'Freelance tərcüməçi', city: 'Bakı', school: 'Bakı Dövlət Universiteti · Tərcümə fakültəsi', memberSince: '2024-03-11'
+  };
+  function firstRun() {
+    var d = store.get('firstRun', '');
+    if (!d || isNaN(new Date(d).getTime())) { d = new Date().toISOString(); iset('firstRun', d); }
+    return d;
+  }
+  function cleanStoredProfile() {
+    if (store.get('profileClean', false)) return;
+    var cur = store.get('profile', null);
+    if (cur && typeof cur === 'object') {
+      Object.keys(LEGACY_FAKE).forEach(function (k) { if (cur[k] === LEGACY_FAKE[k]) delete cur[k]; });
+      if (typeof cur.bio === 'string' && /SOCAR|Kapital Bank|ADA Universiteti/.test(cur.bio)) delete cur.bio;
+      ['plan', 'planPrice', 'planRenews'].forEach(function (k) { delete cur[k]; });
+      iset('profile', cur);
+    }
+    iset('profileClean', true);
+  }
   function initials(name) {
     var p = String(name || '').trim().split(/\s+/).filter(Boolean);
-    if (!p.length) return 'N';
+    if (!p.length) return '';
     return upper((p[0].charAt(0) || '') + (p.length > 1 ? p[p.length - 1].charAt(0) : (p[0].charAt(1) || '')));
   }
-  function firstName(name) { return String(name || '').trim().split(/\s+/)[0] || 'dostum'; }
+  function firstName(name) { return String(name || '').trim().split(/\s+/)[0] || ''; }
   function profile() {
+    cleanStoredProfile();
     var p = assign({}, PROFILE_DEFAULTS, store.get('profile', {}) || {});
+    if (!p.memberSince) p.memberSince = firstRun();
+    ['plan', 'planPrice', 'planRenews'].forEach(function (k) { delete p[k]; });
+    p.name = String(p.name || '').trim();
     if (!Array.isArray(p.pairs) || !p.pairs.length) p.pairs = PROFILE_DEFAULTS.pairs.slice();
     var r = rankOf(p.xp);
     p.initials = initials(p.name); p.firstName = firstName(p.name);
@@ -355,7 +379,7 @@
   function setProfile(patch) {
     var cur = store.get('profile', {}) || {};
     assign(cur, patch || {});
-    ['initials', 'firstName', 'pairsLabel', 'rank', 'rankInfo'].forEach(function (k) { delete cur[k]; });
+    ['initials', 'firstName', 'pairsLabel', 'rank', 'rankInfo', 'plan', 'planPrice', 'planRenews'].forEach(function (k) { delete cur[k]; });
     iset('profile', cur);
     renderProfile();
     var p = profile();
@@ -381,7 +405,9 @@
     '.dr-search svg{width:16px;height:16px}.dr-search .lbl{flex:1;min-width:0}',
     '.dr-search:hover{color:var(--ink);border-color:var(--line-2)}.dr-search:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
     '.dr-nav.anim .dr-link,.dr-nav.anim .dr-grp{animation:rise .32s var(--ease-out) both;animation-delay:calc(var(--i,0) * 22ms)}',
-    '.dr-profile .who .badge{display:inline-flex}',
+    '.dr-profile .who .badge{display:inline-flex}.dr-profile .who .badge:empty{display:none}',
+    '.avatar > svg.av-ic{width:56%;height:56%}',
+    '.dr-profile.incomplete .who small{color:var(--firuze)}',
     '.shell-dock{position:relative;width:var(--dock);height:var(--dock);padding:0;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;',
     '  background:radial-gradient(circle at 35% 28%,color-mix(in srgb,var(--deep) 70%,var(--ivory)),var(--deep) 70%);',
     '  box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--firuze),var(--sh-2);transition:transform var(--t-base) var(--ease-spring)}',
@@ -1237,7 +1263,7 @@
     { type: 'Türk forması', severity: 'low', seg: 40, src: 'all necessary documents', tgt: 'bütün gerekli sənədlər', was: 'gerekli', now: 'lazımi', text: '«gerekli» Azərbaycan ədəbi dilinə aid deyil.' },
     { type: 'Rəqəm', severity: 'mid', seg: 52, src: 'within thirty (30) days', tgt: 'otuz (3) gün ərzində', was: '(3)', now: '(30)', text: 'Mötərizədəki rəqəm sözlə yazılışa uyğun gəlmir.' },
     { type: 'Termin', severity: 'low', seg: 60, src: 'Force majeure', tgt: 'Qeyri-adi hallar', was: 'Qeyri-adi hallar', now: 'Fors-major halları', text: 'Lüğətdə «fors-major» təsdiqlənib.' },
-    { type: 'Ad', severity: 'low', seg: 3, src: 'SOCAR', tgt: 'Socar', was: 'Socar', now: 'SOCAR', text: 'Abreviatura böyük hərflərlə yazılır.' },
+    { type: 'Ad', severity: 'low', seg: 3, src: 'UNESCO', tgt: 'Unesco', was: 'Unesco', now: 'UNESCO', text: 'Abreviatura böyük hərflərlə yazılır.' },
     { type: 'Durğu', severity: 'low', seg: 66, src: 'the "Effective Date"', tgt: '"Qüvvəyəminmə tarixi"', was: '"Qüvvəyəminmə tarixi"', now: '«Qüvvəyəminmə tarixi»', text: 'Azərbaycan mətnində «» dırnaqları işlənir.' },
     { type: 'Ardıcıllıq', severity: 'low', seg: 70, src: 'this Agreement', tgt: 'bu müqavilə', was: 'müqavilə', now: 'Müqavilə', text: 'Müəyyən edilmiş termin bütün sənəddə böyük hərflə yazılır.' }
   ];
@@ -1247,7 +1273,7 @@
     { key: 'turkish', label: 'Türk formaları', types: ['Türk forması', 'Orfoqrafiya'] }, { key: 'consistency', label: 'Ardıcıllıq', types: ['Ardıcıllıq', 'Üslub'] },
     { key: 'punct', label: 'Durğu', types: ['Durğu'] }, { key: 'complete', label: 'Tamlıq', types: ['Boş seqment', 'Məna'] }
   ];
-  function projName(p) { if (!p) return 'SOCAR — İllik hesabat 2025'; if (typeof p === 'string') return p; return p.name || p.title || 'Layihə'; }
+  function projName(p) { if (!p) return 'Nümunə layihə'; if (typeof p === 'string') return p; return p.name || p.title || 'Layihə'; }
   function aiQA(inp) {
     inp = inp || {};
     var issues;
@@ -1475,7 +1501,7 @@
   function aiTM(inp) {
     if (typeof inp === 'string') inp = { text: inp };
     var s = String((inp && (inp.text || inp.src)) || ''), from = detectLang(s), ts = tokSet(s);
-    var PROJ = ['SOCAR — İllik hesabat 2025', 'Kapital Bank — Kredit müqaviləsi', 'AzerGold — Təchizat müqaviləsi', 'ADA Universiteti — Tələbə bələdçisi', 'Bakı Bulvar — Turist xəritəsi'];
+    var PROJ = ['Nümunə layihə'];
     return CORPUS.filter(function (e) { return e.lang === from; }).map(function (e) {
       return { src: e.src, tgt: variantFor(e, 'resmi'), pct: Math.round(dice(ts, e._t) * 100), project: PROJ[hash(e.src) % PROJ.length], date: new Date(Date.now() - (hash(e.src) % 90) * 86400000).toISOString() };
     }).filter(function (x) { return x.pct >= 40; }).sort(function (a, b) { return b.pct - a.pct; }).slice(0, 3);
@@ -1605,7 +1631,7 @@
       return h('button', { class: 'tile', type: 'button', onclick: function () { go(id); } }, h('span', { class: 'ic', html: icon(d.icon || 'star') }), h('span', null, h('b', { text: titleOf(d) }), h('small', { text: d.group || '' })));
     });
     sec.appendChild(h('div', { class: 'page shell-fallback' },
-      h('div', { class: 'page-h' }, h('div', null, h('span', { class: 'eyebrow', text: curMode === 'academy' ? 'Akademiya' : 'Peşəkar' }), h('h1', { html: 'Salam, <em>' + esc(p.firstName) + '</em>' }), h('p', { text: 'Masanız hazırdır. Haradan başlayaq?' }))),
+      h('div', { class: 'page-h' }, h('div', null, h('span', { class: 'eyebrow', text: curMode === 'academy' ? 'Akademiya' : 'Peşəkar' }), h('h1', { html: p.firstName ? 'Salam, <em>' + esc(p.firstName) + '</em>' : 'Xoş <em>gəldiniz</em>' }), h('p', { text: 'Masanız hazırdır. Haradan başlayaq?' }))),
       tiles.length ? h('div', { class: 'tiles' }, tiles) : h('div', { class: 'empty' }, h('div', { class: 'empty-art' }), h('h3', { text: 'Ekranlar yüklənir' }), h('p', { text: 'Bir neçə saniyəyə hazır olacaq.' }))));
   }
   function renderScreen(id, params, opts) {
@@ -1646,8 +1672,8 @@
         '<header class="hdr"><div class="hdr-in">' +
         '<button class="burger" type="button" aria-label="Menyunu aç" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>' +
         '<a class="brand" href="#home" aria-label="Nuanza — ana səhifə">' + logoSvg() + '<b>Nuanza</b><small hidden>Akademiya</small></a>' +
-        '<button class="avatar av-firuze" type="button" aria-label="Profil və ayarlar">AM</button></div><div class="rugband" aria-hidden="true"></div></header>' +
-        '<nav class="drawer" id="drawer" aria-label="Əsas menyu"><button class="dr-profile" type="button"><span class="avatar lg av-firuze" aria-hidden="true">AM</span><span class="who"><b></b><small></small><span class="badge"></span></span></button>' +
+        '<button class="avatar av-firuze" type="button" aria-label="Profil və ayarlar"></button></div><div class="rugband" aria-hidden="true"></div></header>' +
+        '<nav class="drawer" id="drawer" aria-label="Əsas menyu"><button class="dr-profile" type="button"><span class="avatar lg av-firuze" aria-hidden="true"></span><span class="who"><b></b><small></small><span class="badge"></span></span></button>' +
         '<div class="dr-mode"><div class="seg block" role="group" aria-label="Rejim"><button type="button" data-mode="pro" aria-pressed="true">Peşəkar</button><button type="button" data-mode="academy" aria-pressed="false">Akademiya</button></div></div>' +
         '<div class="dr-tools"><button class="dr-search" type="button"></button></div><div class="dr-nav"></div>' +
         '<div class="dr-foot"><button class="icon-btn ghost theme-toggle" type="button" aria-label="Rəng rejimini dəyiş"></button><span class="ver">Nuanza ' + VERSION + ' · Bakı</span></div></nav>' +
@@ -1727,23 +1753,33 @@
     });
   }
   function avatarCls(c) { return /^av-(nar|lacquer|zafaran|firuze|benovse|zeytun)$/.test(c || '') ? c : 'av-firuze'; }
+  /* Avatar content: initials when there is a name, otherwise a person icon. */
+  function fillAvatar(el, p) {
+    if (p.initials) el.textContent = p.initials;
+    else el.innerHTML = icon('user', 'av-ic');
+  }
   function renderProfile() {
-    var p = profile(), cls = avatarCls(p.avatarColor);
+    var p = profile(), cls = avatarCls(p.avatarColor), named = !!p.name;
     if (els.hdrAvatar) {
       els.hdrAvatar.className = 'avatar ' + cls;
-      els.hdrAvatar.textContent = p.initials;
-      els.hdrAvatar.setAttribute('aria-label', 'Profil və ayarlar — ' + p.name);
+      fillAvatar(els.hdrAvatar, p);
+      els.hdrAvatar.setAttribute('aria-label', named ? 'Profil və ayarlar — ' + p.name : 'Profil və ayarlar');
     }
     if (els.drProfile) {
       var av = $('.avatar', els.drProfile), who = $('.who', els.drProfile);
-      if (av) { av.className = 'avatar lg ' + cls; av.textContent = p.initials; }
+      if (av) { av.className = 'avatar lg ' + cls; fillAvatar(av, p); }
+      els.drProfile.classList.toggle('incomplete', !named);
       if (who) {
         var b = $('b', who), sm = $('small', who), bg = $('.badge', who);
-        if (b) b.textContent = p.name;
-        if (sm) sm.textContent = curMode === 'academy' ? (p.rank + ' rütbəsi · ' + fmt.num(p.xp) + ' XP') : (p.role + ' · ' + p.pairsLabel);
-        if (bg) bg.textContent = curMode === 'academy' ? (p.streak + ' günlük seriya') : p.plan;
+        if (b) b.textContent = named ? p.name : 'Profilinizi tamamlayın';
+        if (sm) {
+          if (!named) sm.textContent = 'Adınızı əlavə edin';
+          else if (curMode === 'academy') sm.textContent = p.rank + ' · ' + fmt.num(p.xp) + ' XP';
+          else sm.textContent = [p.role, p.pairsLabel].filter(Boolean).join(' · ');
+        }
+        if (bg) { bg.textContent = curMode === 'academy' && p.streak > 0 ? (p.streak + ' günlük seriya') : ''; bg.className = 'badge'; }
       }
-      els.drProfile.setAttribute('aria-label', p.name + ' — profil və ayarlar');
+      els.drProfile.setAttribute('aria-label', (named ? p.name : 'Profilinizi tamamlayın') + ' — profil və ayarlar');
     }
   }
   function syncModeUI() {
@@ -1958,13 +1994,13 @@
       '«Shall» müqavilədə gələcək zaman deyil — öhdəlikdir: «etməlidir».'
     ],
     translate: ['Mətni yapışdırın — üslubu özüm tanıyacağam. Sarı xətli yerlərə bir də baxın.', 'Situasiya kartını doldurun: kimə, nə üçün? Tərcümə ona uyğunlaşır.'],
-    projects: ['Gecikən təhvillər yuxarıdadır. Əvvəlcə onlara baxaq?', 'Layihəni açın — QA və təhvil paketi bir kliklə hazırdır.'],
+    projects: ['Yeni layihə yaradın — QA və təhvil paketi bir kliklə hazır olacaq.', 'Nümunə layihəni açıb redaktora baxa bilərsiniz.'],
     settings: ['Burada məni də fərdiləşdirə bilərsiniz: ölçü, danışıqlıq, hərəkət.', 'Rəng rejimini sistemə də bağlaya bilərsiniz.'],
     home: ['Bu gün nə tərcümə edirik?', 'Son layihənizə qayıtmaq üçün kartına toxunun.']
   };
   var HINT_IDS = { translate: 1, projects: 1, settings: 1, glossary: 1, qa: 1, academy: 1, lessons: 1, practice: 1, cards: 1, review: 1, memory: 1, tm: 1 };
   var HINT_TEXT = {
-    translate: 'Mətni yapışdırın — üslubu özüm tanıyacağam.', projects: 'Gecikən təhvillər yuxarıdadır. Əvvəlcə onlara baxaq?',
+    translate: 'Mətni yapışdırın — üslubu özüm tanıyacağam.', projects: 'İlk layihənizi buradan yaradın.',
     settings: 'Burada məni də fərdiləşdirə bilərsiniz.', glossary: 'Lüğətdəki terminləri tərcümədə özüm qoruyuram.',
     qa: 'Rəqəm, ad, tarix — hamısını yoxlayacağıq.', review: 'Mirzələr hazırdır. Mətni verin, yoxlayaq.',
     memory: 'Tərcümə yaddaşı hər təhvildən sonra böyüyür.', tm: 'Tərcümə yaddaşı hər təhvildən sonra böyüyür.',
@@ -2186,7 +2222,7 @@
     function nzSet(s, o) { if (nz && typeof nz.set === 'function') { try { nz.set(s, o || {}); } catch (e) { log(e); } } }
     later(function () { if (!done && st.step === 0) nzSet('wave', { say: 'Salam! Mən Nuanzayam.', ms: 2800 }); }, reducedMotion() ? 200 : 1300);
 
-    function dots(i) { return h('div', { class: 'onb-dots', 'aria-hidden': 'true' }, [0, 1, 2].map(function (k) { return h('i', { class: k === i ? 'on' : null }); })); }
+    function dots(i) { return h('div', { class: 'onb-dots', 'aria-hidden': 'true' }, [0, 1, 2, 3].map(function (k) { return h('i', { class: k === i ? 'on' : null }); })); }
     function choice(id, ic, icCls, title, sub) {
       return h('button', {
         class: 'choice', type: 'button', 'aria-pressed': String(st.mode === id),
@@ -2220,7 +2256,6 @@
     }
     function step2() {
       var err = h('div', { class: 'onb-err', role: 'alert' });
-      var nameIn = h('input', { class: 'input', id: 'onb-name', value: st.name, autocomplete: 'name', oninput: function (e) { st.name = e.target.value; } });
       var chips = h('div', { class: 'chips onb-pairs', role: 'group', 'aria-label': 'Dil cütləri' }, PAIRS.map(function (pr) {
         return h('button', {
           class: 'chip', type: 'button', 'aria-pressed': String(st.pairs.indexOf(pr.id) >= 0), title: pr.name,
@@ -2236,7 +2271,6 @@
       return h('div', { class: 'onb-step' },
         h('h1', { class: 'onb-h', id: 'onb-h', html: 'Dil <em>cütləriniz</em>' }),
         h('p', { class: 'onb-p', text: 'Azərbaycan dilini ingilis, rus və türk dilləri ilə işləyirəm. Birdən çox cüt seçə bilərsiniz.' }),
-        h('div', { class: 'field onb-field' }, h('label', { for: 'onb-name' }, 'Sizə necə müraciət edim?'), nameIn),
         chips, err,
         h('div', { class: 'onb-actions' },
           h('button', { class: 'btn btn-ghost btn-lg', type: 'button', onclick: function () { show(1); } }, iconEl('back'), 'Geri'),
@@ -2244,34 +2278,51 @@
             class: 'btn btn-primary btn-lg', type: 'button', 'data-primary': '1',
             onclick: function () {
               if (!st.pairs.length) { err.textContent = 'Ən azı bir dil cütü seçin.'; nzSet('worried', { say: 'Bir dil cütü lazımdır.', ms: 2200 }); return; }
-              finish(false);
+              show(3);
             }
-          }, 'Başlayaq', iconEl('sparkle'))),
+          }, 'Davam et', iconEl('arrow'))),
         dots(2));
+    }
+    /* Optional name step: "Keç" finishes without a name. */
+    function step3() {
+      var nameIn = h('input', {
+        class: 'input', id: 'onb-name', value: st.name, autocomplete: 'name', placeholder: 'Məsələn, Leyla', maxlength: '60',
+        oninput: function (e) { st.name = e.target.value; },
+        onkeydown: function (e) { if (e.key === 'Enter') { e.preventDefault(); finish(false); } }
+      });
+      return h('div', { class: 'onb-step' },
+        h('h1', { class: 'onb-h', id: 'onb-h', html: 'Sizə necə <em>müraciət</em> edək?' }),
+        h('p', { class: 'onb-p', text: 'İstəsəniz, adınızı yazın. Sonra ayarlardan dəyişə bilərsiniz.' }),
+        h('div', { class: 'field onb-field' }, h('label', { for: 'onb-name' }, 'Adınız (istəyə bağlı)'), nameIn),
+        h('div', { class: 'onb-actions' },
+          h('button', { class: 'btn btn-ghost btn-lg', type: 'button', onclick: function () { st.name = ''; finish(false); } }, 'Keç'),
+          h('button', { class: 'btn btn-primary btn-lg', type: 'button', 'data-primary': '1', onclick: function () { finish(false); } }, 'Başlayaq', iconEl('sparkle'))),
+        dots(3));
     }
     function show(i) {
       st.step = i;
       hero.classList.toggle('small', i > 0);
       host.textContent = '';
-      host.appendChild([step0, step1, step2][i]());
+      host.appendChild([step0, step1, step2, step3][i]());
       el.setAttribute('aria-labelledby', 'onb-h'); el.removeAttribute('aria-label');
       if (i === 1) nzSet('point', { say: 'Əvvəlcə bir sual: necə işləyirsiniz?', ms: 2600 });
       if (i === 2) nzSet('read', { say: 'Hansı dillərlə işləyirik?', ms: 2400 });
+      if (i === 3) nzSet('wave', { say: 'Tanış olaq?', ms: 2000 });
       try { el.scrollTop = 0; } catch (e) { /* ignore */ }
-      focusSoon($('[data-primary]', host));
+      focusSoon(i === 3 ? $('#onb-name', host) : $('[data-primary]', host));
     }
     function finish(skipped) {
       if (done) return; done = true;
       iset('onboarded', true);
       if (!skipped) {
         var patch = { pairs: st.pairs.slice() };
-        var nm = String(st.name || '').trim(); if (nm) patch.name = nm;
+        var nm = String(st.name || '').trim(); if (nm) patch.name = nm.slice(0, 60);
         setProfile(patch);
       }
       if (st.mode !== curMode && !skipped) setMode(st.mode, { silent: true });
       var first = profile().firstName;
       if (!skipped) {
-        nzSet('celebrate', { say: 'Hazırıq! Xoş gəldiniz, ' + first + '.', ms: 1600 });
+        nzSet('celebrate', { say: first ? 'Hazırıq! Xoş gəldiniz, ' + first + '.' : 'Hazırıq! Xoş gəldiniz.', ms: 1600 });
         if (W.NuanzaFX && typeof W.NuanzaFX.burst === 'function') { try { W.NuanzaFX.burst(W.innerWidth / 2, W.innerHeight * 0.38, 'confetti'); } catch (e) { log(e); } }
       }
       later(function () {
@@ -2281,7 +2332,7 @@
         go('home', {}, { focus: false });
         restoreFocus(restore && restore !== D.body ? restore : null);
         if (!skipped) {
-          toast('Xoş gəldiniz, ' + first + '!', 'ok', { sub: curMode === 'academy' ? 'Akademiya masanız hazırdır' : 'Peşəkar masanız hazırdır', icon: 'sparkle' });
+          toast(first ? 'Xoş gəldiniz, ' + first + '!' : 'Xoş gəldiniz!', 'ok', { sub: curMode === 'academy' ? 'Akademiya masanız hazırdır' : 'Peşəkar masanız hazırdır', icon: 'sparkle' });
           later(function () { companion.set('wave', { say: 'Mən buradayam — lazım olsam, toxunun.', ms: 3200 }); }, 700);
         }
       }, skipped ? 0 : 950);
@@ -2321,12 +2372,12 @@
     scrollRaf = W.requestAnimationFrame(function () { scrollRaf = 0; if (els.hdr) els.hdr.classList.toggle('scrolled', (W.scrollY || W.pageYOffset || 0) > 4); });
   }
   function greet() {
-    var p = profile(), hr = new Date().getHours(), g;
-    if (hr >= 5 && hr < 12) g = 'Sabahınız xeyir, ' + p.firstName + '!';
-    else if (hr >= 12 && hr < 18) g = 'Gününüz xeyir, ' + p.firstName + '!';
-    else if (hr >= 18 && hr < 23) g = 'Axşamınız xeyir, ' + p.firstName + '!';
+    var p = profile(), hr = new Date().getHours(), g, nm = p.firstName ? ', ' + p.firstName : '';
+    if (hr >= 5 && hr < 12) g = 'Sabahınız xeyir' + nm + '!';
+    else if (hr >= 12 && hr < 18) g = 'Gününüz xeyir' + nm + '!';
+    else if (hr >= 18 && hr < 23) g = 'Axşamınız xeyir' + nm + '!';
     else g = 'Gecə növbəsi? Çay dəmləyin, mən buradayam.';
-    var tail = curMode === 'academy' ? ' Seriyanı qoruyaq — bu gün bir dərs?' : ' Bu gün nə tərcümə edirik?';
+    var tail = curMode === 'academy' ? (p.streak > 0 ? ' Seriyanı qoruyaq — bu gün bir dərs?' : ' Bu gün bir dərslə başlayaq?') : ' Bu gün nə tərcümə edirik?';
     chatter('wave', hr >= 23 || hr < 5 ? g : g + tail, 3600);
   }
   function start() {

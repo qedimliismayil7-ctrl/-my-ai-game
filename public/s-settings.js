@@ -5,10 +5,10 @@
      • Geniş ekranda: solda yapışqan bölmə naviqasiyası, sağda bölmənin məzmunu.
      • Profil başlığı: xalça gölündə baş hərflər, rəng seçimi, profil tamlığı.
      • Bölmələr: Hesab · İş profili · Tərcümə · Nuanza köməkçisi · Görünüş ·
-       Bildirişlər · Məxfilik və məlumat · Abunə · Klaviatura qısayolları · Haqqında.
+       Bildirişlər · Məxfilik və məlumat · Klaviatura qısayolları · Haqqında.
      • Formlar qaralama kimi saxlanılır: «Yadda saxlanılmamış dəyişikliklər» paneli,
        Ctrl/⌘+S, doğrulama. Tema, şrift, sıxlıq və köməkçi dərhal tətbiq olunur.
-   Store: profile (App.setProfile), prefs, ui, companion, logins, sessions-out, tg-link, billing.
+   Store: profile (App.setProfile), prefs, ui, companion, tg-link.
    Plain browser JS. Screen CSS prefix: settings-.
    ===================================================================== */
 (function () {
@@ -53,13 +53,14 @@
     var s = dec != null ? n.toFixed(dec) : String(Math.round(n * 100) / 100), p = s.split('.');
     return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + (p[1] ? ',' + p[1] : '');
   }
-  function money(n) { n = Number(n); if (!isFinite(n)) return '—'; return num(n, 2) + ' ₼'; }
-  function priceTxt(n) { n = Number(n) || 0; return num(n, n % 1 ? 2 : 0) + ' ₼'; }
+  function money(n) { n = Number(n); if (!isFinite(n)) return '—'; return num(n, 2) + '\u00a0AZN'; }
   function parseDec(s) {
     var t = String(s == null ? '' : s).replace(/[\s ]/g, '').replace(',', '.');
     if (!/^\d*\.?\d+$/.test(t)) return NaN;
     return parseFloat(t);
   }
+  /* empty when not set (a new user has no rate) */
+  function optDec(n) { var v = Number(n); return n === null || n === undefined || n === '' || !isFinite(v) ? '' : num(v); }
   function decStr(n, fb) { var v = Number(n); if (!isFinite(v) || n === null || n === '') v = fb; return num(v); }
   function dateAz(d) { return d.getDate() + '\u00a0' + MONTHS[d.getMonth()] + '\u00a0' + d.getFullYear(); }
   function fmtDate(v) { var d = v instanceof Date ? v : new Date(v); if (isNaN(d)) return '—'; return dateAz(d); }
@@ -93,10 +94,10 @@
   /* ------------------------------------------------------------------
      2. REFERENCE DATA
      ------------------------------------------------------------------ */
-  var GROUPS = ['Profil', 'İş üslubu', 'Tətbiq', 'Abunə və kömək'];
+  var GROUPS = ['Profil', 'İş üslubu', 'Tətbiq', 'Kömək'];
   var SECTIONS = [
-    { id: 'account', title: 'Hesab', icon: 'user', cls: '', grp: 'Profil', kw: 'profil şəxsi ad e-poçt telefon giriş təhlükəsizlik sessiya',
-      desc: 'Ad, əlaqə məlumatları, giriş üsulları və aktiv sessiyalar.' },
+    { id: 'account', title: 'Hesab', icon: 'user', cls: '', grp: 'Profil', kw: 'profil şəxsi ad e-poçt telefon giriş kod',
+      desc: 'Ad, əlaqə məlumatları və sayt giriş kodu.' },
     { id: 'work', title: 'İş profili', icon: 'quill', cls: 'gold', grp: 'Profil', kw: 'dil cüt ixtisas tarif qiymət imza möhür faktura vöen bank',
       desc: 'Dil cütləri, ixtisas sahələri, tariflər və hesab-faktura rekvizitləri.' },
     { id: 'translation', title: 'Tərcümə', icon: 'translate', cls: 'settings-fir', grp: 'İş üslubu', kw: 'üslub register keyfiyyət format tarix rəqəm transliterasiya türk',
@@ -109,11 +110,9 @@
       desc: 'Son tarix xatırlatmaları, Telegram bot və həftəlik e-poçt hesabatı.' },
     { id: 'privacy', title: 'Məxfilik və məlumat', icon: 'lock', cls: 'green', grp: 'Tətbiq', kw: 'məxfilik lokal maska sil ixrac json tmx tbx',
       desc: 'Lokal rejim, maskalama, saxlama müddəti və məlumatların ixracı.' },
-    { id: 'billing', title: 'Abunə', icon: 'card', cls: 'settings-fir', grp: 'Abunə və kömək', kw: 'plan abunə ödəniş limit qiymət',
-      desc: 'Cari plan, istifadə limitləri və planların müqayisəsi.' },
-    { id: 'shortcuts', title: 'Klaviatura qısayolları', icon: 'keyboard', cls: '', grp: 'Abunə və kömək', kw: 'qısayol klaviatura düymə',
+    { id: 'shortcuts', title: 'Klaviatura qısayolları', icon: 'keyboard', cls: '', grp: 'Kömək', kw: 'qısayol klaviatura düymə',
       desc: 'Siçana əl atmadan, daha sürətli işləmək üçün.' },
-    { id: 'about', title: 'Haqqında', icon: 'info', cls: '', grp: 'Abunə və kömək', kw: 'versiya rəy şərtlər məxfilik siyasəti',
+    { id: 'about', title: 'Haqqında', icon: 'info', cls: '', grp: 'Kömək', kw: 'versiya rəy şərtlər məxfilik siyasəti',
       desc: 'Versiya, hüquqi sənədlər və rəy göndərmək.' }
   ];
   var SEC = {}; SECTIONS.forEach(function (s) { SEC[s.id] = s; });
@@ -124,8 +123,6 @@
     ['account', 'email', 'E-poçt ünvanı', 'email mail poçt'],
     ['account', 'phone', 'Telefon nömrəsi', 'nömrə mobil əlaqə'],
     ['account', 'role', 'Rol', 'freelance büro şirkətdaxili tələbə vəzifə'],
-    ['account', 'logins', 'Giriş üsulları', 'google telegram e-poçt linki daxil ol parol'],
-    ['account', 'sessions', 'Aktiv sessiyalar', 'cihaz çıxış et brauzer təhlükəsizlik'],
     ['account', 'code', 'Sayt giriş kodu', 'kod giriş açar parol şifrə access ai süni intellekt'],
     ['work', 'pairs', 'Dil cütləri', 'ingilis rus türk en ru tr az dil'],
     ['work', 'specialties', 'İxtisas sahələri', 'hüquq maliyyə neft tibb sahə'],
@@ -157,11 +154,8 @@
     ['privacy', 'local', 'Lokal rejim', 'lokal cihaz oflayn'],
     ['privacy', 'mask', 'Adları və rəqəmləri maskala', 'maska anonim gizlət ai'],
     ['privacy', 'retention', 'Avtomatik silmə müddəti', 'sil müddət saxlama'],
-    ['privacy', 'export', 'Məlumatlarımı ixrac et', 'json tmx tbx ixrac yüklə'],
+    ['privacy', 'export', 'Məlumatlarımı ixrac et', 'json ixrac yüklə'],
     ['privacy', 'wipe', 'Hər şeyi sil', 'sil hesab təhlükəli zona'],
-    ['billing', 'plan', 'Cari plan', 'peşəkar pulsuz büro abunə ödəniş'],
-    ['billing', 'usage', 'İstifadə limitləri', 'limit söz məclis yoxlama'],
-    ['billing', 'compare', 'Planların müqayisəsi', 'müqayisə qiymət plan'],
     ['shortcuts', 'keys', 'Qısayolların siyahısı', 'qısayol ctrl alt düymə'],
     ['about', 'version', 'Versiya', 'versiya yenilik buraxılış'],
     ['about', 'feedback', 'Rəy göndər', 'rəy təklif xəta əlaqə'],
@@ -169,8 +163,9 @@
   ];
 
   var ROLES = [
+    { id: '', label: 'Seçilməyib', hint: '' },
     { id: 'Freelance tərcüməçi', label: 'Freelance tərcüməçi', hint: 'Layihələr, tariflər və hesab-faktura sizin üçün açıqdır.' },
-    { id: 'Tərcümə bürosu', label: 'Büro — tərcümə bürosu', hint: 'Komanda, paylaşılan lüğət və yaddaş üçün «Büro» planı uyğundur.' },
+    { id: 'Tərcümə bürosu', label: 'Büro — tərcümə bürosu', hint: 'Komanda ilə paylaşılan lüğət və yaddaş önə çıxır.' },
     { id: 'Şirkətdaxili tərcüməçi', label: 'Şirkətdaxili tərcüməçi', hint: 'Şirkət lüğəti və daxili üslub bələdçisi önə çıxır.' },
     { id: 'Tələbə', label: 'Tələbə', hint: 'Akademiya rejimi tövsiyə olunur: dərslər, XP və rütbələr.' }
   ];
@@ -264,24 +259,6 @@
     { id: 'system', label: 'Sistem', ic: 'settings' }
   ];
   var LANGS_UI = [{ id: 'az', label: 'Azərbaycan' }, { id: 'en', label: 'English' }, { id: 'ru', label: 'Русский' }];
-  var PLANS = [
-    { id: 'Pulsuz', price: 0, yearly: 0, ic: 'tag', cls: '', tag: 'Başlamaq və sınamaq üçün', rank: 0 },
-    { id: 'Peşəkar', price: 19, yearly: 15.2, ic: 'quill', cls: 'settings-fir', tag: 'Fərdi peşəkar tərcüməçilər üçün', rank: 1 },
-    { id: 'Büro', price: 59, yearly: 47.2, ic: 'users', cls: 'gold', tag: '5 nəfərə qədər komanda üçün', rank: 2 }
-  ];
-  var LIMITS = { 'Pulsuz': { words: 5000, meclis: 3 }, 'Peşəkar': { words: 100000, meclis: 40 }, 'Büro': { words: 500000, meclis: null } };
-  var USED = { words: 38400, meclis: 14, tg: 212 };
-  var FEATURES = [
-    ['Aylıq söz limiti', '5 000', '100 000', '500 000'],
-    ['Mirzə Məclisi yoxlamaları', '3 / ay', '40 / ay', 'Limitsiz'],
-    ['Lüğət (termin bazası)', '200 termin', true, 'Paylaşılan'],
-    ['Tərcümə yaddaşı (TM)', false, true, 'Paylaşılan'],
-    ['Telegram bot', true, true, true],
-    ['Lokal rejim', false, true, true],
-    ['VÖEN ilə hesab-faktura', false, true, true],
-    ['Komanda üzvləri', false, false, '5 nəfər'],
-    ['Dəstək', 'Forum', '24 saatda', 'Şəxsi menecer']
-  ];
   var SHORTCUTS = [
     { grp: 'Ümumi', rows: [
       [[MOD, 'K'], 'Axtar və istənilən ekrana keç'],
@@ -313,8 +290,7 @@
   var PREF_KEYS = Object.keys(PREF_DEF);
   var TEXT_KEYS = ['first', 'last', 'email', 'phone', 'signName', 'voen', 'addr', 'bank', 'iban'];
   var COMPLETE = [
-    ['first', 'Ad'], ['email', 'E-poçt'], ['phone', 'Telefon'], ['pairs', 'Dil cütləri'], ['specialties', 'İxtisas'],
-    ['rate', 'Tarif'], ['signName', 'İmza adı'], ['voen', 'VÖEN'], ['addr', 'Ünvan'], ['bank', 'Bank'], ['iban', 'IBAN']
+    ['first', 'Ad'], ['email', 'E-poçt'], ['pairs', 'Dil cütləri'], ['specialties', 'İxtisas'], ['rate', 'Tarif']
   ];
   var KEY_LABEL = {
     first: 'Ad', last: 'Soyad', email: 'E-poçt', phone: 'Telefon', role: 'Rol', pairs: 'Dil cütləri', specialties: 'İxtisas sahələri',
@@ -371,13 +347,7 @@
     } catch (e) { /* ignore */ }
     if (V) later(liftCalc, 60);
   }
-  function logins() {
-    var l = sget('logins', null);
-    return l && typeof l === 'object' ? l : { google: true, telegram: true, email: false };
-  }
   function tgLink() { var t = sget('tg-link', null); return t && typeof t === 'object' ? t : { linked: false }; }
-  function planOf(id) { for (var i = 0; i < PLANS.length; i++) if (PLANS[i].id === id) return PLANS[i]; return PLANS[1]; }
-  function billing() { var b = sget('billing', null); return b && typeof b === 'object' ? b : { period: 'month' }; }
   function setRate(root, rate) {
     if (!root || !root.getAnimations) return;
     try { each(root.getAnimations({ subtree: true }), function (a) { if (a.playbackRate !== rate) a.playbackRate = rate; }); } catch (e) { /* ignore */ }
@@ -440,6 +410,8 @@
     '.settings-av .sa-ring{display:none}',
     '.settings-av b{position:relative;font-family:var(--f-display);font-size:1.75rem;font-weight:600;letter-spacing:.03em;color:var(--on-av);line-height:1}',
     '@media (min-width:640px){.settings-av b{font-size:2.125rem}}',
+    '.settings-av b svg{display:block;width:1.1em;height:1.1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}',
+    '.settings-hero h2.settings-hero-empty{color:var(--soft)}',
     '@media (hover:hover){.settings-av:hover .sa-star,.settings-av:hover .sa-fill{transform:rotate(90deg)}}',
     '.settings-av:active{transform:scale(.97)}',
     '.settings-av:focus-visible{outline:2px solid var(--focus);outline-offset:4px}',
@@ -667,31 +639,6 @@
     '.settings-wipe{display:grid;gap:10px;margin-top:6px;text-align:left}',
     '.settings-wipe .input{font-family:var(--f-mono);letter-spacing:.24em;text-transform:uppercase}',
     '.settings-wipe label{color:var(--ink);font-size:var(--fs-sm);font-weight:600}',
-    /* billing */
-    '.settings-plan{display:grid;gap:16px}',
-    '.settings-plan .price{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}',
-    '.settings-plan .price b{font-family:var(--f-display);font-size:2.5rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums lining-nums}',
-    '.settings-plan .kv dd{color:var(--on-deep)}',
-    /* modern plan panel: firuzə plan name and a thin firuzə inner frame instead of the gold manuscript frame */
-    '.settings-plan.card.lacquer::before{border-color:color-mix(in srgb,var(--firuze) 32%,transparent)}',
-    '.settings-plan.card.lacquer h2 em{color:color-mix(in srgb,var(--firuze) 80%,var(--on-deep))}',
-    '.settings-plan .actions{display:flex;flex-wrap:wrap;gap:8px}',
-    '.settings-plan .btn-ghost{--btn-ink:var(--on-deep);--btn-bg-h:color-mix(in srgb,var(--on-deep) 12%,transparent)}',
-    '.settings-meter{display:grid;gap:7px}',
-    '.settings-meter .row{justify-content:space-between;flex-wrap:nowrap}',
-    '.settings-meter b{font-size:var(--fs-sm)}',
-    '.settings-meter .row > span{font-size:var(--fs-sm);color:var(--soft);font-variant-numeric:tabular-nums;white-space:nowrap}',
-    '.settings-cmp{font-size:var(--fs-sm)}',
-    '.settings-cmp th,.settings-cmp td{padding:10px 8px}',
-    '.settings-cmp th:first-child,.settings-cmp td:first-child{padding-left:14px}',
-    '.settings-cmp th:not(:first-child),.settings-cmp td:not(:first-child){text-align:center}',
-    '.settings-cmp td:first-child{font-weight:500}',
-    '.settings-cmp .cur{background:var(--fir-t)}',
-    '.settings-cmp th.cur{color:var(--firuze)}',
-    '.settings-cmp th small{display:block;margin-top:3px;font-weight:500;letter-spacing:0;text-transform:none;font-size:.72rem;color:var(--soft)}',
-    '.settings-cmp .yes{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ok-t);color:var(--ok)}',
-    '.settings-cmp .yes svg{width:13px;height:13px}',
-    '.settings-cmp .no{color:var(--faint)}',
     /* shortcuts */
     '.settings-keys td:last-child{text-align:right;white-space:nowrap}',
     '.settings-keys .kbd{transition:background var(--t-fast),color var(--t-fast),transform var(--t-fast),border-color var(--t-fast)}',
@@ -744,14 +691,14 @@
     var parts = String(p.name || '').trim().split(/\s+/).filter(Boolean);
     var out = {
       first: parts[0] || '', last: parts.slice(1).join(' '),
-      email: p.email || '', phone: p.phone || '', role: p.role || ROLES[0].id,
+      email: p.email || '', phone: p.phone || '', role: p.role || '',
       pairs: Array.isArray(p.pairs) ? p.pairs.slice() : ['en-az'],
       specialties: Array.isArray(p.specialties) ? p.specialties.slice() : [],
-      rate: decStr(p.rate, 0.06), ratePage: decStr(p.ratePage, 12), notarial: p.notarial !== undefined ? !!p.notarial : true,
+      rate: optDec(p.rate), ratePage: optDec(p.ratePage), notarial: !!p.notarial,
       signName: p.signName != null ? String(p.signName) : String(p.name || ''),
       voen: inv.voen != null ? String(inv.voen) : '',
-      addr: inv.addr != null ? String(inv.addr) : 'Bakı şəhəri, Nəsimi rayonu',
-      bank: inv.bank != null ? String(inv.bank) : 'Kapital Bank',
+      addr: inv.addr != null ? String(inv.addr) : '',
+      bank: inv.bank != null ? String(inv.bank) : '',
       iban: inv.iban != null ? String(inv.iban) : ''
     };
     PREF_KEYS.forEach(function (k) { out[k] = pr[k]; });
@@ -781,14 +728,12 @@
      ------------------------------------------------------------------ */
   function validate() {
     var e = {}, d = Dr;
-    if (!String(d.first || '').trim()) e.first = 'Adınızı yazın.';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(d.email || '').trim())) e.email = 'E-poçt ünvanı düzgün deyil. Nümunə: ad@domen.az';
+    var em = String(d.email || '').trim();
+    if (em && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) e.email = 'E-poçt ünvanı düzgün deyil. Nümunə: ad@domen.az';
     var ph = String(d.phone || '').replace(/[\s()\-]/g, '');
     if (ph && !/^\+?\d{9,15}$/.test(ph)) e.phone = 'Nömrəni +994 50 123 45 67 formatında yazın.';
-    var r = parseDec(d.rate);
-    if (!(r >= 0) || r > 50) e.rate = 'Məbləği rəqəmlə yazın, məsələn 0,06.';
-    var rp = parseDec(d.ratePage);
-    if (!(rp >= 0) || rp > 1000) e.ratePage = 'Məbləği rəqəmlə yazın, məsələn 12.';
+    if (String(d.rate == null ? '' : d.rate).trim()) { var r = parseDec(d.rate); if (!(r >= 0) || r > 50) e.rate = 'Məbləği rəqəmlə yazın, məsələn 0,06.'; }
+    if (String(d.ratePage == null ? '' : d.ratePage).trim()) { var rp = parseDec(d.ratePage); if (!(rp >= 0) || rp > 1000) e.ratePage = 'Məbləği rəqəmlə yazın, məsələn 12.'; }
     var v = String(d.voen || '').replace(/\s+/g, '');
     if (v && !/^\d{10}$/.test(v)) e.voen = 'VÖEN 10 rəqəmdən ibarət olmalıdır.';
     var ib = String(d.iban || '').replace(/\s+/g, '').toUpperCase();
@@ -946,20 +891,22 @@
   function filled(v) { return Array.isArray(v) ? v.length > 0 : String(v == null ? '' : v).trim() !== ''; }
   function syncHero() {
     if (!V || !V.heroName || !Dr) return;
-    var p = App.profile(), name = draftName() || 'Adsız istifadəçi';
-    V.heroName.textContent = name;
-    V.avTx.textContent = initials(name);
+    var p = App.profile(), name = draftName();
+    V.heroName.textContent = name || 'Profilinizi tamamlayın';
+    V.heroName.classList.toggle('settings-hero-empty', !name);
+    if (name) V.avTx.textContent = initials(name); else V.avTx.innerHTML = App.icon('user');
     V.av.className = 'settings-av ' + avCls(p.avatarColor);
-    V.heroMeta.textContent = (Dr.role || '') + (Dr.pairs && Dr.pairs.length ? ' · ' + pairsShort(Dr.pairs) : '');
-    V.heroMail.textContent = Dr.email || '—';
+    var meta = [Dr.role, Dr.pairs && Dr.pairs.length ? pairsShort(Dr.pairs) : ''].filter(Boolean).join(' · ');
+    V.heroMeta.textContent = meta;
+    V.heroMeta.hidden = !meta;
+    V.heroMail.textContent = Dr.email || (name ? '' : 'Adınızı və e-poçtunuzu əlavə edin');
+    V.heroMail.hidden = !V.heroMail.textContent;
     V.heroMail.title = Dr.email || '';
     V.heroBadges.textContent = '';
-    var plan = planOf(p.plan);
-    V.heroBadges.appendChild(h('span', { class: 'badge settings-fir' }, ie('tag'), plan.id + ' plan'));
-    if (App.mode && App.mode() === 'academy' && p.rank) V.heroBadges.appendChild(h('span', { class: 'badge navy' }, ie('medal'), p.rank + ' rütbəsi'));
+    if (App.mode && App.mode() === 'academy' && p.rank) V.heroBadges.appendChild(h('span', { class: 'badge navy' }, ie('medal'), p.rank));
     if (Dr.notarial) V.heroBadges.appendChild(h('span', { class: 'badge navy' }, ie('stamp'), 'Notarial tərcümə'));
-    var since = new Date(p.memberSince || '2024-03-11');
-    if (!isNaN(since)) V.heroBadges.appendChild(h('span', { class: 'badge' }, 'Üzv: ' + MONTHS[since.getMonth()] + ' ' + since.getFullYear()));
+    var since = p.memberSince ? new Date(p.memberSince) : null;
+    if (since && !isNaN(since)) V.heroBadges.appendChild(h('span', { class: 'badge' }, 'Üzv: ' + MONTHS[since.getMonth()] + ' ' + since.getFullYear()));
     /* completeness */
     var miss = COMPLETE.filter(function (c) { return !filled(Dr[c[0]]); });
     var pct = Math.round((COMPLETE.length - miss.length) / COMPLETE.length * 100);
@@ -968,7 +915,7 @@
     V.compTx.textContent = '';
     if (!miss.length) {
       V.compTx.appendChild(h('b', { text: 'Profil 100% tamamdır' }));
-      V.compTx.appendChild(D.createTextNode(' — müştərilər üçün hazırsınız'));
+      V.compTx.appendChild(D.createTextNode(' — hər şey yerindədir'));
       V.compBtn.hidden = true;
     } else {
       V.compTx.appendChild(h('b', { text: 'Profil ' + pct + '% tamamdır' }));
@@ -984,6 +931,7 @@
   function avatarSheet() {
     var p = App.profile(), cur = avCls(p.avatarColor), chosen = cur, name = draftName() || p.name;
     var prev = h('span', { class: 'settings-av big ' + cur, 'aria-hidden': 'true' }, avParts(initials(name)));
+    if (!name) { var pb = prev.querySelector('b'); if (pb) pb.innerHTML = App.icon('user'); }
     var cap = h('p', { class: 'small muted', 'aria-live': 'polite' });
     function setCap(id) { for (var i = 0; i < AV_COLORS.length; i++) if (AV_COLORS[i].id === id) { cap.textContent = AV_COLORS[i].name + ' — ' + AV_COLORS[i].note; } }
     setCap(cur);
@@ -1000,7 +948,7 @@
       sw.appendChild(b);
     });
     var body = h('div', { class: 'settings-avsheet' }, prev, cap, sw,
-      h('p', { class: 'small muted', text: 'Fotoşəkil əvəzinə baş hərfləriniz xalça gölündə göstərilir — layihələrdə, hesab-fakturada və Telegram botda.' }));
+      h('p', { class: 'small muted', text: 'Fotoşəkil əvəzinə baş hərfləriniz xalça gölündə göstərilir.' }));
     App.sheet({
       title: 'Şəkli dəyiş', body: body,
       actions: [{ label: 'Ləğv et', kind: 'ghost' }, { label: 'Yadda saxla', kind: 'primary', onClick: function () {
@@ -1018,11 +966,6 @@
   /* ------------------------------------------------------------------
      9. SECTION: HESAB
      ------------------------------------------------------------------ */
-  var LOGIN_DEFS = [
-    { id: 'google', name: 'Google', ic: 'globe', cls: '', sub: function (on, p) { return on ? String(p.email || '').split('@')[0] + '@gmail.com' : 'Google hesabı ilə bir kliklə giriş'; } },
-    { id: 'telegram', name: 'Telegram', ic: 'telegram', cls: '', sub: function (on, p) { return on ? (p.telegram || '@aysel_tercume') + ' · bot da bu hesabla işləyir' : 'Telegramdakı hesabınızla təsdiq'; } },
-    { id: 'email', name: 'E-poçt linki', ic: 'mail', cls: 'gold', sub: function (on, p) { return on ? 'Parolsuz giriş linki: ' + (p.email || '') : 'Parolsuz giriş: linki e-poçtunuza göndəririk'; } }
-  ];
   function detectDevice() {
     var ua = navigator.userAgent || '', br = 'Brauzer', os = 'Kompüter';
     if (/Edg\//.test(ua)) br = 'Edge'; else if (/OPR\//.test(ua)) br = 'Opera'; else if (/Firefox\//.test(ua)) br = 'Firefox';
@@ -1030,14 +973,6 @@
     if (/iPhone/.test(ua)) os = 'iPhone'; else if (/iPad/.test(ua)) os = 'iPad'; else if (/Android/.test(ua)) os = 'Android';
     else if (/Mac OS X|Macintosh/.test(ua)) os = 'macOS'; else if (/Windows/.test(ua)) os = 'Windows'; else if (/Linux/.test(ua)) os = 'Linux';
     return br + ' · ' + os;
-  }
-  function sessionsList() {
-    return [
-      { id: 'cur', dev: detectDevice(), where: 'Bakı, Azərbaycan', when: 'İndi aktiv', ic: 'globe', current: true },
-      { id: 'iph', dev: 'Safari · iPhone 15', where: 'Bakı, Azərbaycan', when: '2 saat əvvəl', ic: 'globe' },
-      { id: 'tg', dev: 'Telegram bot · @NuanzaBot', where: 'Telegram', when: '12 dəq əvvəl', ic: 'telegram' },
-      { id: 'win', dev: 'Edge · Windows 11', where: 'Gəncə, Azərbaycan', when: '3 gün əvvəl', ic: 'globe' }
-    ];
   }
 
   function secAccount() {
@@ -1055,97 +990,16 @@
       student.hidden = !(Dr.role === 'Tələbə' && (!App.mode || App.mode() !== 'academy'));
     }
     watch('role', syncRole); syncRole();
-    var personal = card('Şəxsi məlumatlar', 'Müştərilər bu məlumatları hesab-fakturada və təhvil sənədlərində görür.', [
+    var personal = card('Şəxsi məlumatlar', 'Hamısı istəyə bağlıdır və yalnız bu cihazda saxlanılır.', [
       h('div', { class: 'grid-2' },
-        fieldBox('first', 'Ad', textIn('first', { autocomplete: 'given-name' })),
-        fieldBox('last', 'Soyad', textIn('last', { autocomplete: 'family-name' }), { optTx: 'istəyə görə' })),
-      fieldBox('email', 'E-poçt', textIn('email', { type: 'email', autocomplete: 'email', inputmode: 'email', spellcheck: 'false' }), { hint: 'Həftəlik hesabat və hesab-fakturalar bu ünvana gəlir.' }),
+        fieldBox('first', 'Ad', textIn('first', { autocomplete: 'given-name', placeholder: 'Adınız' })),
+        fieldBox('last', 'Soyad', textIn('last', { autocomplete: 'family-name', placeholder: 'Soyadınız' }), { optTx: 'istəyə görə' })),
+      fieldBox('email', 'E-poçt', textIn('email', { type: 'email', autocomplete: 'email', inputmode: 'email', spellcheck: 'false', placeholder: 'ad@domen.az' })),
       h('div', { class: 'grid-2' },
         fieldBox('phone', 'Telefon', textIn('phone', { type: 'tel', autocomplete: 'tel', inputmode: 'tel', placeholder: '+994 50 123 45 67' }), { hint: 'Təcili təhvil məsələləri üçün.' }),
         fieldBox('role', 'Rol', roleSel, { hintEl: roleHint })),
       student
     ]);
-
-    /* logins */
-    var L = logins(), p = App.profile();
-    var lList = h('div', { class: 'list' });
-    function drawLogins() {
-      lList.textContent = '';
-      LOGIN_DEFS.forEach(function (d) {
-        var on = !!L[d.id];
-        var btn = h('button', { class: 'btn btn-sm ' + (on ? 'btn-ghost' : 'btn-secondary'), type: 'button', 'aria-label': (on ? 'Ayır: ' : 'Qoş: ') + d.name }, on ? 'Ayır' : 'Qoş');
-        btn.addEventListener('click', function () { if (on) disconnect(d); else connect(d, btn); });
-        lList.appendChild(h('div', { class: 'list-row' }, icTile(d.ic, d.cls),
-          h('span', { class: 'tx' }, h('b', null, d.name, ' ', on ? h('span', { class: 'badge green dot', text: 'Qoşulub' }) : h('span', { class: 'badge', text: 'Qoşulmayıb' })),
-            h('small', { text: d.sub(on, p) })),
-          h('span', { class: 'end' }, btn)));
-      });
-    }
-    function connect(d, btn) {
-      busy(btn, true);
-      later(function () {
-        L[d.id] = true; sset('logins', L);
-        if (!V) return;
-        drawLogins();
-        toast(d.name + ' qoşuldu', 'ok', { sub: 'Növbəti dəfə ' + d.name + ' ilə daxil ola bilərsiniz' });
-        nz('success', 'Giriş üsulu əlavə olundu — hesabınız daha etibarlıdır.', 2600);
-      }, 1100);
-    }
-    function disconnect(d) {
-      var n = Object.keys(L).filter(function (k) { return L[k]; }).length;
-      if (n <= 1) { toast('Son giriş üsulunu ayırmaq olmaz', 'warn', { sub: 'Əvvəlcə başqa bir üsul qoşun' }); nz('worried', null, 1600); return; }
-      App.confirm({ title: d.name + ' ayrılsın?', text: 'Bundan sonra ' + d.name + ' ilə daxil ola bilməyəcəksiniz. İstədiyiniz vaxt yenidən qoşa bilərsiniz.', okLabel: 'Ayır', danger: true })
-        .then(function (ok) {
-          if (!ok) return;
-          L[d.id] = false; sset('logins', L);
-          if (V) drawLogins();
-          toast(d.name + ' ayrıldı', 'info');
-        });
-    }
-    drawLogins();
-    var loginsCard = card('Giriş üsulları', 'Hesaba necə daxil olursunuz. Ən azı biri qoşulu qalmalıdır.', [lList], { opt: 'logins' });
-
-    /* sessions */
-    var out = sget('sessions-out', []); out = Array.isArray(out) ? out : [];
-    var sList = h('div', { class: 'list' });
-    var allBtn = h('button', { class: 'btn btn-danger btn-sm', type: 'button' }, ie('logout'), 'Digər cihazların hamısından çıxış et');
-    function drawSessions() {
-      sList.textContent = '';
-      var rest = sessionsList().filter(function (s) { return s.current || out.indexOf(s.id) < 0; });
-      rest.forEach(function (s) {
-        var end;
-        if (s.current) end = h('span', { class: 'badge green dot', text: 'Bu cihaz' });
-        else {
-          end = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': 'Çıxış et: ' + s.dev }, 'Çıxış et');
-          end.addEventListener('click', function () {
-            var row = end.closest('.list-row');
-            if (row) row.classList.add('settings-out');
-            later(function () {
-              out.push(s.id); sset('sessions-out', out);
-              if (!V) return;
-              drawSessions();
-              toast('Sessiya bağlandı', 'ok', { sub: s.dev + ' · ' + s.where });
-            }, reduced() ? 0 : 260);
-          });
-        }
-        sList.appendChild(h('div', { class: 'list-row' }, icTile(s.ic, s.current ? 'green' : ''),
-          h('span', { class: 'tx' }, h('b', { text: s.dev }), h('small', { text: s.where + ' · ' + s.when })), h('span', { class: 'end' }, end)));
-      });
-      allBtn.hidden = rest.length <= 1;
-    }
-    allBtn.addEventListener('click', function () {
-      App.confirm({ title: 'Digər cihazlardan çıxılsın?', text: 'Bu cihazdan başqa bütün sessiyalar, o cümlədən Telegram bot bağlanacaq. Yenidən daxil olmaq lazım gələcək.', okLabel: 'Çıxış et', danger: true })
-        .then(function (ok) {
-          if (!ok) return;
-          sessionsList().forEach(function (s) { if (!s.current && out.indexOf(s.id) < 0) out.push(s.id); });
-          sset('sessions-out', out);
-          if (V) drawSessions();
-          toast('Digər bütün sessiyalar bağlandı', 'ok', { sub: 'Yalnız bu cihaz aktiv qaldı' });
-          nz('success', 'Hesab təhlükəsizdir.', 2200);
-        });
-    });
-    drawSessions();
-    var sessCard = card('Aktiv sessiyalar', 'Tanımadığınız cihaz görsəniz, dərhal çıxış edin.', [sList, h('div', { class: 'row' }, allBtn)], { opt: 'sessions' });
 
     /* site access code: the Worker's ACCESS_CODE. Stored as 'code' (App.store → localStorage
        'nuanza2:code', JSON) and sent by ai/core.js with every AI request (x-access-code).
@@ -1174,7 +1028,7 @@
       h('div', { class: 'row' }, codeSave)
     ], { opt: 'code' });
 
-    return h('div', { class: 'stack-lg' }, personal, codeCard, loginsCard, sessCard);
+    return h('div', { class: 'stack-lg' }, personal, codeCard);
   }
 
   /* ------------------------------------------------------------------
@@ -1287,9 +1141,11 @@
 
     /* rates */
     var sampleTx = h('div');
+    var sampleBox = h('div', { class: 'callout navy' }, ie('chart'), sampleTx);
     function drawSample() {
       var r = parseDec(Dr.rate), pg = parseDec(Dr.ratePage);
       sampleTx.textContent = '';
+      sampleBox.hidden = !isFinite(r) && !isFinite(pg);
       sampleTx.appendChild(h('b', { text: 'Nümunə hesab: ' }));
       sampleTx.appendChild(D.createTextNode('2 400 sözlük müqavilə ≈ '));
       sampleTx.appendChild(h('b', { text: isFinite(r) ? money(2400 * r) : '—' }));
@@ -1299,12 +1155,12 @@
     }
     watch('rate', drawSample); watch('ratePage', drawSample); watch('notarial', drawSample);
     drawSample();
-    var ratesCard = card('Tariflər', 'Layihə yaradılanda qiymət bu tariflərlə avtomatik hesablanır.', [
+    var ratesCard = card('Öz tarifləriniz', 'İstəyə bağlı. Yazsanız, layihə qiyməti bununla hesablanır.', [
       h('div', { class: 'grid-2' },
-        fieldBox('rate', 'Söz başına', affix(textIn('rate', { inputmode: 'decimal' }), 'AZN / söz')),
-        fieldBox('ratePage', 'Səhifə başına', affix(textIn('ratePage', { inputmode: 'decimal' }), 'AZN / səhifə'), { hint: '1 səhifə = 1 800 simvol (boşluqlarla).' })),
+        fieldBox('rate', 'Söz başına', affix(textIn('rate', { inputmode: 'decimal', placeholder: 'məs. 0,05' }), 'AZN / söz'), { optTx: 'istəyə görə' }),
+        fieldBox('ratePage', 'Səhifə başına', affix(textIn('ratePage', { inputmode: 'decimal', placeholder: 'məs. 10' }), 'AZN / səhifə'), { optTx: 'istəyə görə', hint: '1 səhifə = 1 800 simvol (boşluqlarla).' })),
       h('div', { class: 'list' }, switchRow('notarial', 'Notarial təsdiqli tərcümə edirəm', 'Notarius üçün imzalı nüsxə və tərcüməçi bəyanı hazırlanır.', 'stamp', 'gold')),
-      h('div', { class: 'callout navy' }, ie('chart'), sampleTx)
+      sampleBox
     ], { opt: 'rates' });
 
     /* signature + seal */
@@ -1328,7 +1184,7 @@
     watch('pairs', function () { drawSign(false); });
     drawSign(false);
     var signCard = card('İmza və möhür', 'Tərcüməçi bəyanında, təhvil sənədində və möhür ştampında görünür.', [
-      fieldBox('signName', 'İmzada görünən ad', textIn('signName', { autocomplete: 'name' }), { hint: 'Pasportdakı kimi yazın — notarius bu adı yoxlayır.' }),
+      fieldBox('signName', 'İmzada görünən ad', textIn('signName', { autocomplete: 'name', placeholder: 'Ad Soyad' }), { hint: 'Pasportdakı kimi yazın — notarius bu adı yoxlayır.' }),
       h('div', { class: 'settings-sign', 'aria-label': 'İmza önizləməsi' },
         h('span', { class: 'sg-l' }, h('span', { class: 'sg-k', text: 'Tərcüməni yerinə yetirdi' }), sgName, h('span', { class: 'sg-line', 'aria-hidden': 'true' }), sgMeta),
         sealHost)
@@ -1354,22 +1210,20 @@
     function val(v, miss) { v = String(v || '').trim(); return v ? h('dd', { text: v }) : h('dd', { class: 'miss', text: miss || 'əlavə edilməyib' }); }
     var today = new Date();
     var body = h('div', { class: 'settings-inv' },
-      h('div', { class: 'row between' }, h('div', null, h('span', { class: 'eyebrow', text: 'Hesab-faktura' }), h('h3', { class: 'serif', text: '№ NZ-' + today.getFullYear() + '-0142' })), h('span', { class: 'badge', text: dateAz(today) })),
+      h('div', { class: 'row between' }, h('div', null, h('span', { class: 'eyebrow', text: 'Hesab-faktura' }), h('h3', { class: 'serif', text: '№ NZ-' + today.getFullYear() + '-0001' })), h('span', { class: 'badge', text: dateAz(today) })),
       h('dl', { class: 'kv' },
         h('dt', { text: 'İcraçı' }), h('dd', { text: name }),
         h('dt', { text: 'VÖEN' }), val(Dr.voen),
         h('dt', { text: 'Ünvan' }), val(Dr.addr),
         h('dt', { text: 'Bank' }), val(Dr.bank),
         h('dt', { text: 'IBAN' }), val(Dr.iban),
-        h('dt', { text: 'Sifarişçi' }), h('dd', { text: '«Xəzər Hüquq Mərkəzi» MMC' })),
+        h('dt', { text: 'Sifarişçi' }), h('dd', { class: 'miss', text: 'Sifarişçinin adı' })),
       h('div', { class: 'table-wrap' }, h('table', { class: 'table compact' },
         h('thead', null, h('tr', null, h('th', { text: 'Xidmət' }), h('th', { class: 'num', text: 'Məbləğ' }))),
-        h('tbody', null, h('tr', null, h('td', null, h('b', { text: 'Hüquqi tərcümə, ' + (pairLabel(Dr.pairs[0] || 'en-az')) }), h('div', { class: 'muted', text: '2 400 söz × ' + num(r) + ' ₼' })), h('td', { class: 'num', text: money(total) }))))),
+        h('tbody', null, h('tr', null, h('td', null, h('b', { text: 'Hüquqi tərcümə, ' + (pairLabel(Dr.pairs[0] || 'en-az')) }), h('div', { class: 'muted', text: '2 400 söz × ' + num(r) + ' AZN' })), h('td', { class: 'num', text: money(total) }))))),
       h('div', { class: 'tot' }, h('span', { class: 'muted', text: 'Cəmi ödənilməli' }), h('b', { text: money(total) })),
       (!String(Dr.voen || '').trim() || !String(Dr.iban || '').trim()) ? h('div', { class: 'callout red' }, ie('alert'), h('div', null, 'VÖEN və IBAN olmadan hesab-faktura rəsmi sayılmır. Qırmızı sətirləri doldurun.')) : null);
-    App.sheet({ title: 'Nümunə hesab-faktura', body: body, actions: [{ label: 'Bağla', kind: 'ghost' }, { label: 'PDF hazırla', kind: 'primary', icon: 'download', onClick: function () {
-      return new Promise(function (res) { later(function () { res(true); toast('Hazırdır', 'ok', { sub: 'hesab-faktura-NZ-0142.pdf · 92 KB' }); }, 900); });
-    } }] });
+    App.sheet({ title: 'Nümunə hesab-faktura', body: body, actions: [{ label: 'Bağla', kind: 'primary' }] });
   }
 
   /* ------------------------------------------------------------------
@@ -1693,7 +1547,7 @@
         var test = h('button', { class: 'btn btn-sm', type: 'button' }, ie('send'), 'Test mesajı');
         test.addEventListener('click', function () {
           busy(test, true);
-          later(function () { busy(test, false); toast('Test mesajı göndərildi', 'ok', { sub: '@NuanzaBot: «Salam, ' + (Dr.first || 'dostum') + '! Bildirişlər işləyir.»', icon: 'telegram' }); }, 900);
+          later(function () { busy(test, false); toast('Test mesajı göndərildi', 'ok', { sub: '@NuanzaBot: «Salam' + (Dr.first ? ', ' + Dr.first : '') + '! Bildirişlər işləyir.»', icon: 'telegram' }); }, 900);
         });
         var off = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, 'Ayır');
         off.addEventListener('click', function () {
@@ -1705,7 +1559,7 @@
           });
         });
         tgBody.appendChild(h('div', { class: 'list' }, h('div', { class: 'list-row' }, icTile('telegram', 'green'),
-          h('span', { class: 'tx' }, h('b', null, t.handle || '@aysel_tercume', ' ', h('span', { class: 'badge green dot', text: 'Qoşulub' })),
+          h('span', { class: 'tx' }, h('b', null, t.handle || 'Telegram', ' ', h('span', { class: 'badge green dot', text: 'Qoşulub' })),
             h('small', { text: 'Bildirişlər @NuanzaBot vasitəsilə gəlir' + (t.since ? ' · ' + fmtDate(t.since) + ' tarixindən' : '') })))));
         tgBody.appendChild(h('div', { class: 'settings-row2' }, test, off));
         return;
@@ -1737,13 +1591,13 @@
         busy(verify, true);
         later(function () {
           busy(verify, false);
-          var handle = App.profile().telegram || '@aysel_tercume';
+          var handle = App.profile().telegram || '';
           sset('tg-link', { linked: true, handle: handle, since: new Date().toISOString() });
           tgCode = null;
           if (!V) return;
           burstAt(verify, 'confetti');
           drawTg(); syncSummaries();
-          toast('Telegram bot qoşuldu', 'ok', { sub: handle + ' · @NuanzaBot artıq sizə yazacaq', icon: 'telegram' });
+          toast('Telegram bot qoşuldu', 'ok', { sub: '@NuanzaBot artıq sizə yazacaq', icon: 'telegram' });
           nz('celebrate', 'Artıq Telegramda da yanınızdayam!', 2800);
         }, 1600);
       });
@@ -1759,32 +1613,13 @@
 
     /* e-mail */
     var daySel = selectCtl('nWeeklyDay', WEEK_DAYS, { label: 'Göndərmə vaxtı' });
-    var wRow = switchRow('nWeekly', 'Həftəlik hesabat', 'Söz sayı, QA balları, gəlir və gələn həftənin son tarixləri — bir məktubda.', 'mail', 'gold', { extra: daySel });
+    var wRow = switchRow('nWeekly', 'Həftəlik hesabat', 'Həftənin işi və yaxınlaşan son tarixlər — bir məktubda.', 'mail', 'gold', { extra: daySel });
     function syncDay() { wRow._tx.setAttribute('aria-disabled', String(!Dr.nWeekly)); daySel.disabled = !Dr.nWeekly; }
     watch('nWeekly', syncDay); syncDay();
-    var mailCard = card('E-poçt', null, [h('div', { class: 'list' }, wRow),
-      h('div', { class: 'row' }, h('button', { class: 'btn btn-sm', type: 'button', onclick: weeklySheet }, ie('eye'), 'Nümunəyə bax'))], { opt: 'nWeekly' });
+    var mailCard = card('E-poçt', null, [h('div', { class: 'list' }, wRow)], { opt: 'nWeekly' });
 
     return h('div', { class: 'stack-lg' }, remind, tgCard, mailCard);
   }
-  function weeklySheet() {
-    var to = String(Dr.email || '').trim() || '—';
-    var body = h('div', { class: 'stack' },
-      h('p', { class: 'muted small', text: 'Kimə: ' + to + ' · ' + ((WEEK_DAYS.filter(function (d) { return d.id === Dr.nWeeklyDay; })[0] || WEEK_DAYS[0]).label) }),
-      h('h3', { class: 'serif', text: 'Salam, ' + (Dr.first || 'dostum') + '! Həftəniz belə keçdi:' }),
-      h('div', { class: 'stats' },
-        h('div', { class: 'stat' }, h('b', null, '12 480', h('span', { class: 'delta', text: '+12%' })), h('span', { text: 'söz tərcümə' })),
-        h('div', { class: 'stat' }, h('b', { text: '6' }), h('span', { text: 'layihə təhvil' })),
-        h('div', { class: 'stat' }, h('b', { text: '93' }), h('span', { text: 'orta QA balı' })),
-        h('div', { class: 'stat' }, h('b', { text: '748,80' }), h('span', { text: 'AZN gəlir' }))),
-      h('hr', { class: 'divider' }),
-      h('div', { class: 'list' },
-        h('div', { class: 'list-row' }, icTile('clock', 'nar'), h('span', { class: 'tx' }, h('b', { text: 'SOCAR — İllik hesabat 2025' }), h('small', { text: 'Cümə, 18:00 · EN → AZ · 12 480 söz' }))),
-        h('div', { class: 'list-row' }, icTile('clock'), h('span', { class: 'tx' }, h('b', { text: 'ADA Universiteti — Tədris planı' }), h('small', { text: '14 oktyabr · EN → AZ · 3 200 söz' })))),
-      h('div', { class: 'callout green' }, ie('sparkle'), h('div', null, h('b', { text: 'Nuanzanın qeydi: ' }), 'Bu həftə Dilçi Nənə cəmi 2 türk forması tapdı — keçən həftədən 5 dəfə az. Əla gedirsiniz!')));
-    App.sheet({ title: 'Həftəlik hesabat — nümunə', body: body, actions: [{ label: 'Bağla', kind: 'primary' }] });
-  }
-
   /* ------------------------------------------------------------------
      15. SECTION: MƏXFİLİK VƏ MƏLUMAT
      ------------------------------------------------------------------ */
@@ -1825,26 +1660,28 @@
       fieldBox('retention', 'Avtomatik silmə müddəti', selectCtl('retention', RETENTION), { hint: 'Tamamlanmış layihələrin mətnləri silinir; lüğət və tərcümə yaddaşı qalır.' })
     ]);
 
-    /* export */
-    var EXPORTS = [
-      { id: 'json', ic: 'database', b: 'JSON', s: 'Bütün hesab: profil, layihələr, ayarlar', file: 'nuanza-hesab-' + isoToday() + '.json', size: '2,4 MB' },
-      { id: 'tmx', ic: 'layers', b: 'TMX', s: 'Tərcümə yaddaşı · 18\u00a0240\u00a0seqment', file: 'nuanza-tm-' + isoToday() + '.tmx', size: '4,8 MB' },
-      { id: 'tbx', ic: 'book', b: 'TBX', s: 'Lüğət · 1\u00a0284\u00a0termin', file: 'nuanza-luget-' + isoToday() + '.tbx', size: '0,6 MB' }
-    ];
-    var tiles = h('div', { class: 'tiles settings-exp' }, EXPORTS.map(function (x) {
-      var t = h('button', { class: 'tile', type: 'button', 'aria-label': x.b + ' ixrac et — ' + x.s }, icTile(x.ic, x.id === 'json' ? '' : x.id === 'tmx' ? 'gold' : 'green'),
-        h('span', null, h('b', { text: x.b }), h('small', { text: x.s })));
-      t.addEventListener('click', function () {
-        if (t.classList.contains('settings-tile-busy')) return;
-        t.classList.add('settings-tile-busy'); t.setAttribute('aria-busy', 'true');
-        later(function () {
-          t.classList.remove('settings-tile-busy'); t.removeAttribute('aria-busy');
-          toast('Hazırdır', 'ok', { sub: x.file + ' · ' + x.size, icon: 'download' });
-          nz('success', null, 1400);
-        }, 1300);
-      });
-      return t;
-    }));
+    /* export: a real JSON file of everything Nuanza keeps in this browser */
+    function exportJson() {
+      var data = {};
+      try {
+        var ls = W.localStorage;
+        for (var i = 0; i < ls.length; i++) {
+          var k = ls.key(i);
+          if (k && k.indexOf('nuanza2:') === 0 && k !== 'nuanza2:code') { var raw = ls.getItem(k); try { data[k.slice(8)] = JSON.parse(raw); } catch (e) { data[k.slice(8)] = raw; } }
+        }
+      } catch (e) { /* storage blocked */ }
+      var file = 'nuanza-' + isoToday() + '.json';
+      try {
+        var blob = new Blob([JSON.stringify({ app: 'Nuanza', exported: new Date().toISOString(), data: data }, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob), a = h('a', { href: url, download: file });
+        D.body.appendChild(a); a.click(); a.remove();
+        later(function () { URL.revokeObjectURL(url); }, 4000);
+        toast('Yükləndi', 'ok', { sub: file, icon: 'download' });
+      } catch (e) { toast('Fayl yaradılmadı', 'warn', { sub: 'Brauzer yükləməyə icazə vermədi' }); }
+    }
+    var tiles = h('div', { class: 'tiles settings-exp' },
+      h('button', { class: 'tile', type: 'button', 'aria-label': 'JSON ixrac et — profil, layihələr və ayarlar', onclick: exportJson }, icTile('database'),
+        h('span', null, h('b', { text: 'JSON' }), h('small', { text: 'Profil, layihələr, ayarlar' }))));
     var exportCard = card('Məlumatlarımı ixrac et', 'Hər şey sizindir — istənilən vaxt açıq standartlarda götürün.', [tiles], { opt: 'export' });
 
     /* danger */
@@ -1863,7 +1700,7 @@
   function wipeAll(btn) {
     var inp = h('input', { class: 'input', id: uid('wipe'), autocomplete: 'off', spellcheck: 'false', autocapitalize: 'characters', placeholder: 'SİL', 'aria-describedby': null });
     var text = h('div', { class: 'settings-wipe' },
-      h('span', { text: 'Layihələr, tərcümə yaddaşı (18 240 seqment), lüğət (1 284 termin), Akademiya irəliləyişi və bütün ayarlar bu cihazdan silinəcək. Bu əməliyyat geri qaytarılmır.' }),
+      h('span', { text: 'Layihələr, tərcümə yaddaşı, lüğət, Akademiya irəliləyişi və bütün ayarlar bu cihazdan silinəcək. Bu əməliyyat geri qaytarılmır.' }),
       h('label', { for: inp.id }, 'Təsdiq üçün ', h('b', { text: 'SİL' }), ' yazın'), inp);
     var pr = App.confirm({ title: 'Hər şey silinsin?', text: text, okLabel: 'Hər şeyi sil', danger: true });
     var dlg = inp.closest ? inp.closest('.dialog') : null;
@@ -1905,110 +1742,6 @@
     } catch (e) { /* storage blocked */ }
     keys.forEach(function (k) {
       try { if (App.store && typeof App.store.remove === 'function') App.store.remove(k); else W.localStorage.removeItem('nuanza2:' + k); } catch (e) { /* ignore */ }
-    });
-  }
-
-  /* ------------------------------------------------------------------
-     16. SECTION: ABUNƏ
-     ------------------------------------------------------------------ */
-  function secBilling() {
-    var p = App.profile(), plan = planOf(p.plan), bill = billing();
-    var price = bill.period === 'year' ? plan.yearly : plan.price;
-    var payBtn = h('button', { class: 'btn btn-ghost', type: 'button' }, ie('card'), 'Ödəniş üsulu');
-    payBtn.addEventListener('click', function () { toast('Demo rejim', 'info', { sub: 'Prototipdə ödəniş alınmır və kart məlumatı soruşulmur.' }); });
-    var cur = h('section', { class: 'card lacquer pad-lg settings-plan', 'data-opt': 'plan' },
-      h('div', { class: 'row between' }, h('span', { class: 'eyebrow', text: 'Cari plan' }), h('span', { class: 'badge', text: 'Demo' })),
-      h('div', null, h('h2', { html: '<em>' + esc(plan.id) + '</em>' }), h('p', { class: 'muted', text: plan.tag })),
-      h('div', { class: 'price' }, h('b', { text: priceTxt(price) }), h('span', { class: 'muted', text: plan.price ? ('/ ay' + (bill.period === 'year' ? ' · illik ödənişlə' : ' · aylıq')) : 'həmişəlik pulsuz' })),
-      h('dl', { class: 'kv' },
-        h('dt', { text: 'Növbəti ödəniş' }), h('dd', { text: plan.price ? fmtDate(p.planRenews || '2026-11-07') : '—' }),
-        h('dt', { text: 'Ödəniş üsulu' }), h('dd', { text: plan.price ? 'Kart •••• 4417' : '—' }),
-        h('dt', { text: 'Hesab-faktura' }), h('dd', { text: S0 && S0.voen ? 'VÖEN ' + S0.voen : 'VÖEN əlavə edilməyib' })),
-      h('div', { class: 'actions' }, h('button', { class: 'btn btn-primary', type: 'button', onclick: changePlanSheet }, ie('sparkle'), 'Planı dəyiş'), payBtn));
-
-    /* usage */
-    var lim = LIMITS[plan.id] || LIMITS['Peşəkar'];
-    function meter(label, used, limit, unit) {
-      var pct = limit ? Math.min(100, Math.round(used / limit * 100)) : 12;
-      var cls = !limit ? 'green' : pct >= 100 ? 'settings-over' : pct >= 80 ? 'gold' : 'settings-prog';
-      return h('div', { class: 'settings-meter' },
-        h('div', { class: 'row' }, h('b', null, label, ' ', limit && used > limit ? h('span', { class: 'badge red', text: 'Limit aşılıb' }) : null),
-          h('span', { class: 'settings-meter-n', text: num(used) + ' / ' + (limit ? num(limit) : 'limitsiz') + '\u00a0' + unit })),
-        h('div', { class: 'progress ' + cls, role: 'progressbar', 'aria-label': label, 'aria-valuenow': String(pct), 'aria-valuemin': '0', 'aria-valuemax': '100' }, h('i', { style: 'width:' + pct + '%' })));
-    }
-    var usage = card('Bu ay istifadə', 'Limitlər ' + fmtDate(p.planRenews || '2026-11-07') + ' tarixində yenilənir.', [
-      meter('Söz limiti', USED.words, lim.words, 'söz'),
-      meter('Mirzə Məclisi yoxlamaları', USED.meclis, lim.meclis, 'yoxlama'),
-      meter('Telegram bot sorğuları', USED.tg, null, 'sorğu')
-    ], { opt: 'usage' });
-
-    /* comparison */
-    var curIdx = PLANS.indexOf(plan) + 1;
-    function cell(v, i) {
-      var cls = i === curIdx ? 'cur' : null;
-      if (v === true) return h('td', { class: cls }, h('span', { class: 'yes', 'aria-label': 'var', html: App.icon('check') }));
-      if (v === false) return h('td', { class: cls }, h('span', { class: 'no', 'aria-label': 'yoxdur', text: '—' }));
-      return h('td', { class: cls, text: v });
-    }
-    var table = h('div', { class: 'table-wrap' }, h('table', { class: 'table compact settings-cmp' },
-      h('thead', null, h('tr', null, h('th', { text: 'İmkan' }), PLANS.map(function (pl, i) {
-        return h('th', { class: i + 1 === curIdx ? 'cur' : null, scope: 'col' }, pl.id, h('small', { text: pl.price ? priceTxt(pl.price) + '/ay' : 'Pulsuz' }));
-      }))),
-      h('tbody', null, FEATURES.map(function (f) { return h('tr', null, f.map(function (v, i) { return i === 0 ? h('td', { text: v }) : cell(v, i); })); }))));
-    var cmp = card('Planları müqayisə et', 'İllik ödənişdə 20% endirim.', [table,
-      h('div', { class: 'row' }, h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: changePlanSheet }, 'Planı dəyiş'))], { opt: 'compare' });
-
-    /* history */
-    var hist = h('div', { class: 'list' }, [['Oktyabr 2026', '10'], ['Sentyabr 2026', '09'], ['Avqust 2026', '08']].map(function (r) {
-      var b = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': r[0] + ' qəbzi' }, ie('download'), 'Qəbz');
-      b.addEventListener('click', function () { busy(b, true); later(function () { busy(b, false); toast('Hazırdır', 'ok', { sub: 'qebz-2026-' + r[1] + '.pdf · 84 KB', icon: 'download' }); }, 800); });
-      return h('div', { class: 'list-row settings-hist' }, icTile('file'), h('span', { class: 'tx' }, h('b', { text: r[0] }), h('small', null, 'Peşəkar · ' + money(19) + ' · ', h('span', { class: 'settings-paid', text: 'ödənilib' }))),
-        h('span', { class: 'end' }, b));
-    }));
-    var histCard = card('Ödəniş tarixçəsi', null, [hist]);
-
-    return h('div', { class: 'stack-lg' }, cur, usage, cmp, histCard);
-  }
-  function changePlanSheet() {
-    var p = App.profile(), cur = planOf(p.plan).id, chosen = cur, period = billing().period || 'month', curPeriod = period;
-    var list = h('div', { class: 'stack' });
-    function draw() {
-      list.textContent = '';
-      PLANS.forEach(function (pl) {
-        var pr = period === 'year' ? pl.yearly : pl.price;
-        var b = h('button', { class: 'choice', type: 'button', 'aria-pressed': String(pl.id === chosen) }, icTile(pl.ic, pl.cls),
-          h('span', { class: 'grow' }, h('b', null, pl.id, pl.id === cur ? h('span', { class: 'badge settings-fir', text: 'Cari' }) : null),
-            h('small', { text: pl.tag + ' · ' + (pr ? priceTxt(pr) + '\u00a0/\u00a0ay' : 'Pulsuz') })));
-        b.addEventListener('click', function () { chosen = pl.id; draw(); var f = list.querySelector('[aria-pressed="true"]'); focusEl(f); });
-        list.appendChild(b);
-      });
-    }
-    var per = segCtl('billPeriod', [{ id: 'month', label: 'Aylıq' }, { id: 'year', label: 'İllik · −20%' }], {
-      get: function () { return period; }, set: function (v) { period = v; draw(); }, label: 'Ödəniş dövrü', block: true, noId: true });
-    draw();
-    App.sheet({
-      title: 'Planı dəyiş',
-      body: h('div', { class: 'stack' }, per, list, h('p', { class: 'muted small', text: 'Demo rejim: ödəniş alınmır, plan dərhal dəyişir.' })),
-      actions: [{ label: 'Ləğv et', kind: 'ghost' }, { label: 'Təsdiq et', kind: 'primary', onClick: function () {
-        if (chosen === cur && period === curPeriod) { toast('Plan dəyişmədi', 'info'); return; }
-        var down = planOf(chosen).rank < planOf(cur).rank;
-        function apply() {
-          saveProfile({ plan: chosen, planPrice: planOf(chosen).price });
-          sset('billing', { period: period });
-          if (V) { if (ST.sec === 'billing') renderSection({ noAnim: true }); syncHero(); syncSummaries(); }
-          if (down) { toast('Plan dəyişdi: ' + chosen, 'info', { sub: 'Yeni limitlər növbəti ödəniş dövründən qüvvəyə minir' }); nz('sad', 'Yenə görüşərik, ' + planOf(cur).id + ' plan!', 2400); }
-          else if (chosen !== cur) {
-            toast(chosen + ' planına xoş gəldiniz!', 'ok', { sub: 'Yeni imkanlar artıq aktivdir' });
-            nz('celebrate', 'Təbriklər! İndi daha çox şey edə bilərik.', 2800);
-            try { if (App.fx && App.fx.burst) App.fx.burst(W.innerWidth / 2, W.innerHeight / 3, 'confetti'); } catch (e) { /* ignore */ }
-          } else toast('Ödəniş dövrü dəyişdi', 'ok', { sub: period === 'year' ? 'İllik ödəniş — 20% qənaət' : 'Aylıq ödəniş' });
-        }
-        if (chosen === 'Pulsuz') {
-          return App.confirm({ title: 'Pulsuz plana keçilsin?', text: 'Bu ay ' + num(USED.words) + ' söz istifadə etmisiniz — Pulsuz planın limiti 5 000 sözdür. Tərcümə yaddaşı və lokal rejim dayandırılacaq.', okLabel: 'Keç', danger: true })
-            .then(function (ok) { if (ok) apply(); return ok; });
-        }
-        apply();
-      } }]
     });
   }
 
@@ -2076,8 +1809,7 @@
       'İstənilən vaxt bütün məlumatlarınızı JSON, TMX və TBX formatında ixrac edə və ya həmişəlik silə bilərsiniz.'] },
     terms: { title: 'İstifadə şərtləri', paras: [
       'Tərcümələrin müəllif hüquqları sizə və ya sifarişçinizə məxsusdur. Nuanza alət rolunu oynayır və tərcümə üzərində hüquq iddia etmir.',
-      'Notarial və hüquqi sənədlərdə yekun məsuliyyət imzalayan tərcüməçinin üzərindədir. Mirzə Məclisinin hökmü tövsiyə xarakterlidir.',
-      'Abunə istənilən vaxt ləğv edilə bilər; ödənilmiş dövr sonuna qədər bütün imkanlar açıq qalır.'] },
+      'Notarial və hüquqi sənədlərdə yekun məsuliyyət imzalayan tərcüməçinin üzərindədir. Mirzə Məclisinin hökmü tövsiyə xarakterlidir.'] },
     licenses: { title: 'Açıq mənbə lisenziyaları', paras: [
       'Unbounded və Plus Jakarta Sans şriftləri — SIL Open Font License 1.1.',
       'Xalça naxışları və göl motivi Nuanza komandası tərəfindən çəkilib.',
@@ -2179,7 +1911,7 @@
 
   var BUILD = {
     account: secAccount, work: secWork, translation: secTranslation, companion: secCompanion, appearance: secAppearance,
-    notifications: secNotifications, privacy: secPrivacy, billing: secBilling, shortcuts: secShortcuts, about: secAbout
+    notifications: secNotifications, privacy: secPrivacy, shortcuts: secShortcuts, about: secAbout
   };
 
   /* ------------------------------------------------------------------
@@ -2187,14 +1919,13 @@
      ------------------------------------------------------------------ */
   function summaryOf(id) {
     try {
-      if (id === 'account') return Dr.email || 'E-poçt əlavə edilməyib';
-      if (id === 'work') { var r = parseDec(Dr.rate); return (pairsShort(Dr.pairs) || '—') + (isFinite(r) ? ' · ' + num(r) + ' ₼/söz' : ''); }
+      if (id === 'account') return draftName() || Dr.email || 'Profilinizi tamamlayın';
+      if (id === 'work') { var r = parseDec(Dr.rate); return (pairsShort(Dr.pairs) || '—') + (isFinite(r) ? ' · ' + num(r) + ' AZN/söz' : ''); }
       if (id === 'translation') return (REG_SHORT[Dr.register] || '') + ' · ' + (Q_SHORT[Dr.quality] || '');
       if (id === 'companion') { var c = compCfg(); return c.show ? 'Görünür · ' + ({ sakit: 'sakit', normal: 'normal danışır', cox: 'çox danışır' }[c.talk] || '') : 'Gizlədilib'; }
       if (id === 'appearance') { var t = App.theme ? App.theme() : 'dark'; var mo = App.motion ? App.motion() : 'full'; return ({ system: 'Sistem', light: 'İşıqlı', dark: 'Qaranlıq' }[t] || '') + ' · şrift ' + uiCfg().fontScale + '%' + (mo === 'reduce' ? ' · az animasiya' : mo === 'system' ? ' · animasiya sistemə görə' : ''); }
       if (id === 'notifications') return tgLink().linked ? 'Telegram qoşulub' : 'Telegram qoşulmayıb';
       if (id === 'privacy') return Dr.local ? 'Lokal rejim' : (Dr.mask ? 'Bulud · maskalama aktiv' : 'Bulud rejimi');
-      if (id === 'billing') { var p = App.profile(), pl = planOf(p.plan); return pl.id + (pl.price ? ' · ' + priceTxt(billing().period === 'year' ? pl.yearly : pl.price) + '/ay' : ''); }
       if (id === 'shortcuts') { var n = 0; SHORTCUTS.forEach(function (g) { n += g.rows.length; }); return n + ' qısayol'; }
       if (id === 'about') return 'Nuanza ' + (App.version || '2.0');
     } catch (e) { /* ignore */ }
@@ -2433,6 +2164,7 @@
     busy(V.saveBtn, true);
     later(function () { if (!V) return; busy(V.saveBtn, false); commit(keys); }, 450);
   }
+  function decOrNull(v) { if (!String(v == null ? '' : v).trim()) return null; var n = parseDec(v); return isFinite(n) ? n : null; }
   function commit(keys) {
     TEXT_KEYS.forEach(function (k) { Dr[k] = String(Dr[k] == null ? '' : Dr[k]).trim(); });
     Dr.voen = Dr.voen.replace(/\s+/g, '');
@@ -2440,7 +2172,7 @@
     saveProfile({
       name: draftName(), email: Dr.email, phone: Dr.phone, role: Dr.role,
       pairs: Dr.pairs.slice(), specialties: Dr.specialties.slice(),
-      rate: parseDec(Dr.rate), ratePage: parseDec(Dr.ratePage), notarial: !!Dr.notarial, signName: Dr.signName,
+      rate: decOrNull(Dr.rate), ratePage: decOrNull(Dr.ratePage), notarial: !!Dr.notarial, signName: Dr.signName,
       invoice: { voen: Dr.voen, addr: Dr.addr, bank: Dr.bank, iban: Dr.iban }
     });
     var pr = {}; PREF_KEYS.forEach(function (k) { pr[k] = Dr[k]; }); sset('prefs', pr);

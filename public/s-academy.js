@@ -7,9 +7,11 @@
      • 'practice'  Məşq — 7 oyun kartı; «Detektiv» səhifədə oynanılır, digərləri
                    vərəqdə (Sən vs AI, Düzəlt, Kontekst dəyiş, Sürət, Şifahi,
                    Simulyator).
-     • 'cards'     Səhv kartları — aralıqlı təkrar (Leitner), çevrilən kart.
-     • 'progress'  Mənim inkişafım — bacarıq radarı, bal xətti, səhv xəritəsi,
-                   missiyalar, həftəlik çağırış.
+     • 'cards'     Səhv kartları — yalnız istifadəçinin öz səhvlərindən (academy:mycards);
+                   aralıqlı təkrar (Leitner), çevrilən kart.
+     • 'progress'  Mənim inkişafım — yalnız real nəticələr: rütbə, bacarıq radarı,
+                   bal xətti, səhv xəritəsi, missiyalar, həftəlik çağırış.
+                   Yeni istifadəçi üçün boş vəziyyət + bir addım («İlk tapşırığa başla»).
    Plain browser JS. Uses App.* (app.js) and app.css components.
    Screen CSS classes: task-*, practice-*, cards-*, progress-*.
    ===================================================================== */
@@ -58,7 +60,7 @@
   function sget(k, fb) { try { var v = App.store.get(k, fb); return v === undefined || v === null ? fb : v; } catch (e) { return fb; } }
   function sset(k, v) { try { App.store.set(k, v); } catch (e) { /* storage blocked */ } }
   function profile() {
-    try { return App.profile(); } catch (e) { return { name: 'Aysel Məmmədova', firstName: 'Aysel', xp: 1840, streak: 12, bestStreak: 31, dailyGoal: 30, initials: 'AM', avatarColor: 'av-firuze' }; }
+    try { return App.profile() || {}; } catch (e) { return { name: '', firstName: '', xp: 0, streak: 0, bestStreak: 0, dailyGoal: 30, initials: '', avatarColor: 'av-firuze' }; }
   }
   var RANKS_FB = [{ name: 'Şagird', min: 0 }, { name: 'Katib', min: 400 }, { name: 'Münşi', min: 1200 }, { name: 'Mirzə', min: 2500 }, { name: 'Dilmanc', min: 5000 }, { name: 'Ustad', min: 10000 }];
   function ranks() { return (App.data && App.data.RANKS) || App.RANKS || RANKS_FB; }
@@ -172,9 +174,9 @@
   var MISSIONS = [
     { id: 'login', t: 'Masaya baxın', s: 'Gündəlik giriş', cur: 1, max: 1, xp: 10, ic: 'home' },
     { id: 'lesson', t: 'Bir dərs bitirin', s: 'İstənilən mövzu, 5–7 dəqiqə', cur: 0, max: 1, xp: 30, ic: 'book', go: ['lessons', 'lesson', 'task'] },
-    { id: 'cards', t: '10 səhv kartını təkrarlayın', s: 'Səhv kartları', cur: 6, max: 10, xp: 20, ic: 'cards', go: ['cards'] },
-    { id: 'turk', t: 'Türk forması olmadan 3 cümlə', s: 'Dilçi Nənə izləyir', cur: 2, max: 3, xp: 25, ic: 'quill', go: ['task', 'practice'] },
-    { id: 'week', t: 'Həftəlik: 5 gün ardıcıl məşq', s: 'Bazar gününədək', cur: 4, max: 5, xp: 60, ic: 'flame', weekly: true, go: ['practice'] }
+    { id: 'cards', t: '10 səhv kartını təkrarlayın', s: 'Səhv kartları', cur: 0, max: 10, xp: 20, ic: 'cards', go: ['cards'] },
+    { id: 'turk', t: 'Türk forması olmadan 3 cümlə', s: 'Dilçi Nənə izləyir', cur: 0, max: 3, xp: 25, ic: 'quill', go: ['task', 'practice'] },
+    { id: 'week', t: 'Həftəlik: 5 gün ardıcıl məşq', s: 'Bazar gününədək', cur: 0, max: 5, xp: 60, ic: 'flame', weekly: true, go: ['practice'] }
   ];
   function msState() { var s = sget('home:ms:' + dayKey(), {}); return s && typeof s === 'object' ? s : {}; }
   function missionById(id) { for (var i = 0; i < MISSIONS.length; i++) if (MISSIONS[i].id === id) return MISSIONS[i]; return null; }
@@ -194,30 +196,32 @@
   function claimKey(m) { return 'home:claimed:' + (m.weekly ? weekKey() : dayKey()); }
   function isClaimed(m) { var c = sget(claimKey(m), {}) || {}; return !!c[m.id]; }
 
-  /* score history (seeded so the charts are alive on first visit) */
-  var SEED_SCORES = [[29, 64, 'b1-false'], [27, 68, 'a2-oldcity'], [25, 66, 'b1-letter'], [22, 71, 'b2-fidic'], [20, 74, 'a2-chat'], [17, 70, 'b2-shall'],
-    [14, 77, 'b1-false'], [11, 79, 'b2-finance'], [8, 76, 'c1-ui'], [5, 82, 'b2-shall'], [2, 84, 'b2-fidic']];
+  /* score history — only real checked translations, empty for a new user */
   function scores() {
     var s = sget('academy:scores', null);
-    if (Array.isArray(s) && s.length) return s;
-    var now = Date.now();
-    return SEED_SCORES.map(function (r) { var t = taskById(r[2]); return { t: now - r[0] * DAY - 3600000 * 5, s: r[1], title: t ? t.title : 'Tapşırıq', lv: t ? t.level : 'B2' }; });
+    return Array.isArray(s) ? s.filter(function (x) { return x && isFinite(Number(x.s)); }) : [];
   }
   function pushScore(score, task) {
     var s = scores().slice(-29);
     s.push({ t: Date.now(), s: score, title: task.title, lv: task.level });
     sset('academy:scores', s);
   }
-  var AXES = ['Məna', 'Terminologiya', 'Üslub', 'Ədəbi norma', 'Format', 'Sürət'];
-  var SKILL_BEFORE = [70, 58, 62, 71, 80, 55];
-  var SKILL_NOW = [84, 72, 79, 77, 90, 64];
-  function skills() {
-    var s = sget('academy:skills', null);
-    return Array.isArray(s) && s.length === AXES.length ? s.map(function (v) { return clamp(Math.round(Number(v) || 0), 0, 100); }) : SKILL_NOW.slice();
+  /* skills come only from rubric results; null until the first check */
+  var AXES = ['Məna', 'Terminologiya', 'Üslub', 'Ədəbi norma', 'Format'];
+  function normSkills(s) {
+    return Array.isArray(s) && s.length >= AXES.length ? s.slice(0, AXES.length).map(function (v) { return clamp(Math.round(Number(v) || 0), 0, 100); }) : null;
   }
+  function skills() { return normSkills(sget('academy:skills', null)); }
+  function skillsStart() { return normSkills(sget('academy:skills0', null)); }
   function updateSkills(rubric) {
-    var s = skills();
-    (rubric || []).slice(0, 5).forEach(function (r, i) { var pct = r.max ? r.score / r.max * 100 : 0; s[i] = Math.round(s[i] * 0.85 + pct * 0.15); });
+    var cur = skills(), first = !cur;
+    var pcts = AXES.map(function (a, i) { var r = (rubric || [])[i]; return r && r.max ? r.score / r.max * 100 : null; });
+    var s = AXES.map(function (a, i) {
+      var p = pcts[i];
+      if (first) return Math.round(p == null ? 0 : p);
+      return p == null ? cur[i] : Math.round(cur[i] * 0.85 + p * 0.15);
+    });
+    if (first) sset('academy:skills0', s);
     sset('academy:skills', s);
   }
   function logErrors(errs) {
@@ -225,7 +229,7 @@
     errs.forEach(function (e) { lg[e.type] = (Number(lg[e.type]) || 0) + 1; });
     sset('academy:errlog', lg);
   }
-  function weeklyCount() { return clamp(Number(sget('academy:weekly:' + weekKey(), 3)) || 0, 0, 5); }
+  function weeklyCount() { return clamp(Number(sget('academy:weekly:' + weekKey(), 0)) || 0, 0, 5); }
   function bumpWeekly() { var v = weeklyCount(); if (v < 5) sset('academy:weekly:' + weekKey(), v + 1); return v + 1; }
 
   /* ------------------------------------------------------------------
@@ -241,7 +245,7 @@
   function levelIdx(id) { for (var i = 0; i < LEVELS.length; i++) if (LEVELS[i].id === id) return i; return 2; }
 
   var TASKS = [
-    { id: 'a2-oldcity', level: 'A2', domain: 'Turizm', reg: 'Neytral', client: 'Bakı Bulvar Hotel', title: 'Otel bukleti: şəhər turu', xp: 20, minutes: 4,
+    { id: 'a2-oldcity', level: 'A2', domain: 'Turizm', reg: 'Neytral', client: 'Otel', title: 'Otel bukleti: şəhər turu', xp: 20, minutes: 4,
       src: 'The Old City is a ten-minute walk from the hotel. The Maiden Tower museum is open every day except Monday, from 10:00 to 18:00.',
       model: 'İçərişəhər oteldən on dəqiqəlik piyada yolundadır. Qız qalası muzeyi bazar ertəsindən başqa hər gün saat 10:00-dan 18:00-dək açıqdır.',
       hints: ['«The Old City» Bakıda xüsusi addır — «İçərişəhər».', '«Maiden Tower» — «Qız qalası».', 'Həftə günləri kiçik hərflə yazılır: «bazar ertəsi».'],
@@ -265,7 +269,7 @@
         { w: ['göndərə bilərsiniz'], now: 'göndərə bilərsən', type: 'Üslub', why: 'Mesaj həmkar-dosta yazılıb: «siz» müraciəti burada soyuq səslənir.', ex: 'Can you help me? → Mənə kömək edə bilərsən?' },
         { w: ['təşəkkür edirik'], now: 'sağ ol', type: 'Üslub', why: 'Danışıq mesajında rəsmi «təşəkkür edirik» yad səslənir; təbii forma — «Çox sağ ol!»', ex: 'Thanks a lot! → Çox sağ ol!' }
       ] },
-    { id: 'b1-false', level: 'B1', domain: 'Biznes', reg: 'Neytral', client: 'Azercell — layihə ofisi', title: 'Daxili layihə hesabatı', xp: 30, minutes: 5,
+    { id: 'b1-false', level: 'B1', domain: 'Biznes', reg: 'Neytral', client: 'Layihə ofisi', title: 'Daxili layihə hesabatı', xp: 30, minutes: 5,
       src: 'Our actual costs were 12.4% higher than planned. Eventually, the team found a cheaper supplier.',
       model: 'Faktiki xərclərimiz planlaşdırılandan 12,4% yüksək olub. Nəhayət, komanda daha ucuz təchizatçı tapıb.',
       hints: ['«actual» yalançı dostdur: «faktiki», «aktual» deyil.', '«Eventually» — «nəhayət, sonda»; ehtimal bildirmir.', 'Onluq kəsr vergüllə yazılır: 12,4%.'],
@@ -274,7 +278,7 @@
       traps: [
         { w: ['ehtimal ki'], now: 'Nəhayət', type: 'Məna', why: '«Eventually» — «nəhayət, sonda». «Ehtimal ki» isə «probably» deməkdir — məna tamam dəyişir.', ex: 'Eventually, they signed the contract. → Nəhayət, müqaviləni imzaladılar.' }
       ] },
-    { id: 'b1-letter', level: 'B1', domain: 'İşgüzar yazışma', reg: 'Rəsmi', client: 'Kapital Bank', title: 'Müştəriyə rəsmi məktub', xp: 30, minutes: 5,
+    { id: 'b1-letter', level: 'B1', domain: 'İşgüzar yazışma', reg: 'Rəsmi', client: 'Bank', title: 'Müştəriyə rəsmi məktub', xp: 30, minutes: 5,
       src: 'Dear Mr. Aliyev, we are pleased to inform you that your loan application has been approved. Please find the agreement attached.',
       model: 'Hörmətli cənab Əliyev, kredit müraciətinizin təsdiq edildiyini məmnuniyyətlə bildiririk. Müqavilə məktuba əlavə olunur.',
       hints: ['Rəsmi müraciət: «Hörmətli cənab…».', 'Soyad Azərbaycan yazılışı ilə: «Əliyev».', '«Please find attached» — «…əlavə olunur».'],
@@ -284,14 +288,14 @@
         { w: ['Aliyev'], cs: true, now: 'Əliyev', type: 'Ad', why: 'Azərbaycan soyadı ingilis transliterasiyası ilə deyil, öz yazılışı ilə verilir: «Əliyev».', ex: 'Mr. Mammadov → cənab Məmmədov; Ms. Guliyeva → xanım Quliyeva.' },
         { w: ['bəy'], now: 'cənab', type: 'Üslub', why: 'Rəsmi bank məktubunda müraciət — «Hörmətli cənab…». «Bəy» bu kontekstdə türk yazışmasını xatırladır.', ex: 'Dear Mr. Aliyev → Hörmətli cənab Əliyev' }
       ] },
-    { id: 'b2-shall', level: 'B2', domain: 'Hüquq', reg: 'Hüquqi', client: 'AzerGold QSC', title: 'Təchizat müqaviləsi, 4.2-ci bənd', xp: 40, minutes: 6,
+    { id: 'b2-shall', level: 'B2', domain: 'Hüquq', reg: 'Hüquqi', client: 'Təchizat şirkəti', title: 'Təchizat müqaviləsi, 4.2-ci bənd', xp: 40, minutes: 6,
       src: 'The Supplier shall deliver 250 units to Baku by 15 March 2026. Payment shall be made within thirty (30) days of receipt of a valid invoice.',
       model: 'Təchizatçı 15 mart 2026-cı il tarixinədək Bakıya 250 ədəd məhsul təhvil verməlidir. Ödəniş etibarlı hesab-faktura alındıqdan sonra otuz (30) gün ərzində həyata keçirilir.',
       hints: ['«shall» öhdəlikdir: «təhvil verməlidir».', '«invoice» — lüğətdə «hesab-faktura».', 'Ay adı kiçik hərflə: «15 mart».'],
       draft: 'Tedarikçi 15 Mart 2026 tarixinədək Bakıya 205 ədəd məhsul təhvil etməlidir. Ödəniş etibarlı invoys alındıqdan sonra otuz (30) gün içinde həyata keçirilir.',
       tip: 'Müqavilədir: «shall», rəqəmlər və tarixlər — Möhürdar Mirzə hər birinə baxacaq.',
       traps: [] },
-    { id: 'b2-fidic', level: 'B2', domain: 'Hüquq', reg: 'Hüquqi', client: 'Azvirt MMC', title: 'Tikinti müqaviləsi (FIDIC), 1.8-ci bənd', xp: 40, minutes: 5,
+    { id: 'b2-fidic', level: 'B2', domain: 'Hüquq', reg: 'Hüquqi', client: 'Tikinti şirkəti', title: 'Tikinti müqaviləsi (FIDIC), 1.8-ci bənd', xp: 40, minutes: 5,
       src: 'The Contractor shall notify the Employer within 14 days after becoming aware of the event.',
       model: 'Podratçı hadisədən xəbər tutduqdan sonra 14 gün ərzində Sifarişçini xəbərdar etməlidir.',
       hints: ['FIDIC-də «Employer» — «Sifarişçi», «İşəgötürən» deyil.', '«shall notify» — «xəbərdar etməlidir».', '«within 14 days» — «14 gün ərzində».'],
@@ -301,14 +305,14 @@
         { w: ['edəcək'], now: 'etməlidir', type: 'Məna', why: 'Hüquqi mətndə «shall» gələcək zaman yox, öhdəlik bildirir: «xəbərdar etməlidir».', ex: 'The Buyer shall pay within 10 days. → Alıcı 10 gün ərzində ödəməlidir.' },
         { w: ['gün içində'], now: 'gün ərzində', type: 'Üslub', why: 'Hüquqi mətndə müddət «ərzində» ilə verilir; «içində» danışıq dilinə yaxındır.', ex: 'within 30 days → 30 gün ərzində' }
       ] },
-    { id: 'b2-finance', level: 'B2', domain: 'Maliyyə', reg: 'Rəsmi', client: 'SOCAR', title: 'İllik hesabat 2025: xülasə', xp: 40, minutes: 6,
+    { id: 'b2-finance', level: 'B2', domain: 'Maliyyə', reg: 'Rəsmi', client: 'Enerji şirkəti', title: 'İllik hesabat 2025: xülasə', xp: 40, minutes: 6,
       src: 'Net profit rose by 12.4% to AZN 3.8 billion. The Board of Directors will meet on 2 June to approve the dividend.',
       model: 'Xalis mənfəət 12,4% artaraq 3,8 milyard manata çatıb. İdarə Heyəti dividendi təsdiqləmək üçün 2 iyunda iclas keçirəcək.',
       hints: ['«Net profit» — «xalis mənfəət».', 'AZN 3.8 billion → 3,8 milyard manat.', '«meet» rəsmi mətndə — «iclas keçirmək».'],
       draft: 'Təmiz gəlir 12.4% artaraq 3.8 milyard manata çatıb. İdarə Heyəti dividendi təsdiqləmək için 2 İyun tarixində toplantı keçirəcək.',
       tip: 'Maliyyə hesabatıdır: rəqəm formatı və «net profit» terminini yoxlayın.',
       traps: [] },
-    { id: 'c1-majeure', level: 'C1', domain: 'Hüquq', reg: 'Hüquqi', client: 'Kapital Bank', title: 'Xidmət müqaviləsi, 9-cu maddə', xp: 50, minutes: 7,
+    { id: 'c1-majeure', level: 'C1', domain: 'Hüquq', reg: 'Hüquqi', client: 'Hüquq şöbəsi', title: 'Xidmət müqaviləsi, 9-cu maddə', xp: 50, minutes: 7,
       src: 'Neither Party shall be liable for any failure to perform its obligations where such failure results from force majeure.',
       model: 'Öhdəliklərin icra edilməməsi fors-major hallarının nəticəsidirsə, Tərəflərdən heç biri buna görə məsuliyyət daşımır.',
       hints: ['«Neither Party» — «Tərəflərdən heç biri».', 'İnkarlı «shall not be liable» — fakt: «məsuliyyət daşımır».', '«force majeure» — «fors-major».'],
@@ -318,7 +322,7 @@
         { w: ['taraflardan'], now: 'Tərəflərdən', type: 'Türk forması', why: '«taraf» türk formasıdır; Azərbaycan dilində «tərəf» — «Tərəflərdən heç biri».', ex: 'Neither Party → Tərəflərdən heç biri' },
         { w: ['olmamalıdır'], now: 'daşımır', type: 'Məna', why: 'İnkarlı «shall not be liable» qadağa yox, hüquqi faktdır: «məsuliyyət daşımır».', ex: 'The Supplier shall not be liable for indirect damages. → Təchizatçı dolayı zərərə görə məsuliyyət daşımır.' }
       ] },
-    { id: 'c1-ui', level: 'C1', domain: 'İnterfeys', reg: 'Neytral', client: 'Birbank', title: 'Mobil tətbiq: təhlükəsizlik bildirişləri', xp: 50, minutes: 5,
+    { id: 'c1-ui', level: 'C1', domain: 'İnterfeys', reg: 'Neytral', client: 'Mobil bank', title: 'Mobil tətbiq: təhlükəsizlik bildirişləri', xp: 50, minutes: 5,
       src: 'Your session has expired. Please sign in again to continue. Don’t share your one-time password with anyone.',
       model: 'Sessiyanın vaxtı bitib. Davam etmək üçün yenidən daxil olun. Birdəfəlik şifrənizi heç kimlə paylaşmayın.',
       hints: ['İnterfeys mətni qısa olmalıdır — artıq əvəzlikləri atın.', '«sign in» — «daxil olun».', '«one-time password» — «birdəfəlik şifrə».'],
@@ -330,8 +334,8 @@
         { w: ['tək istifadəlik parolunuzu', 'tək istifadəlik parol'], now: 'birdəfəlik şifrənizi', type: 'Termin', why: 'Bank terminologiyasında «one-time password» — «birdəfəlik şifrə» (SMS-kod).', ex: 'Enter the one-time password → Birdəfəlik şifrəni daxil edin' },
         { w: ['heç kimə paylaşmayın'], now: 'heç kimlə paylaşmayın', type: 'Üslub', why: '«Paylaşmaq» feili «kimləsə» idarə edir: «heç kimlə paylaşmayın».', ex: 'Share with friends → Dostlarla paylaşın' }
       ] },
-    { id: 'sim-ada', level: 'B2', domain: 'Təhsil', reg: 'Rəsmi', client: 'ADA Universiteti', title: 'Tələbə bələdçisi, 3-cü fəsil', xp: 60, minutes: 6,
-      sim: { deadline: 'Bu gün, 18:00', volume: '20 söz · sınaq parçası', rate: '0,06 AZN / söz', fee: 'Sınaq — ödənişsiz', contact: 'Nigar Rzayeva · Tələbə xidmətləri',
+    { id: 'sim-ada', level: 'B2', domain: 'Təhsil', reg: 'Rəsmi', client: 'Universitet', title: 'Tələbə bələdçisi, 3-cü fəsil', xp: 60, minutes: 6,
+      sim: { deadline: 'Bu gün, 18:00', volume: '20 söz · sınaq parçası', contact: 'Tələbə xidmətləri',
         req: ['Rəsmi-neytral üslub', 'thesis → buraxılış işi', 'Ay adları kiçik hərflə'] },
       src: 'Students must submit their thesis by 1 May 2026. Late submissions will not be accepted without the Dean’s written approval.',
       model: 'Tələbələr buraxılış işini 1 may 2026-cı il tarixinədək təqdim etməlidirlər. Gecikmiş işlər dekanın yazılı razılığı olmadan qəbul edilmir.',
@@ -392,9 +396,8 @@
     { id: 'sim', name: 'Simulyator', icon: 'folder', cls: 'practice-fir', desc: 'Real sifariş: müştəri, son tarix, tarif.', diff: 3, skill: 'Peşəkarlıq' }
   ];
   var DIFF = { 1: 'Asan', 2: 'Orta', 3: 'Çətin' };
-  var DEFAULT_BEST = { vs: 80, fix: 83, context: 80, speed: 12, sim: 71 };
   function gameById(id) { for (var i = 0; i < GAMES.length; i++) if (GAMES[i].id === id) return GAMES[i]; return null; }
-  function bestOf(id) { var b = sget('academy:best', {}) || {}; if (b[id] != null) return Number(b[id]); return DEFAULT_BEST[id] != null ? DEFAULT_BEST[id] : null; }
+  function bestOf(id) { var b = sget('academy:best', {}) || {}; return b[id] != null ? Number(b[id]) : null; }
   function setBest(id, v) { var b = sget('academy:best', {}) || {}; b[id] = v; sset('academy:best', b); }
   function fmtBest(id, v) { return id === 'speed' ? v + ' termin' : v + ' bal'; }
 
@@ -442,7 +445,7 @@
   var OK_MSG = ['Düzdür!', 'Əla!', 'Məhz belə!', 'Bəli, doğrudur!'];
 
   var DET = [
-    { title: 'AzerGold — təchizat müqaviləsi, 4.2-ci bənd',
+    { title: 'Təchizat müqaviləsi, 4.2-ci bənd',
       src: 'The Supplier shall deliver 250 units to Baku by 15 March 2026. Payment shall be made within thirty (30) days of receipt of a valid invoice.',
       tgt: 'Tədarükçü 15 Mart 2026 tarixinədək Bakıya 205 ədəd məhsul təhvil verməlidir. Ödəniş etibarlı invoys alındıqdan sonra otuz (30) gün içinde həyata keçirilir.',
       errors: [
@@ -452,7 +455,7 @@
         { w: 'invoys', now: 'hesab-faktura', type: 'Termin', why: '«invoice» — «hesab-faktura»; «invoys» kalkadır.' },
         { w: 'içinde', now: 'ərzində', type: 'Türk forması', why: '«içinde» türk formasıdır; rəsmi mətndə — «ərzində».' }
       ] },
-    { title: 'SOCAR — illik hesabat 2025, xülasə',
+    { title: 'İllik hesabat 2025, xülasə',
       src: 'Net profit rose by 12.4% to AZN 3.8 billion. The Board of Directors will meet on 2 June to approve the dividend.',
       tgt: 'Təmiz gəlir 12.4% artaraq 3,8 milyard manata çatıb. İdarə Heyəti dividendi təsdiqləmək üçün 2 İyun tarixində toplantı keçirəcək.',
       errors: [
@@ -462,7 +465,7 @@
         { w: 'İyun', now: 'iyun', type: 'Orfoqrafiya', why: 'Ay adları kiçik hərflə yazılır.' },
         { w: 'toplantı', now: 'iclas', type: 'Türk forması', why: '«toplantı» türk sözüdür; idarə heyəti «iclas keçirir».' }
       ] },
-    { title: 'Azvirt — tikinti müqaviləsi (FIDIC), 1.8-ci bənd',
+    { title: 'Tikinti müqaviləsi (FIDIC), 1.8-ci bənd',
       src: 'The Contractor shall notify the Employer within 14 days after becoming aware of the event.',
       tgt: 'Kontraktor hadisədən xəbər tutduqdan sonra 41 gün ərzində İşəgötürəni xəbərdar edəcək.',
       errors: [
@@ -473,26 +476,12 @@
       ] }
   ];
 
-  var DECK = [
-    { id: 'c-actual', tag: 'Yalançı dost', elder: 'Lüğətçi Mirzə', src: 'Our actual costs were higher than planned.', wrong: 'Aktual xərclərimiz planlaşdırılandan yüksək olub.', bad: 'Aktual', right: 'Faktiki xərclərimiz planlaşdırılandan yüksək olub.', good: 'Faktiki', why: '«actual» — «faktiki, həqiqi». «Aktual» isə «hazırda vacib, gündəmdə olan» deməkdir.' },
-    { id: 'c-tarafindan', tag: 'Türk forması', elder: 'Dilçi Nənə', src: 'The agreement was signed by both parties.', wrong: 'Müqavilə hər iki tərəf tarafından imzalanıb.', bad: 'tarafından', right: 'Müqavilə hər iki tərəf tərəfindən imzalanıb.', good: 'tərəfindən', why: '«tarafından» türk dilinə məxsusdur. Azərbaycan ədəbi dilində — «tərəfindən».' },
-    { id: 'c-decimal', tag: 'Rəqəm', elder: 'Möhürdar Mirzə', src: 'Net profit rose by 12.4%.', wrong: 'Xalis mənfəət 12.4% artıb.', bad: '12.4%', right: 'Xalis mənfəət 12,4% artıb.', good: '12,4%', why: 'Azərbaycan dilində onluq kəsr vergüllə, minliklər boşluqla ayrılır: 1 250 000,50.' },
-    { id: 'c-employer', tag: 'Termin', elder: 'Lüğətçi Mirzə', src: 'The Contractor shall notify the Employer.', wrong: 'Podratçı İşəgötürəni xəbərdar etməlidir.', bad: 'İşəgötürəni', right: 'Podratçı Sifarişçini xəbərdar etməlidir.', good: 'Sifarişçini', why: 'FIDIC tikinti müqavilələrində «Employer» — «Sifarişçi». «İşəgötürən» əmək müqaviləsinə aiddir.' },
-    { id: 'c-shall', tag: 'Hüquqi', elder: 'Mənaçı Mirzə', src: 'The Seller shall deliver the goods by 1 June.', wrong: 'Satıcı malları 1 iyunadək təhvil verəcək.', bad: 'təhvil verəcək', right: 'Satıcı malları 1 iyunadək təhvil verməlidir.', good: 'təhvil verməlidir', why: 'Hüquqi mətndə «shall» gələcək zaman yox, öhdəlik bildirir: «-malı/-məli».' },
-    { id: 'c-month', tag: 'Orfoqrafiya', elder: 'Dilçi Nənə', src: 'The meeting will be held on 15 March.', wrong: 'İclas 15 Mart tarixində keçiriləcək.', bad: 'Mart', right: 'İclas 15 mart tarixində keçiriləcək.', good: 'mart', why: 'Ay adları cümlənin ortasında kiçik hərflə yazılır.' },
-    { id: 'c-icinde', tag: 'Türk forması', elder: 'Dilçi Nənə', src: 'Payment shall be made within 30 days.', wrong: 'Ödəniş 30 gün içinde həyata keçirilir.', bad: 'içinde', right: 'Ödəniş 30 gün ərzində həyata keçirilir.', good: 'ərzində', why: 'Rəsmi mətndə müddət «ərzində» ilə verilir; «içinde» türk formasıdır.' },
-    { id: 'c-sympathetic', tag: 'Yalançı dost', elder: 'Lüğətçi Mirzə', src: 'She was sympathetic to our situation.', wrong: 'O, vəziyyətimizə simpatik yanaşdı.', bad: 'simpatik', right: 'O, vəziyyətimizə anlayışla yanaşdı.', good: 'anlayışla', why: '«sympathetic» — «anlayışlı, rəğbətli». «Simpatik» isə xarici görünüşə aiddir.' },
-    { id: 'c-kompaniya', tag: 'Üslub', elder: 'Üslubçu Mirzə', src: 'The company opened a new office in Ganja.', wrong: 'Kompaniya Gəncədə yeni ofis açıb.', bad: 'Kompaniya', right: 'Şirkət Gəncədə yeni ofis açıb.', good: 'Şirkət', why: '«Kompaniya» rus mənşəli danışıq formasıdır; yazılı mətndə «şirkət».' },
-    { id: 'c-tehvil', tag: 'Üslub', elder: 'Üslubçu Mirzə', src: 'Please submit the documents by Friday.', wrong: 'Zəhmət olmasa, sənədləri cüməyədək təhvil edin.', bad: 'təhvil edin', right: 'Zəhmət olmasa, sənədləri cüməyədək təhvil verin.', good: 'təhvil verin', why: 'Sabit söz birləşməsi: «təhvil vermək». «Təhvil etmək» səhvdir.' },
-    { id: 'c-eventually', tag: 'Yalançı dost', elder: 'Mənaçı Mirzə', src: 'Eventually, the parties reached an agreement.', wrong: 'Ehtimal ki, tərəflər razılığa gəldilər.', bad: 'Ehtimal ki', right: 'Nəhayət, tərəflər razılığa gəldilər.', good: 'Nəhayət', why: '«eventually» — «nəhayət, sonda»; ehtimal bildirmir.' },
-    { id: 'c-sayin', tag: 'Türk forması', elder: 'Dilçi Nənə', src: 'Dear Director,', wrong: 'Sayın Direktor,', bad: 'Sayın', right: 'Hörmətli Direktor,', good: 'Hörmətli', why: 'Rəsmi müraciət Azərbaycan dilində «Hörmətli…» ilə başlayır; «Sayın» türk formasıdır.' }
-  ];
   var TAG_BADGE = { 'Yalançı dost': 'red', 'Türk forması': 'gold', 'Rəqəm': 'navy', 'Termin': 'navy', 'Hüquqi': 'red', 'Orfoqrafiya': 'gold', 'Üslub': '', 'Məna': 'red' };
   var INTERVAL = [0, 0, 1, 3, 7, 16];
   var INT_LABEL = { 1: 'hər gün', 2: '1 gündən bir', 3: '3 gündən bir', 4: 'həftədə bir', 5: '16 gündən bir' };
 
   function userCards() { var l = sget('academy:mycards', []); return Array.isArray(l) ? l : []; }
-  function deck() { return userCards().concat(DECK); }
+  function deck() { return userCards(); } /* only the user's own mistakes */
   function srsAll() { var s = sget('academy:srs', {}); return s && typeof s === 'object' ? s : {}; }
   function dueCount() {
     var s = srsAll(), now = Date.now();
@@ -829,19 +818,11 @@
     '@media (max-width:479px){.progress-erow{grid-template-columns:minmax(0,1fr) auto}.progress-erow .progress{grid-column:1 / -1;grid-row:2}}',
     '.progress-ms .list-row .tx .progress{margin-top:6px}',
     '.progress-week{display:grid;gap:24px}',
-    '@media (min-width:760px){.progress-week{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);align-items:start}}',
     '.progress-week-l{display:grid;gap:12px;min-width:0}',
     '.progress-week-l .btn{justify-self:start}',
     '.progress-week-meta{display:flex;justify-content:space-between;gap:8px;color:var(--on-deep-soft);font-size:var(--fs-sm)}',
     '.progress-reward{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r-md);background:color-mix(in srgb,var(--on-deep) 8%,transparent)}',
     '.progress-reward small{display:block;color:var(--on-deep-soft)}',
-    '.progress-lb-h{margin-bottom:8px;font-size:var(--fs-md)}',
-    '.progress-lb{display:grid;gap:4px;margin:0;padding:0;list-style:none}',
-    '.progress-lb li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-md)}',
-    '.progress-lb li.me{background:color-mix(in srgb,var(--firuze) 18%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--firuze) 50%,transparent)}',
-    '.progress-lb .n{width:18px;color:color-mix(in srgb,var(--firuze) 72%,var(--on-deep));font:600 var(--fs-sm)/1 var(--f-display);text-align:center}',
-    '.progress-lb .nm{flex:1;min-width:0;overflow:hidden;font-size:var(--fs-sm);text-overflow:ellipsis;white-space:nowrap}',
-    '.progress-lb .xp{color:var(--on-deep-soft);font:600 var(--fs-sm)/1 var(--f-body);font-variant-numeric:tabular-nums}',
     '.card.lacquer .avatar.sm{box-shadow:0 0 0 1.5px var(--deep),0 0 0 2.5px var(--firuze)}'
   ].join('\n');
 
@@ -859,10 +840,9 @@
       h('div', null,
         h('span', { class: 'eyebrow', text: 'Akademiya · Tapşırıq' }),
         h('h1', { html: 'Bugünkü <em>tapşırıq</em>' }),
-        h('p', { text: 'Mətni alın, öz variantınızı yazın — Mirzə Məclisi yoxlayıb hər səhvi izah edəcək.' })),
-      h('div', { class: 'actions' },
-        h('button', { class: 'btn', type: 'button', onclick: function () { App.go('cards'); } }, ie('cards'), 'Səhv kartları'),
-        h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { App.go('progress'); } }, ie('chart'), 'İnkişafım'))));
+        h('p', { text: 'Mətni oxuyun, öz variantınızı yazın — Mirzə Məclisi yoxlayıb hər səhvi izah edəcək.' })),
+      userCards().length ? h('div', { class: 'actions' },
+        h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { App.go('cards'); } }, ie('cards'), 'Səhv kartları')) : null));
 
     T.getCard = levelCard();
     page.appendChild(T.getCard);
@@ -1017,7 +997,6 @@
       h('dl', { class: 'kv' },
         h('dt', { text: 'Son tarix' }), h('dd', { text: s.deadline }),
         h('dt', { text: 'Həcm' }), h('dd', { text: s.volume }),
-        h('dt', { text: 'Tarif' }), h('dd', { text: s.rate }),
         h('dt', { text: 'Əlaqə' }), h('dd', { text: s.contact })),
       h('div', { class: 'badges' }, s.req.map(function (r) { return badge(r, '', 'check'); })));
   }
@@ -1282,7 +1261,6 @@
 
     var next = h('div', { class: 'task-next' },
       h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { scrollToEl(T.ta.closest('.card') || T.ta); later(function () { focusSoft(T.ta); }, reduced() ? 0 : 380); } }, ie('edit'), 'Yenidən yaz'),
-      h('button', { class: 'btn', type: 'button', onclick: function () { App.go('cards'); } }, ie('cards'), 'Səhv kartları'),
       h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { fetchTask(null, true); scrollToEl(T.getCard); } }, 'Növbəti mətn', ie('arrow')));
 
     return h('div', { class: 'task-res' }, verdict, h('div', { class: 'grid-2' }, skills, model), errSec, next);
@@ -1760,9 +1738,7 @@
       h('div', { class: 'callout navy' }, ie('message'), h('div', null, '«Salam! Tələbə bələdçisinin 3-cü fəslini tərcümə etdirmək istəyirik. Əvvəlcə kiçik sınaq parçası göndəririk: üslub rəsmi-neytral olsun, lüğətimizə əməl edin.»')),
       h('dl', { class: 'kv' },
         h('dt', { text: 'Son tarix' }), h('dd', { text: s.deadline }),
-        h('dt', { text: 'Həcm' }), h('dd', { text: s.volume }),
-        h('dt', { text: 'Tarif' }), h('dd', { text: s.rate }),
-        h('dt', { text: 'Qonorar' }), h('dd', { text: s.fee })),
+        h('dt', { text: 'Həcm' }), h('dd', { text: s.volume })),
       h('div', { class: 'stack-sm' }, h('span', { class: 'eyebrow', text: 'Müştərinin tələbləri' }),
         h('ul', { class: 'practice-req' }, s.req.map(function (r) { return h('li', { text: r }); }))));
     App.sheet({
@@ -1785,10 +1761,8 @@
       h('div', null,
         h('span', { class: 'eyebrow', text: 'Akademiya · Səhv kartları' }),
         h('h1', { html: 'Səhv <em>kartları</em>' }),
-        h('p', { text: 'Buraxdığınız səhvlər kart olur. «Bildim» — kart seyrəkləşir, «Çətin oldu» — tez-tez qayıdır.' })),
-      h('div', { class: 'actions' },
-        h('button', { class: 'btn', type: 'button', onclick: function () { App.go('task'); } }, ie('edit'), 'Tapşırıq'),
-        h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { App.go('progress'); } }, ie('chart'), 'İnkişafım'))));
+        h('p', { text: 'Tapşırıqlarda buraxdığınız səhvlər kart olur. «Bildim» — kart seyrəkləşir, «Çətin oldu» — tez-tez qayıdır.' }))));
+    if (!deck().length) { renderNoCards(page); return; }
     C.chips = h('div', { class: 'chips cards-chips', role: 'group', 'aria-label': 'Mövzu üzrə süzgəc' });
     page.appendChild(C.chips);
     paintChips();
@@ -1800,11 +1774,24 @@
     listen(D, 'keydown', onCardsKey);
   }
 
+  /* a new user has no mistakes yet — so no cards, just one clear next step */
+  function renderNoCards(page) {
+    C.ended = true;
+    var art = h('div', { class: 'empty-art', 'aria-hidden': 'true' });
+    page.appendChild(h('div', { class: 'empty cards-empty' }, art,
+      h('h3', { text: 'Hələ səhv kartı yoxdur' }),
+      h('p', { text: 'Tapşırıqda tərcüməniz yoxlananda səhvin düzgün variantına baxın — o, buraya kart kimi düşəcək və vaxtaşırı təkrarlanacaq.' }),
+      h('div', { class: 'actions' },
+        h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { App.go('task'); } }, ie('edit'), 'Tapşırıq götür'))));
+    later(function () { mountMini(art, 'idle'); }, 30);
+  }
+
   function paintChips() {
     var tags = [];
     deck().forEach(function (c) { if (tags.indexOf(c.tag) < 0) tags.push(c.tag); });
     if (C.tag && tags.indexOf(C.tag) < 0) C.tag = null;
     C.chips.textContent = '';
+    C.chips.hidden = tags.length < 2;
     [null].concat(tags).forEach(function (tg) {
       var b = h('button', { class: 'chip', type: 'button', 'aria-pressed': C.tag === tg ? 'true' : 'false', text: tg || 'Hamısı' });
       b.addEventListener('click', function () { if (C.tag === tg) return; C.tag = tg; paintChips(); startSession(false); });
@@ -1968,7 +1955,6 @@
     if (C.hard) actions.appendChild(h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { startSession(false); } }, ie('refresh'), 'Çətinləri təkrarla'));
     else if (remaining) actions.appendChild(h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { startSession(false); } }, ie('cards'), 'Yenə ' + Math.min(10, remaining) + ' kart'));
     actions.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { App.go('home'); } }, ie('home'), 'Masaya qayıt'));
-    actions.appendChild(h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { App.go('progress'); } }, ie('chart'), 'İnkişafım'));
     C.wrap.appendChild(h('section', { class: 'card pad-lg carpet cards-done', 'aria-labelledby': 'cards-done-h' },
       medal,
       h('h2', { id: 'cards-done-h', html: 'Təkrar <em>tamamlandı</em>!' }),
@@ -2031,42 +2017,74 @@
      8. PROGRESS SCREEN («Mənim inkişafım»)
      ------------------------------------------------------------------ */
   var EMAP = [
-    { t: 'Yalançı dostlar', s: '«actual», «eventually»', base: 23, types: ['Məna'], tag: 'Yalançı dost', d: -6 },
-    { t: 'Terminologiya', s: 'Lüğətə uyğunluq', base: 15, types: ['Termin'], tag: 'Termin', d: -4 },
-    { t: 'Türk formaları', s: '«için», «içinde»', base: 10, types: ['Türk forması'], tag: 'Türk forması', d: -9 },
-    { t: 'Rəqəm və tarix', s: '12,4% · 15 mart', base: 7, types: ['Rəqəm', 'Tarix', 'Durğu', 'Ad'], tag: 'Rəqəm', d: 2 },
-    { t: 'Üslub və yazılış', s: 'Müraciət, register', base: 5, types: ['Üslub', 'Söz sırası', 'Orfoqrafiya', 'Ardıcıllıq'], tag: 'Üslub', d: -3 }
+    { t: 'Məna və yalançı dostlar', s: '«actual», «eventually»', types: ['Məna', 'Boş seqment'], tag: 'Məna' },
+    { t: 'Terminologiya', s: 'Lüğətə uyğunluq', types: ['Termin'], tag: 'Termin' },
+    { t: 'Türk formaları', s: '«için», «içinde»', types: ['Türk forması'], tag: 'Türk forması' },
+    { t: 'Rəqəm və tarix', s: '12,4% · 15 mart', types: ['Rəqəm', 'Tarix'], tag: 'Rəqəm' },
+    { t: 'Üslub və yazılış', s: 'Müraciət, register, orfoqrafiya', types: ['Üslub', 'Söz sırası', 'Orfoqrafiya', 'Ardıcıllıq', 'Durğu', 'Ad'], tag: 'Üslub' }
   ];
 
   function renderProgress(page) {
     var p = profile(), r = rankOf(p.xp);
-    var hist = scores();
-    var n = hist.length, k = Math.min(4, Math.floor(n / 2) || 1);
-    var avgFirst = Math.round(hist.slice(0, k).reduce(function (s, x) { return s + x.s; }, 0) / k);
-    var avgLast = Math.round(hist.slice(-k).reduce(function (s, x) { return s + x.s; }, 0) / k);
-    var now = skills(), gains = now.map(function (v, i) { return v - SKILL_BEFORE[i]; });
-    var gi = 0; gains.forEach(function (g, i) { if (g > gains[gi]) gi = i; });
+    var hist = scores(), n = hist.length;
+    var now = skills(), base = skillsStart();
+    var sub = 'Hər yoxlanan tərcümə burada iz qoyur: rütbə, ballar və zəif tərəflər.';
+    if (n >= 2) {
+      var k = Math.min(4, Math.floor(n / 2) || 1);
+      var avgFirst = Math.round(hist.slice(0, k).reduce(function (s, x) { return s + x.s; }, 0) / k);
+      var avgLast = Math.round(hist.slice(-k).reduce(function (s, x) { return s + x.s; }, 0) / k);
+      sub = n + ' tapşırıq yoxlanıb. Orta bal ' + avgFirst + '-dən ' + avgLast + '-ə ' + (avgLast > avgFirst ? 'qalxıb' : avgLast < avgFirst ? 'enib' : 'bərabər qalıb') + '.';
+    } else if (n === 1) {
+      sub = 'İlk tapşırıq yoxlanıb — ' + hist[0].s + ' bal. Növbəti nəticələrlə qrafik yaranacaq.';
+    }
 
     page.appendChild(h('div', { class: 'page-h' },
       h('div', null,
         h('span', { class: 'eyebrow', text: 'Akademiya · İnkişaf' }),
         h('h1', { html: 'Mənim <em>inkişafım</em>' }),
-        h('p', { text: 'Son ' + n + ' tapşırıqda orta bal ' + avgFirst + '-dən ' + avgLast + '-ə ' + (avgLast >= avgFirst ? 'qalxıb' : 'dəyişib') + '. Ən böyük irəliləyiş — ' + lower(AXES[gi]) + ' (+' + gains[gi] + ').' })),
-      h('div', { class: 'actions' },
-        h('button', { class: 'btn', type: 'button', onclick: function () { App.toast('Hazırdır', 'ok', { sub: 'Həftəlik hesabat Səbinə müəllimə Telegram-da göndərildi', icon: 'send' }); } }, ie('send'), 'Müəllimə göndər'))));
+        h('p', { text: sub }))));
 
     page.appendChild(rankCard(p, r, hist));
-    page.appendChild(h('div', { class: 'grid-2' }, radarCard(now), lineCard(hist)));
+    if (!n) {
+      page.appendChild(progressEmpty());
+      return;
+    }
+    var charts = [];
+    if (now) charts.push(radarCard(now, base));
+    if (n >= 2) charts.push(lineCard(hist));
+    if (charts.length === 2) page.appendChild(h('div', { class: 'grid-2' }, charts));
+    else charts.forEach(function (c) { page.appendChild(c); });
+    var em = errorMapCard();
     var ms = missionsCard();
-    page.appendChild(h('div', { class: 'grid-2' }, errorMapCard(), ms));
+    if (em) page.appendChild(h('div', { class: 'grid-2' }, em, ms));
+    else page.appendChild(ms);
     page.appendChild(weeklyCard());
-    later(function () { nz('point', AXES[gi] + ' üzrə +' + gains[gi] + ' bal! Radar özü danışır.', 3200); }, 900);
+  }
+
+  function progressEmpty() {
+    var art = h('div', { class: 'empty-art', 'aria-hidden': 'true' });
+    var el = h('div', { class: 'empty' }, art,
+      h('h3', { text: 'Hələ nəticə yoxdur' }),
+      h('p', { text: 'İlk tərcüməniz yoxlananda bacarıqlarınız, ballarınız və səhv xəritəniz burada görünəcək.' }),
+      h('div', { class: 'actions' },
+        h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { App.go('task'); } }, ie('edit'), 'İlk tapşırığa başla')));
+    later(function () { mountMini(art, 'point'); }, 30);
+    return el;
   }
 
   function rankCard(p, r, hist) {
     var pct = Math.round((r.progress || 0) * 100);
-    var avg = Math.round(hist.reduce(function (s, x) { return s + x.s; }, 0) / Math.max(1, hist.length));
+    var xp = Number(p.xp) || 0, streak = Number(p.streak) || 0;
     var R = ranks();
+    var stats = [];
+    if (xp) stats.push(h('div', { class: 'stat' }, h('b', { text: num(xp) }), h('span', { text: 'ümumi XP' })));
+    if (streak) stats.push(h('div', { class: 'stat' }, h('b', { text: String(streak) }), h('span', { text: 'günlük seriya' })));
+    if (hist.length) {
+      var avg = Math.round(hist.reduce(function (s, x) { return s + x.s; }, 0) / hist.length);
+      stats.push(h('div', { class: 'stat' }, h('b', { text: String(hist.length) }), h('span', { text: 'tapşırıq' })));
+      stats.push(h('div', { class: 'stat' }, h('b', { text: String(avg) }), h('span', { text: 'orta bal' })));
+    }
+    var nextTx = r.nextName ? (xp ? r.nextName + ' rütbəsinə ' + num(r.toNext) + ' XP qalıb' : 'Hər tapşırıq XP gətirir. ' + r.nextName + ' rütbəsi ' + num(r.toNext) + ' XP-dədir.') : 'Ən yüksək rütbə — Ustad!';
     return h('section', { class: 'card lacquer pad-lg progress-hero', 'aria-labelledby': 'progress-rank-h' },
       h('div', { class: 'progress-hero-main' },
         h('div', { class: 'progress-hero-l' },
@@ -2074,26 +2092,23 @@
           h('div', { class: 'stack-sm' },
             h('span', { class: 'eyebrow', text: 'Rütbəniz' }),
             h('h2', { class: 'progress-rank', id: 'progress-rank-h', html: '<em>' + esc(r.name) + '</em>' }),
-            h('p', { class: 'muted small', text: r.nextName ? r.nextName + ' rütbəsinə ' + num(r.toNext) + ' XP qalıb' : 'Ən yüksək rütbə — Ustad!' }),
+            h('p', { class: 'muted small', text: nextTx }),
             h('div', { class: 'progress progress-fir', role: 'progressbar', 'aria-label': 'Növbəti rütbəyə', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: 'width:' + pct + '%' })))),
         h('ol', { class: 'progress-ladder', 'aria-label': 'Rütbələr' }, R.map(function (rk, i) {
           return h('li', { class: i < r.index ? 'done' : i === r.index ? 'cur' : '', 'aria-current': i === r.index ? 'step' : null }, h('i', { 'aria-hidden': 'true' }), h('span', { text: rk.name }));
         }))),
-      h('div', { class: 'stats' },
-        h('div', { class: 'stat' }, h('b', { text: num(p.xp || 0) }), h('span', { text: 'ümumi XP' })),
-        h('div', { class: 'stat' }, h('b', { text: String(p.streak || 0) }), h('span', { text: 'günlük seriya' })),
-        h('div', { class: 'stat' }, h('b', { text: String(hist.length) }), h('span', { text: 'tapşırıq' })),
-        h('div', { class: 'stat' }, h('b', { text: String(avg) }), h('span', { text: 'orta bal' }))));
+      stats.length ? h('div', { class: 'stats' }, stats) : null);
   }
 
-  function radarCard(now) {
+  function radarCard(now, base) {
+    var B = base && base.some(function (v, i) { return v !== now[i]; }) ? base : null;
     var cx = 190, cy = 150, R = 92, n = AXES.length;
     function pt(i, v) { var a = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + Math.cos(a) * R * v / 100, cy + Math.sin(a) * R * v / 100]; }
     function poly(vals) { return vals.map(function (v, i) { var q = pt(i, v); return f1(q[0]) + ',' + f1(q[1]); }).join(' '); }
     var s = '<svg class="progress-svg" viewBox="0 0 380 300" aria-hidden="true">';
     [25, 50, 75, 100].forEach(function (v) { s += '<polygon class="g" points="' + poly(AXES.map(function () { return v; })) + '"/>'; });
     AXES.forEach(function (a, i) { var q = pt(i, 100); s += '<line class="sp" x1="' + cx + '" y1="' + cy + '" x2="' + f1(q[0]) + '" y2="' + f1(q[1]) + '"/>'; });
-    s += '<polygon class="b" points="' + poly(SKILL_BEFORE) + '"/>';
+    if (B) s += '<polygon class="b" points="' + poly(B) + '"/>';
     s += '<polygon class="n" points="' + poly(now) + '"/>';
     now.forEach(function (v, i) { var q = pt(i, v); s += '<circle class="d" data-i="' + i + '" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="4"/>'; });
     AXES.forEach(function (a, i) {
@@ -2102,11 +2117,11 @@
       var anchor = c > 0.3 ? 'start' : c < -0.3 ? 'end' : 'middle';
       var y1, y2;
       if (sn < -0.5) { y1 = y - 16; y2 = y - 1; } else if (sn > 0.5) { y1 = y + 8; y2 = y + 23; } else { y1 = y - 3; y2 = y + 13; }
-      var g = now[i] - SKILL_BEFORE[i];
+      var g = B ? now[i] - B[i] : 0;
       s += '<text x="' + f1(x) + '" y="' + f1(y1) + '" text-anchor="' + anchor + '">' + esc(a) + '</text>';
       s += '<text class="lv" x="' + f1(x) + '" y="' + f1(y2) + '" text-anchor="' + anchor + '">' + now[i] + (g ? ' <tspan class="' + (g > 0 ? 'up' : 'dn') + '">' + (g > 0 ? '+' : '−') + Math.abs(g) + '</tspan>' : '') + '</text>';
     });
-    now.forEach(function (v, i) { var q = pt(i, v); s += '<circle class="hit" tabindex="0" role="img" aria-label="' + esc(AXES[i]) + ': ' + v + ', 4 həftə əvvəl ' + SKILL_BEFORE[i] + '" data-i="' + i + '" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="14"/>'; });
+    now.forEach(function (v, i) { var q = pt(i, v); s += '<circle class="hit" tabindex="0" role="img" aria-label="' + esc(AXES[i]) + ': ' + v + (B ? ', başlanğıcda ' + B[i] : '') + '" data-i="' + i + '" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="14"/>'; });
     s += '</svg>';
     var wrap = h('div', { class: 'progress-chart', html: s });
     var tip = h('div', { class: 'progress-tip', 'aria-hidden': 'true' });
@@ -2117,7 +2132,7 @@
       tip.textContent = '';
       tip.appendChild(h('b', { text: String(now[i]) }));
       tip.appendChild(h('span', { text: AXES[i] }));
-      tip.appendChild(h('span', { text: '4 həftə əvvəl: ' + SKILL_BEFORE[i] }));
+      if (B) tip.appendChild(h('span', { text: 'Başlanğıcda: ' + B[i] }));
       tip.style.left = clamp(q[0] * sc, 64, r.width - 64) + 'px';
       tip.style.top = (q[1] * sc) + 'px';
       tip.classList.add('on');
@@ -2135,11 +2150,11 @@
     var table = h('details', { class: 'progress-tbl' },
       h('summary', null, ie('chevron'), 'Cədvəl kimi göstər'),
       h('div', { class: 'table-wrap' }, h('table', { class: 'table compact' },
-        h('thead', null, h('tr', null, h('th', { text: 'Bacarıq' }), h('th', { class: 'num', text: '4 həftə əvvəl' }), h('th', { class: 'num', text: 'İndi' }))),
-        h('tbody', null, AXES.map(function (a, i) { return h('tr', null, h('td', { text: a }), h('td', { class: 'num', text: String(SKILL_BEFORE[i]) }), h('td', { class: 'num' }, h('b', { text: String(now[i]) }))); })))));
+        h('thead', null, h('tr', null, h('th', { text: 'Bacarıq' }), B ? h('th', { class: 'num', text: 'Başlanğıcda' }) : null, h('th', { class: 'num', text: 'İndi' }))),
+        h('tbody', null, AXES.map(function (a, i) { return h('tr', null, h('td', { text: a }), B ? h('td', { class: 'num', text: String(B[i]) }) : null, h('td', { class: 'num' }, h('b', { text: String(now[i]) }))); })))));
     return h('section', { class: 'card progress-card', 'aria-labelledby': 'progress-radar-h' },
       h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow', text: 'Bacarıqlar' }), h('h2', { id: 'progress-radar-h', text: 'Bacarıq radarı' }))),
-      h('div', { class: 'progress-legend' }, h('span', null, h('i', { 'aria-hidden': 'true' }), 'İndi'), h('span', null, h('i', { class: 'b', 'aria-hidden': 'true' }), '4 həftə əvvəl')),
+      B ? h('div', { class: 'progress-legend' }, h('span', null, h('i', { 'aria-hidden': 'true' }), 'İndi'), h('span', null, h('i', { class: 'b', 'aria-hidden': 'true' }), 'Başlanğıcda')) : null,
       wrap, table);
   }
 
@@ -2221,26 +2236,28 @@
 
   function errorMapCard() {
     var lg = sget('academy:errlog', {}) || {};
-    var rows = EMAP.map(function (m) { var extra = 0; m.types.forEach(function (t) { extra += Number(lg[t]) || 0; }); return { m: m, n: m.base + extra }; });
-    var total = rows.reduce(function (a, r) { return a + r.n; }, 0) || 1;
-    var maxShare = rows.reduce(function (a, r) { return Math.max(a, r.n / total); }, 0) || 1;
-    var top = rows.slice().sort(function (a, b) { return b.n - a.n; })[0];
+    var rows = EMAP.map(function (m) { var c = 0; m.types.forEach(function (t) { c += Number(lg[t]) || 0; }); return { m: m, n: c }; })
+      .filter(function (r) { return r.n > 0; })
+      .sort(function (a, b) { return b.n - a.n; });
+    if (!rows.length) return null;
+    var total = rows.reduce(function (a, r) { return a + r.n; }, 0);
+    var maxN = rows[0].n;
+    var top = rows[0];
     return h('section', { class: 'card progress-card', 'aria-labelledby': 'progress-emap-h' },
       h('div', { class: 'card-h' },
         h('div', null, h('span', { class: 'eyebrow', text: 'Zəif tərəflər' }), h('h2', { id: 'progress-emap-h', text: 'Səhvlərin xəritəsi' })),
-        h('span', { class: 'small muted', text: 'son 30 gün · ' + total + ' səhv' })),
+        h('span', { class: 'small muted', text: total + ' səhv' })),
       h('div', { class: 'progress-emap' }, rows.map(function (r, i) {
         var share = Math.round(r.n / total * 100), m = r.m;
-        var b = h('button', { class: 'progress-erow', type: 'button', 'aria-label': m.t + ': səhvlərin ' + share + '%-i, ' + r.n + ' səhv. Bu mövzuda kartları təkrarla' },
+        var b = h('button', { class: 'progress-erow', type: 'button', 'aria-label': m.t + ': səhvlərin ' + share + '%-i, ' + r.n + ' səhv. Kartlara bax' },
           h('span', { class: 'progress-erow-t' }, m.t, h('small', { text: m.s })),
-          h('span', { class: 'progress' + (i ? ' gold' : ''), 'aria-hidden': 'true' }, h('i', { style: 'width:' + Math.round(r.n / total / maxShare * 100) + '%' })),
-          h('span', { class: 'progress-erow-v' }, share + '%',
-            h('span', { class: 'delta' + (m.d > 0 ? ' down' : ''), title: 'Keçən aya nisbətən, faiz bəndi', text: (m.d > 0 ? '+' : '−') + Math.abs(m.d) })));
+          h('span', { class: 'progress' + (i ? ' gold' : ''), 'aria-hidden': 'true' }, h('i', { style: 'width:' + Math.round(r.n / maxN * 100) + '%' })),
+          h('span', { class: 'progress-erow-v' }, share + '%'));
         b.addEventListener('click', function () { App.go('cards', { tag: m.tag }); });
         return b;
       })),
       h('div', { class: 'callout' }, ie('bulb'),
-        h('div', null, 'Ən çox səhv — ', h('b', { text: lower(top.m.t) }), '. Sətrə toxunun: həmin mövzunun kartları açılacaq.')));
+        h('div', null, 'Ən çox səhv — ', h('b', { text: lower(top.m.t) }), '.')));
   }
 
   function missionsCard() {
@@ -2279,17 +2296,9 @@
   }
 
   function weeklyCard() {
-    var wk = weeklyCount(), p = profile();
+    var wk = weeklyCount();
     var dl = 6 - ((new Date().getDay() + 6) % 7);
     var claimedKey = 'academy:wclaim:' + weekKey(), claimed = !!sget(claimedKey, false);
-    var meXP = 380 + wk * 45 + Math.min(todayXP(), 200);
-    var board = [
-      { name: 'Leyla Həsənova', xp: 640, av: 'av-firuze', ini: 'LH' },
-      { name: 'Murad Əliyev', xp: 515, av: 'av-lacquer', ini: 'MƏ' },
-      { name: 'Nigar Quliyeva', xp: 470, av: 'av-benovse', ini: 'NQ' },
-      { name: 'Tural Babayev', xp: 355, av: 'av-zeytun', ini: 'TB' },
-      { name: (p.name || 'Siz') + ' (siz)', xp: meXP, av: p.avatarColor || 'av-firuze', ini: p.initials || 'AM', me: true }
-    ].sort(function (a, b) { return b.xp - a.xp; });
     var action;
     if (wk >= 5 && !claimed) {
       action = h('button', { class: 'btn btn-primary', type: 'button' }, ie('medal'), '+150 XP al');
@@ -2317,16 +2326,7 @@
           h('div', { class: 'progress-week-meta' }, h('span', { text: wk + ' / 5 mətn' }), h('span', { text: dl === 0 ? 'bu gün bitir' : dl + ' gün qalıb' })),
           h('div', { class: 'progress-reward' }, h('span', { class: 'medal sm', 'aria-hidden': 'true' }, h('b', { text: 'M' })),
             h('span', null, h('b', { text: 'Mükafat: «Möhürdar» nişanı' }), h('small', { text: '+150 XP və profilinizdə möhür' }))),
-          action),
-        h('div', null,
-          h('h3', { class: 'progress-lb-h', text: 'Qrup reytinqi · BDU, 3-cü kurs' }),
-          h('ol', { class: 'progress-lb' }, board.map(function (b, i) {
-            return h('li', { class: b.me ? 'me' : '' },
-              h('span', { class: 'n', text: String(i + 1) }),
-              h('span', { class: 'avatar sm ' + b.av, 'aria-hidden': 'true', text: b.ini }),
-              h('span', { class: 'nm', text: b.name }),
-              h('span', { class: 'xp', text: num(b.xp) + ' XP' }));
-          })))));
+          action)));
   }
 
   /* ------------------------------------------------------------------
