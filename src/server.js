@@ -34,6 +34,8 @@ export default {
     try {
       if (p === "/api") return request.method === "POST" ? handleApi(request, env) : json({ error: "method" }, 405);
       if (p === "/tg") return request.method === "POST" ? handleTelegram(request, env, ctx) : new Response("ok");
+      if (p === "/grammar") return request.method === "POST" ? handleGrammar(request, env) : json({ ok: false, error: "method" }, 405);
+      if (p === "/grammar/docs") return json(GRAMMAR_DOCS, 200, { "cache-control": "public, max-age=300" });
       if (p === "/lib") return request.method === "GET" ? handleLib(request, env, url, ctx) : json({ ok: false, error: "method" }, 405);
       if (p === "/setup") return handleSetup(request, env, url);
       if (p === "/health") return json({ ok: true, ai: !!env.GEMINI_KEY, bot: !!env.TG_TOKEN, locked: !!env.ACCESS_CODE });
@@ -98,7 +100,7 @@ function allow(key, limit, windowMs) {
 function clientIp(request) { return request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "unknown"; }
 
 // ---------- Gemini ----------
-async function gemini(env, prompt, speed) {
+async function gemini(env, prompt, speed, temperature) {
   if (!env.GEMINI_KEY) throw { code: "not_configured", status: 500 };
   const models = [env.MODEL || "gemini-flash-latest", "gemini-flash-lite-latest"];
   const variants = [];
@@ -109,7 +111,7 @@ async function gemini(env, prompt, speed) {
   for (const m of models) {
     let vi = 0, retried = false;
     while (vi < variants.length) {
-      const gc = { responseMimeType: "application/json", temperature: 0.4, maxOutputTokens: 8192 };
+      const gc = { responseMimeType: "application/json", temperature: typeof temperature === "number" ? temperature : 0.4, maxOutputTokens: 8192 };
       if (variants[vi]) gc.thinkingConfig = variants[vi];
       let r;
       try {
