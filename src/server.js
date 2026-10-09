@@ -150,6 +150,187 @@ async function handleApi(request, env) {
   catch (e) { return json({ error: e.code || "server_error" }, e.status || 502); }
 }
 
+// ---------- Kitabxana: Vikimənbə (Wikisource) proksisi ----------
+// GET /lib?op=search|cat|page&lang=az|en&q=...|title=...
+// Yalnız az/en.wikisource.org MediaWiki API-si — ixtiyari URL qəbul edilmir.
+const LIB_HOSTS = { az: "az.wikisource.org", en: "en.wikisource.org" };
+const LIB_UA = "Nuanza/1.0 (translator training app)";
+const LIB_LICENCE = "CC BY-SA 4.0 / ictimai mülkiyyət (Vikimənbə)";
+const LIB_MAX_TEXT = 60000;
+const LIB_TTL = { page: 7 * 24 * 3600, cat: 24 * 3600, search: 24 * 3600 };
+
+async function handleLib(request, env, url, ctx) {
+  if (env.ACCESS_CODE && !sameText(request.headers.get("x-access-code") || "", env.ACCESS_CODE)) return json({ ok: false, error: "bad_code" }, 401);
+  const limit = parseInt(env.LIB_LIMIT, 10) || 120;
+  if (!allow("lib:" + clientIp(request), limit, 10 * 60 * 1000)) return json({ ok: false, error: "rate_limited" }, 429);
+  const sp = url.searchParams, op = sp.get("op") || "", lang = sp.get("lang") || "az";
+  if (!LIB_TTL[op] || !LIB_HOSTS[lang]) return json({ ok: false, error: "invalid_request" }, 400);
+  let arg = String(op === "search" ? sp.get("q") || "" : sp.get("title") || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  if (!arg) return json({ ok: false, error: "invalid_request" }, 400);
+  if (arg.length > 250) return json({ ok: false, error: "prompt_too_large" }, 400);
+  if (op !== "search") arg = arg.split("#")[0].trim();
+  if (!arg) return json({ ok: false, error: "invalid_request" }, 400);
+  if (op === "cat" && !/^(kateqoriya|category):/i.test(arg)) arg = (lang === "az" ? "Kateqoriya:" : "Category:") + arg;
+
+  const cache = typeof caches !== "undefined" && caches.default ? caches.default : null;
+  const key = new Request("https://nuanza-lib.internal/" + op + "/" + lang + "?k=" + encodeURIComponent(arg));
+  if (cache) {
+    try { const hit = await cache.match(key); if (hit) { const r = new Response(hit.body, hit); r.headers.set("x-lib-cache", "hit"); return r; } } catch (e) {}
+  }
+  let data;
+  try { data = await libFetch(op, lang, arg); }
+  catch (e) { return json({ ok: false, error: e.code || "upstream_error" }, e.status || 502); }
+  const res = json({ ok: true, data: data }, 200, { "cache-control": "public, max-age=" + LIB_TTL[op] });
+  if (cache) {
+    const put = cache.put(key, res.clone()).catch(function () {});
+    if (ctx && ctx.waitUntil) ctx.waitUntil(put);
+  }
+  return res;
+}
+
+async function libApi(lang, params) {
+  const u = new URL("https://" + LIB_HOSTS[lang] + "/w/api.php");
+  Object.keys(params).forEach(function (k) { u.searchParams.set(k, params[k]); });
+  u.searchParams.set("format", "json");
+  u.searchParams.set("formatversion", "2");
+  u.searchParams.set("maxlag", "5");
+  const ctl = new AbortController(), timer = setTimeout(function () { ctl.abort(); }, 12000);
+  let r;
+  try {
+    r = await fetch(u.toString(), { headers: { "user-agent": LIB_UA, "api-user-agent": LIB_UA, accept: "application/json" }, signal: ctl.signal });
+  } catch (e) { clearTimeout(timer); throw { code: e && e.name === "AbortError" ? "timeout" : "upstream_error", status: e && e.name === "AbortError" ? 504 : 502 }; }
+  let j = null;
+  try { j = await r.json(); } catch (e) {}
+  clearTimeout(timer);
+  if (r.status === 429 || (j && j.error && j.error.code === "maxlag")) throw { code: "rate_limited", status: 429 };
+  if (!r.ok || !j) throw { code: "upstream_error", status: 502 };
+  if (j.error) {
+    const c = j.error.code;
+    throw c === "missingtitle" || c === "invalidtitle" || c === "nosuchpageid" ? { code: "not_found", status: 404 } : { code: "upstream_error", status: 502 };
+  }
+  return j;
+}
+
+function libUrl(lang, title) {
+  return "https://" + LIB_HOSTS[lang] + "/wiki/" + encodeURIComponent(String(title).replace(/ /g, "_")).replace(/%2F/g, "/").replace(/%3A/g, ":");
+}
+
+async function libFetch(op, lang, arg) {
+  if (op === "search") {
+    const j = await libApi(lang, { action: "query", list: "search", srsearch: arg, srnamespace: "0", srlimit: "20", srprop: "snippet|size" });
+    return ((j.query && j.query.search) || []).map(function (x) { return { title: x.title, snippet: wsInline(x.snippet || ""), size: x.size || 0 }; });
+  }
+  if (op === "cat") {
+    const j = await libApi(lang, { action: "query", list: "categorymembers", cmtitle: arg, cmlimit: "100", cmprop: "title|type" });
+    return ((j.query && j.query.categorymembers) || []).map(function (x) { return { title: x.title, ns: x.ns }; });
+  }
+  const j = await libApi(lang, { action: "parse", page: arg, prop: "text|displaytitle", redirects: "1", disableeditsection: "1", disabletoc: "1", disablelimitreport: "1" });
+  const pr = j.parse;
+  if (!pr || typeof pr.text !== "string") throw { code: "not_found", status: 404 };
+  const title = pr.title || arg;
+  let text = wsHtmlToText(pr.text), truncated = false;
+  if (text.length > LIB_MAX_TEXT) {
+    const cut = text.lastIndexOf("\n\n", LIB_MAX_TEXT);
+    text = text.slice(0, cut > LIB_MAX_TEXT * 0.8 ? cut : LIB_MAX_TEXT).trim();
+    truncated = true;
+  }
+  return {
+    title: title,
+    displaytitle: wsInline(pr.displaytitle || title) || title,
+    text: text,
+    truncated: truncated,
+    links: wsLinks(pr.text).slice(0, 300),
+    url: libUrl(lang, title),
+    licence: LIB_LICENCE
+  };
+}
+
+// HTML → təmiz mətn. Regex əsaslıdır (Node-da test edilə bilir), MediaWiki parse çıxışı üçün.
+const WS_ENT = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", ndash: "–", mdash: "—", hellip: "…", laquo: "«", raquo: "»", lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”", bdquo: "„", shy: "", zwj: "", zwnj: "", lrm: "", rlm: "", middot: "·", bull: "•", copy: "©", deg: "°", times: "×", thinsp: " ", ensp: " ", emsp: " ", sect: "§", para: "¶" };
+function wsDecode(s) {
+  return String(s).replace(/&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi, function (m, e) {
+    if (e[0] === "#") {
+      const n = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+      if (!isFinite(n) || n <= 0 || n > 0x10ffff || (n >= 0xd800 && n <= 0xdfff)) return "";
+      return n === 0xa0 ? " " : String.fromCodePoint(n);
+    }
+    const v = WS_ENT[e] !== undefined ? WS_ENT[e] : WS_ENT[e.toLowerCase()];
+    return v !== undefined ? v : m;
+  });
+}
+function wsInline(html) { return wsDecode(String(html).replace(/<[^>]*>/g, "")).replace(/\s+/g, " ").trim(); }
+
+// Elementləri (iç-içə eyni teqlər nəzərə alınmaqla) tam silir: test(tag, attrs) true qaytaranda.
+function wsDrop(html, test) {
+  const open = /<([a-z][a-z0-9]*)\b([^>]*)>/gi;
+  let out = "", pos = 0, m;
+  while ((m = open.exec(html))) {
+    const tag = m[1].toLowerCase(), attrs = m[2];
+    if (!test(tag, attrs)) continue;
+    out += html.slice(pos, m.index);
+    if (/\/\s*$/.test(attrs) || /^(br|hr|img|input|meta|link|wbr)$/.test(tag)) { pos = open.lastIndex; continue; }
+    const re = new RegExp("<(/?)" + tag + "\\b[^>]*>", "gi");
+    re.lastIndex = open.lastIndex;
+    let depth = 1, t, end = html.length;
+    while ((t = re.exec(html))) {
+      if (t[1]) { depth--; if (!depth) { end = re.lastIndex; break; } }
+      else if (!/\/\s*>$/.test(t[0])) depth++;
+    }
+    pos = end; open.lastIndex = end;
+  }
+  return out + html.slice(pos);
+}
+const WS_DROP_CLASS = /(^|\s)(mw-editsection|mw-editsection-like|reference|references|mw-references-wrap|reflist|refbegin|mw-cite-backlink|navbox|vertical-navbox|navbox-inner|metadata|noprint|ws-noexport|noexport|headertemplate|ws-header|wst-header|header_notes|header-notes|toc|toccolours|mw-jump-link|catlinks|printfooter|licenseContainer|licence|license|ambox|mbox-small|plainlinks-print|sisterproject|interProject|wst-center-navigation|ws-pagenum|pagenum|mw-empty-elt|mw-headline-number|sortkey|mw-kartographer-container|wst-licence|wst-license|hiddenStructure|ws-summary|mw-ext-score)(\s|$)/;
+const WS_DROP_ID = /^(headertemplate|header|toc|navigation|ws-data|footer|catlinks|references|nav_bar|licenseContainer)$/i;
+function wsHtmlToText(html) {
+  let s = String(html || "");
+  s = s.replace(/<!--[\s\S]*?-->/g, "");
+  s = wsDrop(s, function (tag, attrs) {
+    if (tag === "style" || tag === "script" || tag === "noscript" || tag === "link" || tag === "meta" || tag === "img" || tag === "audio" || tag === "video" || tag === "figure" || tag === "math" || tag === "svg") return true;
+    const c = /\sclass\s*=\s*["']([^"']*)["']/i.exec(attrs), id = /\sid\s*=\s*["']([^"']*)["']/i.exec(attrs);
+    if (c && WS_DROP_CLASS.test(c[1])) return true;
+    if (id && WS_DROP_ID.test(id[1])) return true;
+    if (tag === "sup" && c && /reference/.test(c[1])) return true;
+    if (/\sstyle\s*=\s*["'][^"']*display\s*:\s*none/i.test(attrs)) return true;
+    if (tag === "span" && c && /(^|\s)(mw-cite-backlink|cite-bracket)(\s|$)/.test(c[1])) return true;
+    return false;
+  });
+  // [1], [2] kimi qalmış istinad işarələri
+  s = s.replace(/<sup\b[^>]*>\s*\[\s*\d+\s*\]\s*<\/sup>/gi, "");
+  s = s.replace(/[\s]+/g, " ");                                          // HTML boşluqları
+  s = s.replace(/<br\b[^>]*>/gi, "\n");
+  s = s.replace(/<\/?(p|div|h[1-6]|blockquote|pre|ol|ul|dl|table|tbody|thead|center|section|poem|hr)\b[^>]*>/gi, "\n\n");
+  s = s.replace(/<li\b[^>]*>/gi, "\n• ").replace(/<\/li>/gi, "\n");
+  s = s.replace(/<(dd|dt)\b[^>]*>/gi, "\n").replace(/<\/(dd|dt)>/gi, "\n");
+  s = s.replace(/<tr\b[^>]*>/gi, "\n").replace(/<\/tr>/gi, "\n");
+  s = s.replace(/<\/t[dh]>\s*<t[dh]\b[^>]*>/gi, "    ").replace(/<\/?t[dh]\b[^>]*>/gi, "");
+  s = s.replace(/<[^>]*>/g, "");
+  s = wsDecode(s).replace(/ /g, " ").replace(/[​‎‏﻿]/g, "");
+  s = s.split("\n").map(function (l) { return l.replace(/[ \t]+/g, " ").trim(); }).join("\n");
+  s = s.replace(/\n{3,}/g, "\n\n").replace(/^\s+|\s+$/g, "");
+  // tək qalmış «• » sətirləri
+  s = s.replace(/^•\s*$/gm, "").replace(/\n{3,}/g, "\n\n");
+  return s;
+}
+const WS_SKIP_NS = /^(kateqoriya|category|fayl|file|şəkil|image|media|vikimənbə|wikisource|portal|şablon|template|kömək|help|xüsusi|special|mediawiki|istifadəçi|user|müzakirə|talk|[^:/]*müzakirəsi|[^:/]* talk|index|indeks|page|səhifə|module|modul|translation|tərcümə)\s*:/i;
+// Daxili keçidlər (müəllif səhifələrindəki əsərlər siyahısı üçün): yalnız əsas ad fəzası.
+function wsLinks(html) {
+  const seen = {}, out = [];
+  const clean = wsDrop(String(html || ""), function (tag, attrs) {
+    const c = /\sclass\s*=\s*["']([^"']*)["']/i.exec(attrs), id = /\sid\s*=\s*["']([^"']*)["']/i.exec(attrs);
+    return !!((c && WS_DROP_CLASS.test(c[1]) && !/(^|\s)(plainlinks)(\s|$)/.test(c[1])) || (id && WS_DROP_ID.test(id[1])));
+  });
+  const re = /<a\b[^>]*\shref\s*=\s*"\/wiki\/([^"#?]+)[^"]*"[^>]*>/gi;
+  let m;
+  while ((m = re.exec(clean))) {
+    if (/\sclass\s*=\s*"[^"]*\bnew\b/.test(m[0])) continue;
+    let t; try { t = decodeURIComponent(m[1]).replace(/_/g, " "); } catch (e) { continue; }
+    if (WS_SKIP_NS.test(t)) continue; // xidməti ad fəzaları (Kateqoriya:, Fayl:, Şablon: …); Müəllif:/Author: qalır
+    if (!seen[t]) { seen[t] = 1; out.push(t); }
+  }
+  return out;
+}
+
 // ---------- Telegram ----------
 function hx(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 async function tgSecret(token) { return (await sha("nuanza-tg:" + token)).slice(0, 48); }
