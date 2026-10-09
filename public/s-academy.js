@@ -385,7 +385,63 @@
   ].filter(function (c) { return TASKS.some(function (t) { return !t.sim && (t.col || 'base') === c.id; }); });
   function colOf(t) { return (t && t.col) || 'base'; }
 
-  function taskById(id) { for (var i = 0; i < TASKS.length; i++) if (TASKS[i].id === id) return TASKS[i]; return null; }
+  /* curriculum domains (data-domains-*.js): window.NUANZA_DOMAINS[key] = { key, name, icon, why, glossary[{en,az,note}], tasks[] }.
+     Domain tasks join the base collection («Nuanza tapşırıqları») and carry `dkey`; the «Sahə» chip row filters by it. */
+  var DOMAINS = [];
+  var ICON_FB = { code: 'keyboard', megaphone: 'message', scale: 'shield', gavel: 'shield', law: 'shield', coins: 'chart', money: 'chart', bank: 'chart',
+    oil: 'flame', drop: 'flame', fuel: 'flame', doc: 'file', docs: 'file', stethoscope: 'heart', medical: 'heart', news: 'file', film: 'play' };
+  function domIcon(n) {
+    n = String(n || '');
+    if (!n) return 'book';
+    try { if (App.icon(n).replace('i-' + n, 'i-dot') !== App.icon('dot')) return n; } catch (e) { /* fall through */ }
+    return ICON_FB[n] || 'book';
+  }
+  (function () {
+    var src = W.NUANZA_DOMAINS && typeof W.NUANZA_DOMAINS === 'object' ? W.NUANZA_DOMAINS : null;
+    if (!src) return;
+    Object.keys(src).forEach(function (k) {
+      var d = src[k];
+      if (!d || typeof d !== 'object') return;
+      var key = String(d.key || k), name = String(d.name || k);
+      var gl = (Array.isArray(d.glossary) ? d.glossary : []).filter(function (g) { return g && g.en && g.az; })
+        .map(function (g) { return { en: String(g.en), az: String(g.az), note: g.note ? String(g.note) : '' }; });
+      var n = 0;
+      (Array.isArray(d.tasks) ? d.tasks : []).forEach(function (t) {
+        if (!t || !t.id || !t.src || !levelById(t.level) || taskById(t.id)) return;
+        TASKS.push({ id: String(t.id), dkey: key, level: t.level, domain: t.domain || name, reg: t.reg || 'Neytral', client: t.client || name, title: t.title || name,
+          xp: Number(t.xp) || LV_XP[t.level] || 30, minutes: Number(t.minutes) || minsOf(words(t.src)), src: String(t.src), model: t.model || '',
+          hints: Array.isArray(t.hints) ? t.hints : [], draft: t.draft || '', tip: t.tip || '', traps: Array.isArray(t.traps) ? t.traps : [] });
+        n++;
+      });
+      if (!n && !gl.length) return;
+      DOMAINS.push({ key: key, name: name, icon: domIcon(d.icon), why: String(d.why || ''), glossary: gl, count: n });
+    });
+  })();
+  function domByKey(k) { for (var i = 0; i < DOMAINS.length; i++) if (DOMAINS[i].key === k) return DOMAINS[i]; return null; }
+
+  /* «Kitabxana» → «Tapşırığa çevir»: one-off task from App.store 'academy:custom' (kept as 'academy:customTask' so a reload resumes it) */
+  var CUSTOM = null;
+  function customFrom(c) {
+    if (!c || typeof c !== 'object' || !String(c.src || '').trim()) return null;
+    var src = String(c.src).trim(), n = words(src), lv = n <= 30 ? 'B1' : n <= 60 ? 'B2' : 'C1';
+    var sl = c.srcLang === 'az' ? 'az' : 'en';
+    var url = /^https?:\/\//i.test(String(c.url || '')) ? String(c.url) : '';
+    return { id: 'custom-' + (c.at || Date.now()), level: lv, domain: 'Kitabxana', reg: 'Neytral', client: String(c.source || 'Kitabxana'),
+      title: String(c.title || 'Kitabxana mətni'), xp: LV_XP[lv] || 30, minutes: minsOf(n), src: src, model: '', hints: [], draft: '',
+      tip: 'Bu mətn Kitabxanadan gəlir — model tərcümə yoxdur, Nuanza yoxlayacaq.', traps: [], custom: true, srcLang: sl,
+      source: String(c.source || ''), licence: String(c.licence || ''), url: url };
+  }
+  function pairOf(task) { var s = task && task.srcLang === 'az' ? 'az' : 'en'; return { from: s, to: s === 'az' ? 'en' : 'az' }; }
+
+  function taskById(id) {
+    for (var i = 0; i < TASKS.length; i++) if (TASKS[i].id === id) return TASKS[i];
+    if (CUSTOM && CUSTOM.id === id) return CUSTOM;
+    if (id && String(id).indexOf('custom-') === 0) {
+      var c = sget('academy:customTask', null);
+      if (c && c.id === id && c.src) { CUSTOM = c; return c; }
+    }
+    return null;
+  }
 
   var SEV = { 'Türk forması': 'mid', 'Rəqəm': 'high', 'Termin': 'mid', 'Məna': 'high', 'Orfoqrafiya': 'mid', 'Üslub': 'low', 'Durğu': 'low', 'Ad': 'mid', 'Tarix': 'high', 'Söz sırası': 'low', 'Ardıcıllıq': 'mid', 'Boş seqment': 'high', 'Buraxma': 'high', 'Əlavə': 'mid' };
   var SEV_LABEL = { high: 'Kritik', mid: 'Vacib', low: 'Kiçik' };
@@ -883,11 +939,22 @@
   function renderTask(page, params) {
     var lvParam = params.level && levelById(params.level) ? params.level : null;
     T = { page: page, task: null, hints: 0, result: null, checking: false, level: lvParam || sget('academy:level', 'B2'), lastChecked: null,
-      mode: params.mode === 'hunt' || params.mode === 'tr' ? params.mode : sget('academy:tmode', 'tr'), col: sget('academy:col', 'base'), hunt: null };
+      mode: params.mode === 'hunt' || params.mode === 'tr' ? params.mode : sget('academy:tmode', 'tr'), col: sget('academy:col', 'base'), hunt: null,
+      dom: sget('academy:dom', '') };
     if (!levelById(T.level)) T.level = 'B2';
     if (T.mode !== 'hunt' || !HUNT.length) T.mode = 'tr';
     if (!COLS.some(function (c) { return c.id === T.col; })) T.col = 'base';
-    if (params.col && COLS.some(function (c) { return c.id === params.col; })) { T.col = params.col; T.mode = 'tr'; }
+    if (params.col && COLS.some(function (c) { return c.id === params.col; })) { T.col = params.col; T.mode = 'tr'; T.dom = ''; }
+    if (params.dom && domByKey(params.dom)) { T.dom = params.dom; T.col = 'base'; T.mode = 'tr'; }
+    if (!domByKey(T.dom)) T.dom = '';
+    if (T.dom && T.col !== 'base') T.dom = '';
+    var custom = null;
+    if (params.custom) {
+      custom = customFrom(sget('academy:custom', null));
+      try { if (App.store.remove) App.store.remove('academy:custom'); else sset('academy:custom', null); } catch (e) { sset('academy:custom', null); }
+      if (custom) { CUSTOM = custom; sset('academy:customTask', custom); T.mode = 'tr'; T.col = 'base'; T.dom = ''; }
+      else later(function () { App.toast('Kitabxana mətni tapılmadı', 'info', { sub: 'Kitabxanada parçanı seçib «Tapşırığa çevir» düyməsinə yenidən toxunun' }); }, 300);
+    }
 
     page.appendChild(h('div', { class: 'page-h' },
       h('div', null,
@@ -912,8 +979,8 @@
     page.appendChild(T.huntSlot);
 
     var st = sget('academy:task', null);
-    var pick = params.id ? taskById(params.id) : null;
-    if (pick) T.mode = 'tr';
+    var pick = custom || (params.id ? taskById(params.id) : null);
+    if (pick) { T.mode = 'tr'; T.dom = pick.dkey || ''; }
     paintMode();
     if (T.mode === 'hunt') {
       loadHunt(nextHunt(T.level));
@@ -922,7 +989,8 @@
       setLevel(pick.level);
       loadTask(pick, {});
       later(function () { nz('read', pick.tip, 3200); }, 700);
-    } else if (!lvParam && !params.domain && !params.col && st && taskById(st.id) && colOf(taskById(st.id)) === T.col) {
+    } else if (!lvParam && !params.domain && !params.col && !params.dom && st && taskById(st.id) && colOf(taskById(st.id)) === T.col &&
+        (!T.dom || taskById(st.id).dkey === T.dom)) {
       var t0 = taskById(st.id);
       setLevel(t0.level);
       loadTask(t0, { text: st.text, hints: st.hints, reg: st.reg });
