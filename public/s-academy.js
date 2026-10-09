@@ -349,18 +349,50 @@
         { w: ['Dekanın'], cs: true, now: 'dekanın', type: 'Orfoqrafiya', why: 'Vəzifə adları cümlə ortasında kiçik hərflə yazılır: «dekan», «rektor».', ex: 'the Dean of the School → məktəbin dekanı' }
       ] }
   ];
+  /* real material (data-real.js): NTREX-128 news («ok» → translation tasks, «flawed» → «Səhvi tap»)
+     and the UDHR («Məşhur sənədlər»). Base tasks have no `col` and stay the default collection. */
+  var REAL = W.NUANZA_REAL && typeof W.NUANZA_REAL === 'object' ? W.NUANZA_REAL : null;
+  var NTREX_LINE = 'Mənbə: NTREX-128 (Microsoft) · CC BY-SA 4.0';
+  var UDHR_LINE = 'Mənbə: BMT · İnsan Hüquqları haqqında Ümumi Bəyannamə (1948), rəsmi Azərbaycan tərcüməsi';
+  var LV_XP = { A2: 20, B1: 20, B2: 30, C1: 40 };
+  function minsOf(n) { return Math.max(3, Math.round((Number(n) || 0) / 9) + 2); }
+  var HUNT = [];
+  if (REAL) {
+    (Array.isArray(REAL.items) ? REAL.items : []).forEach(function (it) {
+      if (!it || !it.id || !it.src || !it.model || !levelById(it.level)) return;
+      if (it.status === 'ok') {
+        TASKS.push({ id: it.id, col: 'news', level: it.level, domain: it.domain || 'Xəbər', reg: 'Neytral', client: 'Real xəbər · NTREX', title: it.title || 'Real xəbər',
+          xp: LV_XP[it.level] || 30, minutes: minsOf(it.words), src: it.src, model: it.model, hints: it.hints || [], tip: it.tip || 'Real xəbər mətnidir — adlara, rəqəmlərə və mənaya diqqət!',
+          draft: '', traps: [], credit: NTREX_LINE, modelLabel: 'Dərc olunmuş peşəkar tərcümə', modelNote: 'NTREX-128 korpusunda dərc olunmuş istinad tərcüməsi. Yeganə düzgün variant deyil — öz variantınızla müqayisə edin.' });
+      } else if (it.status === 'flawed' && Array.isArray(it.errors) && it.errors.length) HUNT.push(it);
+    });
+    (Array.isArray(REAL.docs) ? REAL.docs : []).forEach(function (d) {
+      if (!d || !d.id || !d.src || !d.model || !levelById(d.level)) return;
+      TASKS.push({ id: d.id, col: 'docs', level: d.level, domain: 'Hüquq · beynəlxalq', reg: 'Hüquqi', client: 'BMT sənədi', title: d.title,
+        xp: LV_XP[d.level] || 30, minutes: minsOf(d.words), src: d.src, model: d.model, hints: d.hints || [],
+        tip: 'Rəsmi hüquqi mətndir: «hər bir şəxs … hüququna malikdir», «heç kim … bilməz» kimi sabit formulları qoruyun.',
+        draft: '', traps: [], credit: UDHR_LINE, modelLabel: 'Rəsmi tərcümə', modelNote: 'BMT-nin rəsmi Azərbaycan mətni. Variantınız sözbəsöz eyni olmaya bilər — əsas olan terminlər və hüquqi dəqiqlikdir.' });
+    });
+  }
+  var COLS = [
+    { id: 'base', label: 'Nuanza tapşırıqları' },
+    { id: 'news', label: 'Xəbərlər (NTREX)' },
+    { id: 'docs', label: 'Məşhur sənədlər' }
+  ].filter(function (c) { return TASKS.some(function (t) { return !t.sim && (t.col || 'base') === c.id; }); });
+  function colOf(t) { return (t && t.col) || 'base'; }
+
   function taskById(id) { for (var i = 0; i < TASKS.length; i++) if (TASKS[i].id === id) return TASKS[i]; return null; }
 
-  var SEV = { 'Türk forması': 'mid', 'Rəqəm': 'high', 'Termin': 'mid', 'Məna': 'high', 'Orfoqrafiya': 'mid', 'Üslub': 'low', 'Durğu': 'low', 'Ad': 'mid', 'Tarix': 'high', 'Söz sırası': 'low', 'Ardıcıllıq': 'mid', 'Boş seqment': 'high' };
+  var SEV = { 'Türk forması': 'mid', 'Rəqəm': 'high', 'Termin': 'mid', 'Məna': 'high', 'Orfoqrafiya': 'mid', 'Üslub': 'low', 'Durğu': 'low', 'Ad': 'mid', 'Tarix': 'high', 'Söz sırası': 'low', 'Ardıcıllıq': 'mid', 'Boş seqment': 'high', 'Buraxma': 'high', 'Əlavə': 'mid' };
   var SEV_LABEL = { high: 'Kritik', mid: 'Vacib', low: 'Kiçik' };
   var SEV_BADGE = { high: 'red', mid: 'gold', low: 'navy' };
   var SEV_ORDER = { high: 0, mid: 1, low: 2 };
   var TYPE_ELDER = {
     'Termin': 'Lüğətçi Mirzə', 'Məna': 'Mənaçı Mirzə', 'Boş seqment': 'Mənaçı Mirzə', 'Üslub': 'Üslubçu Mirzə', 'Söz sırası': 'Üslubçu Mirzə',
     'Ardıcıllıq': 'Üslubçu Mirzə', 'Türk forması': 'Dilçi Nənə', 'Orfoqrafiya': 'Dilçi Nənə', 'Durğu': 'Dilçi Nənə',
-    'Rəqəm': 'Möhürdar Mirzə', 'Ad': 'Möhürdar Mirzə', 'Tarix': 'Möhürdar Mirzə'
+    'Rəqəm': 'Möhürdar Mirzə', 'Ad': 'Möhürdar Mirzə', 'Tarix': 'Möhürdar Mirzə', 'Buraxma': 'Mənaçı Mirzə', 'Əlavə': 'Mənaçı Mirzə'
   };
-  var TYPE_NOUN = { 'Türk forması': 'türk forması', 'Rəqəm': 'rəqəm səhvi', 'Termin': 'termin', 'Məna': 'məna səhvi', 'Orfoqrafiya': 'orfoqrafiya səhvi', 'Üslub': 'üslub qeydi', 'Durğu': 'durğu qeydi', 'Ad': 'ad', 'Tarix': 'tarix', 'Söz sırası': 'söz sırası', 'Ardıcıllıq': 'ardıcıllıq qeydi', 'Boş seqment': 'boş hissə' };
+  var TYPE_NOUN = { 'Türk forması': 'türk forması', 'Rəqəm': 'rəqəm səhvi', 'Termin': 'termin', 'Məna': 'məna səhvi', 'Orfoqrafiya': 'orfoqrafiya səhvi', 'Üslub': 'üslub qeydi', 'Durğu': 'durğu qeydi', 'Ad': 'ad', 'Tarix': 'tarix', 'Söz sırası': 'söz sırası', 'Ardıcıllıq': 'ardıcıllıq qeydi', 'Boş seqment': 'boş hissə', 'Buraxma': 'buraxma', 'Əlavə': 'artıq əlavə' };
   var EX_BY_TYPE = {
     'Türk forması': '«30 gün içinde» → «30 gün ərzində»; «için» → «üçün»; «toplantı» → «iclas».',
     'Termin': '«invoice» → «hesab-faktura», «Supplier» → «Təchizatçı» — lüğət müştərinin qanunudur.',
@@ -373,7 +405,7 @@
     'Tarix': '«on 2 June» → «2 iyunda»; «by 1 May» → «1 may tarixinədək».',
     'Söz sırası': 'Azərbaycan cümləsində feil sonda gəlir: «Podratçı … xəbərdar etməlidir.»'
   };
-  var TAG_OF = { 'Türk forması': 'Türk forması', 'Termin': 'Termin', 'Rəqəm': 'Rəqəm', 'Tarix': 'Rəqəm', 'Durğu': 'Orfoqrafiya', 'Orfoqrafiya': 'Orfoqrafiya', 'Ad': 'Orfoqrafiya', 'Üslub': 'Üslub', 'Söz sırası': 'Üslub', 'Ardıcıllıq': 'Üslub', 'Məna': 'Məna' };
+  var TAG_OF = { 'Türk forması': 'Türk forması', 'Termin': 'Termin', 'Rəqəm': 'Rəqəm', 'Tarix': 'Rəqəm', 'Durğu': 'Orfoqrafiya', 'Orfoqrafiya': 'Orfoqrafiya', 'Ad': 'Orfoqrafiya', 'Üslub': 'Üslub', 'Söz sırası': 'Üslub', 'Ardıcıllıq': 'Üslub', 'Məna': 'Məna', 'Buraxma': 'Məna', 'Əlavə': 'Məna' };
   var GRADES = [
     { min: 91, l: 'A', w: 'Əla', head: 'Ustad işi!' },
     { min: 81, l: 'B', w: 'Çox yaxşı', head: 'Möhkəm tərcümə' },
@@ -395,6 +427,8 @@
     { id: 'oral', name: 'Şifahi', icon: 'mic', cls: '', desc: 'Dinləyin və ardınca səsli tərcümə edin.', diff: 3, skill: 'Sürət' },
     { id: 'sim', name: 'Simulyator', icon: 'folder', cls: 'practice-fir', desc: 'Real sifariş: müştəri, son tarix, tarif.', diff: 3, skill: 'Peşəkarlıq' }
   ];
+  if (HUNT.length) GAMES.splice(2, 0, { id: 'realhunt', name: 'Real səhv ovu', icon: 'search', cls: 'gold', desc: 'Dərc olunmuş real tərcümələrdə səhvləri tapın.', diff: 3, skill: 'Redaktə' });
+  var NUM_WORD = { 7: 'Yeddi', 8: 'Səkkiz', 9: 'Doqquz' };
   var DIFF = { 1: 'Asan', 2: 'Orta', 3: 'Çətin' };
   function gameById(id) { for (var i = 0; i < GAMES.length; i++) if (GAMES[i].id === id) return GAMES[i]; return null; }
   function bestOf(id) { var b = sget('academy:best', {}) || {}; return b[id] != null ? Number(b[id]) : null; }
@@ -1395,13 +1429,13 @@
       h('div', null,
         h('span', { class: 'eyebrow', text: 'Akademiya · Məşq' }),
         h('h1', { html: 'Məşq <em>meydanı</em>' }),
-        h('p', { text: 'Yeddi oyun — hər biri bir bacarığı itiləyir. Ən yaxşı nəticələriniz yadda qalır.' })),
+        h('p', { text: (NUM_WORD[GAMES.length] || GAMES.length) + ' oyun — hər biri bir bacarığı itiləyir. Ən yaxşı nəticələriniz yadda qalır.' })),
       h('div', { class: 'actions' },
         h('button', { class: 'btn', type: 'button', onclick: function () { openGame(pick(GAMES)); } }, ie('refresh'), 'Təsadüfi oyun'))));
     P.grid = h('div', { class: 'practice-grid' });
     buildGrid();
     page.appendChild(h('section', { class: 'stack', 'aria-labelledby': 'practice-games-h' },
-      h('div', { class: 'sec-h' }, h('h2', { id: 'practice-games-h', text: 'Oyunlar' }), h('span', { class: 'small muted', text: '7 oyun · hər biri bir bacarıq' })),
+      h('div', { class: 'sec-h' }, h('h2', { id: 'practice-games-h', text: 'Oyunlar' }), h('span', { class: 'small muted', text: GAMES.length + ' oyun · hər biri bir bacarıq' })),
       P.grid));
     P.det = detSection();
     page.appendChild(P.det);
@@ -1438,6 +1472,7 @@
       nz('point', 'Şübhəli sözlərə toxunun, sonra «Yoxla».', 2600);
       return;
     }
+    if (g.id === 'realhunt') { playHunt(g); return; }
     if (g.id === 'oral') { playOral(g); return; }
     if (g.id === 'sim') { simBrief(g); return; }
     playQuiz(g);
