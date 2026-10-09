@@ -1,6 +1,9 @@
 /* =====================================================================
    NUANZA — companion girl + NuanzaFX (nuanza.js)
-   window.Nuanza.mount(el,{size:'full'|'dock'|'mini'}) -> instance
+   window.Nuanza.mount(el,{size:'full'|'dock'|'mini', who:'nuanza'|'tenso'}) -> instance
+     who omitted → Nuanza.setDefault(...) if set, else <html data-mode="grammar"> → 'tenso', else 'nuanza'
+     ('nihad' is an alias of 'tenso'). Followers re-render live when data-mode / the default changes.
+     instance.setWho(who|null) · character() · Nuanza.characters · setDefault(who|null) · getDefault()
      instance.set(state,{say,ms}) · say(text,ms) · react('pet'|'hop'|'nod'|'shake') · destroy()
      states: idle wave think write read success celebrate streak worried sad sleep surprised point
    window.NuanzaFX.burst(x,y,kind) · xp(x,y,text) · medal(rankName)
@@ -110,6 +113,16 @@
     '@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nz{--nz-rim:rgba(180,244,236,.42)}}',
     ':root[data-theme="dark"] .nz{--nz-rim:rgba(180,244,236,.42)}',
     '.nz-rim{stroke:var(--nz-rim);stroke-width:1.6}',
+    /* Tenso: warm rim to sit on the wine-dark grammar UI */
+    '@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nz[data-who="tenso"]{--nz-rim:rgba(255,206,212,.44)}}',
+    ':root[data-theme="dark"] .nz[data-who="tenso"]{--nz-rim:rgba(255,206,212,.44)}',
+    '.nz[data-who="tenso"] .nz-braid{transform-origin:128px 52px;animation-duration:calc(4.2s * var(--nz-tempo,1))}',
+    '.nz[data-who="tenso"] .nz-braid2{transform-origin:120px 196px}',
+    '.nz-phone{opacity:0;transition:opacity .2s}',
+    '.nz.nz-s-streak .nz-phone{opacity:1}',
+    '.nz[data-who="tenso"].nz-s-streak .nz-roll{opacity:0}',
+    '.nz[data-who="tenso"].nz-s-write .nz-ink path{stroke-dasharray:30;stroke-dashoffset:30;animation-name:nz-ink-t}',
+    '.nz.nz-swap .nz-hit svg.nz-svg{animation:nz-swap .5s var(--ease-spring,cubic-bezier(.34,1.56,.64,1))}',
     '.nz-g{transform-box:view-box}',
     /* layered rig — origins in viewBox units */
     '.nz-fig{transform-origin:120px 294px}',
@@ -281,6 +294,8 @@
     '@keyframes nz-hum{0%,100%{transform:var(--head,rotate(0deg))}25%{transform:rotate(-5deg)}75%{transform:rotate(5deg)}}',
     '@keyframes nz-braidflick{0%{transform:rotate(0)}30%{transform:rotate(14deg)}60%{transform:rotate(-7deg)}80%{transform:rotate(3deg)}100%{transform:rotate(0)}}',
     '@keyframes nz-caret{50%{opacity:0}}',
+    '@keyframes nz-ink-t{0%{stroke-dashoffset:30}70%,100%{stroke-dashoffset:0}}',
+    '@keyframes nz-swap{0%{opacity:0;transform:scale(.7) translateY(8px)}100%{opacity:1;transform:none}}',
     /* reduced motion: hold poses, fade only */
     '.nz.nz-calm *{animation:none!important}',
     '.nz.nz-calm .nz-bubble{transition:opacity .2s,visibility 0s linear .2s!important;transform:translate(var(--bx,0px),var(--by,0px))!important}',
@@ -310,9 +325,10 @@
 
   /* ---------- SVG markup ---------- */
   var curU = '';
-  function buildSVG(u, size) {
+  function buildSVG(u, size, who) {
     curU = u;
     var dock = size === 'dock';
+    var boy = who === 'tenso';
     var D = [];
     /* defs */
     D.push('<defs>',
@@ -332,16 +348,27 @@
       '<clipPath id="' + u + 'eyeR"><ellipse cx="141" cy="116" rx="12.5" ry="14.5"/></clipPath>',
       '<clipPath id="' + u + 'mOpen"><path d="M108 141 Q120 143.5 132 141 Q131 157.5 120 158.5 Q109 157.5 108 141Z"/></clipPath>',
       '<clipPath id="' + u + 'mGrin"><path d="M108.5 142 Q120 145 131.5 142 Q130 153 120 153.5 Q110 153 108.5 142Z"/></clipPath>',
-      '<clipPath id="' + u + 'dock"><circle cx="120" cy="138" r="56.5"/><rect x="63.5" y="-40" width="113" height="178"/></clipPath>',
-      '</defs>');
+      '<clipPath id="' + u + 'dock"><circle cx="120" cy="138" r="56.5"/><rect x="63.5" y="-40" width="113" height="178"/></clipPath>');
+    if (boy) {
+      D.push('<linearGradient id="' + u + 'hood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + T.hoodHi + '"/><stop offset=".5" stop-color="' + T.hood + '"/><stop offset="1" stop-color="' + T.hoodDk + '"/></linearGradient>',
+        '<linearGradient id="' + u + 'thair" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="' + T.hairMid + '"/><stop offset="1" stop-color="' + T.hair + '"/></linearGradient>',
+        '<radialGradient id="' + u + 'tskin" cx=".42" cy=".36" r=".72"><stop offset="0" stop-color="#F8D3B6"/><stop offset=".7" stop-color="' + T.skin + '"/><stop offset="1" stop-color="#E2AC88"/></radialGradient>',
+        '<linearGradient id="' + u + 'screen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1F6F68"/><stop offset="1" stop-color="#0B2E2B"/></linearGradient>',
+        '<clipPath id="' + u + 'hoodClip"><path d="M120 181 C102 181 92 187 87 199 C81.5 215 80 238 81 263 Q120 271 159 263 C160 238 158.5 215 153 199 C148 187 138 181 120 181Z"/></clipPath>',
+        '<clipPath id="' + u + 'teyeL"><ellipse cx="99" cy="117" rx="10.5" ry="12"/></clipPath>',
+        '<radialGradient id="' + u + 'tdisc" cx=".5" cy=".3" r=".75"><stop offset="0" stop-color="#4A1822"/><stop offset=".65" stop-color="#2A0E14"/><stop offset="1" stop-color="#16080B"/></radialGradient>',
+        '<clipPath id="' + u + 'teyeR"><ellipse cx="141" cy="117" rx="10.5" ry="12"/></clipPath>');
+    }
+    D.push('</defs>');
 
     var S = [];
     /* dock disc (behind her) */
     if (dock) {
-      S.push('<g class="nz-disc"><circle cx="120" cy="138" r="58" fill="url(#' + u + 'disc)"/>',
-        '<polygon points="' + gol(120, 136, 48) + '" fill="' + C.fir + '" opacity=".12"/>',
-        '<circle cx="120" cy="138" r="52.5" fill="none" stroke="' + C.fir + '" stroke-opacity=".45" stroke-width="1.3" stroke-dasharray="1.6 4.2"/>',
-        '<circle cx="120" cy="138" r="57" fill="none" stroke="' + C.fir + '" stroke-width="2.6"/></g>');
+      var ring = boy ? '#FF5468' : C.fir;
+      S.push('<g class="nz-disc"><circle cx="120" cy="138" r="58" fill="url(#' + u + (boy ? 'tdisc' : 'disc') + ')"/>',
+        '<polygon points="' + gol(120, 136, 48) + '" fill="' + ring + '" opacity=".12"/>',
+        '<circle cx="120" cy="138" r="52.5" fill="none" stroke="' + ring + '" stroke-opacity=".45" stroke-width="1.3" stroke-dasharray="1.6 4.2"/>',
+        '<circle cx="120" cy="138" r="57" fill="none" stroke="' + ring + '" stroke-width="2.6"/></g>');
       S.push('<g clip-path="url(#' + u + 'dock)"><g transform="translate(120 202) scale(.76) translate(-120 -202)">');
     }
     /* ground shadow */
@@ -352,6 +379,8 @@
     S.push('<g class="nz-aura"><g class="nz-g nz-flame1"><path d="' + flamePath(120, 252, 114, 236, 9, 0.8) + '" fill="url(#' + u + 'fl1)"/></g>',
       '<g class="nz-g nz-flame2"><path d="' + flamePath(120, 258, 88, 196, 7, 0.76) + '" fill="url(#' + u + 'fl2)" opacity=".75"/></g></g>');
 
+    if (boy) S.push(tensoFigure(u));
+    else {
     /* --- back layer that follows the head: long hair + braid --- */
     S.push('<g class="nz-g nz-headpose"><g class="nz-g nz-bob">');
     S.push('<path class="nz-rim" d="M58 118 C50 64 84 30 120 30 C156 30 190 64 182 118 C185 146 183 166 175 182 Q167 189 160 180 L158 150 L82 150 L80 180 Q73 189 65 182 C57 166 55 146 58 118Z" fill="url(#' + u + 'hair)"/>',
@@ -508,6 +537,7 @@
       '<polygon points="' + rhomb(top[0], top[1], 1.8) + '" fill="' + C.nar + '"/>');
     S.push('</g>'); /* /fringe */
     S.push('</g></g>'); /* /head */
+    } /* /girl */
 
     /* --- extras --- */
     S.push('<g class="nz-xtra nz-think"><circle cx="180" cy="74" r="4" fill="' + C.ivory + '" stroke="' + C.fir + '" stroke-width="1.6"/>',
@@ -543,11 +573,29 @@
     }
     return out.join('');
   }
-  function eye(u, side, cx, cy, s) {
+  function eye(u, side, cx, cy, s, boy) {
     var lash = side === 'L'
       ? 'M86.6 113 Q87.6 100.8 99 100.4 Q110.4 100.8 111.6 111.5'
       : 'M153.4 113 Q152.4 100.8 141 100.4 Q129.6 100.8 128.4 111.5';
     var flick = side === 'L' ? 'M87.6 108 L83.2 104.2' : 'M152.4 108 L156.8 104.2';
+    if (boy) {
+      /* smaller eye, plain upper lid line, no lash flick */
+      var dy = cy - 116;
+      return '<g class="nz-g nz-eye" style="transform-origin:' + cx + 'px ' + cy + 'px">' +
+        '<ellipse cx="' + cx + '" cy="' + cy + '" rx="10.5" ry="12" fill="#fff"/>' +
+        '<g clip-path="url(#' + u + 'teye' + side + ')">' +
+        '<ellipse cx="' + cx + '" cy="' + (cy - 8) + '" rx="11" ry="6" fill="#D6CBD4" opacity=".35"/>' +
+        '<g class="nz-g nz-iris">' +
+        '<circle cx="' + cx + '" cy="' + (cy + 1.5) + '" r="8.4" fill="url(#' + u + 'iris)"/>' +
+        '<circle class="nz-g nz-pupil" style="transform-origin:' + cx + 'px ' + (cy + 1.5) + 'px" cx="' + cx + '" cy="' + (cy + 1.5) + '" r="4.5" fill="' + C.pupil + '"/>' +
+        '<circle cx="' + (cx + 3.1) + '" cy="' + (cy - 2) + '" r="3" fill="#fff"/>' +
+        '<circle cx="' + (cx - 2.9) + '" cy="' + (cy + 4.8) + '" r="1.3" fill="#fff" opacity=".85"/>' +
+        '</g>' +
+        '<rect class="nz-g nz-lid" style="transform-origin:' + cx + 'px ' + (cy - 12.5) + 'px" x="' + (cx - 12) + '" y="' + (cy - 12.5) + '" width="24" height="25.5" fill="' + T.lid + '"/>' +
+        '</g>' +
+        '<path d="M' + f2(cx - 11.2) + ' ' + f2(cy - 1.5) + ' Q' + f2(cx - 10) + ' ' + f2(cy - 12.6) + ' ' + cx + ' ' + f2(cy - 12.8) + ' Q' + f2(cx + 10) + ' ' + f2(cy - 12.6) + ' ' + f2(cx + 11.2) + ' ' + f2(cy - 2.5) + '" fill="none" stroke="' + C.lash + '" stroke-width="2.6" stroke-linecap="round"/>' +
+        '</g>';
+    }
     return '<g class="nz-g nz-eye" style="transform-origin:' + cx + 'px ' + cy + 'px">' +
       '<ellipse cx="' + cx + '" cy="' + cy + '" rx="12.5" ry="14.5" fill="#fff"/>' +
       '<g clip-path="url(#' + u + 'eye' + side + ')">' +
@@ -565,22 +613,23 @@
       '<path d="M' + (cx - 7) + ' ' + (cy + 15.6) + ' Q' + cx + ' ' + (cy + 18) + ' ' + (cx + 7) + ' ' + (cy + 15.6) + '" fill="none" stroke="' + C.skinDeep + '" stroke-opacity=".5" stroke-width="1.2" stroke-linecap="round"/>' +
       '</g>';
   }
-  function mouths(u) {
-    var st = ' fill="none" stroke="' + C.mouth + '" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"';
+  function mouths(u, mc) {
+    var M = mc || C.mouth;
+    var st = ' fill="none" stroke="' + M + '" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"';
     return [
       '<path class="nz-m nz-m-smile" d="M110 143 Q120 152.5 130 143"' + st + '/>',
-      '<g class="nz-m nz-m-open"><path d="M108 141 Q120 143.5 132 141 Q131 157.5 120 158.5 Q109 157.5 108 141Z" fill="' + C.mouth + '"/>',
+      '<g class="nz-m nz-m-open"><path d="M108 141 Q120 143.5 132 141 Q131 157.5 120 158.5 Q109 157.5 108 141Z" fill="' + M + '"/>',
       '<g clip-path="url(#' + u + 'mOpen)"><ellipse cx="120" cy="157" rx="8" ry="5" fill="' + C.tongue + '"/><path d="M108 140 Q120 143 132 140 L132 145 Q120 147.5 108 145Z" fill="#fff"/></g></g>',
-      '<g class="nz-m nz-m-o"><ellipse cx="120" cy="148" rx="4.6" ry="5.8" fill="' + C.mouth + '"/><ellipse cx="120" cy="151.5" rx="3" ry="1.8" fill="' + C.tongue + '"/></g>',
+      '<g class="nz-m nz-m-o"><ellipse cx="120" cy="148" rx="4.6" ry="5.8" fill="' + M + '"/><ellipse cx="120" cy="151.5" rx="3" ry="1.8" fill="' + C.tongue + '"/></g>',
       '<path class="nz-m nz-m-small" d="M114.5 146 Q120 149.5 125.5 146"' + st + '/>',
       '<g class="nz-m nz-m-tongue"><path d="M124 147.2 Q126.5 153.5 130 148.4 Q128.5 146.5 124 147.2Z" fill="' + C.tongue + '"/><path d="M113.5 145.5 Q120 149 127.5 146"' + st + '/></g>',
       '<path class="nz-m nz-m-worry" d="M111 149 Q115.5 145 120 148 Q124.5 151 129 147"' + st + '/>',
       '<path class="nz-m nz-m-sad" d="M112 151 Q120 143.5 128 151"' + st + '/>',
       '<path class="nz-m nz-m-hmm" d="M114 147.5 Q119 145.5 127 146.5"' + st + '/>',
-      '<g class="nz-m nz-m-grin"><path d="M108.5 142 Q120 145 131.5 142 Q130 153 120 153.5 Q110 153 108.5 142Z" fill="' + C.mouth + '"/>',
+      '<g class="nz-m nz-m-grin"><path d="M108.5 142 Q120 145 131.5 142 Q130 153 120 153.5 Q110 153 108.5 142Z" fill="' + M + '"/>',
       '<g clip-path="url(#' + u + 'mGrin)"><path d="M108 141 Q120 144 132 141 L132 147 Q120 149.5 108 147Z" fill="#fff"/></g></g>',
-      '<g class="nz-m nz-m-sleep"><ellipse cx="121" cy="148" rx="2.6" ry="3.2" fill="' + C.mouth + '"/></g>',
-      '<g class="nz-m nz-m-talk"><path d="M112.5 144 Q120 145.5 127.5 144 Q126.5 152.5 120 153 Q113.5 152.5 112.5 144Z" fill="' + C.mouth + '"/><ellipse cx="120" cy="151.5" rx="4" ry="2" fill="' + C.tongue + '"/></g>'
+      '<g class="nz-m nz-m-sleep"><ellipse cx="121" cy="148" rx="2.6" ry="3.2" fill="' + M + '"/></g>',
+      '<g class="nz-m nz-m-talk"><path d="M112.5 144 Q120 145.5 127.5 144 Q126.5 152.5 120 153 Q113.5 152.5 112.5 144Z" fill="' + M + '"/><ellipse cx="120" cy="151.5" rx="4" ry="2" fill="' + C.tongue + '"/></g>'
     ].join('');
   }
   /* flame halo around the figure: symmetric crown of tongues with concave sides */
@@ -603,6 +652,200 @@
     }
     d += ' L' + f2(V[n][0]) + ' 294 Q' + cx + ' 300 ' + f2(V[0][0]) + ' 294Z';
     return d;
+  }
+
+  /* =====================================================================
+     TENSO — the grammar companion (who:'tenso'). Same rig, same class names
+     and joint origins as Nuanza, so every state / animation drives him too.
+     A ~20-year-old student-tutor: short dark hair with a cowlick, round
+     glasses, nar (pomegranate) hoodie with a small göl patch, jeans, sneakers;
+     pen in the right hand, a book (or phone on a streak) in the left.
+     ===================================================================== */
+  var T = {
+    skin: '#EFC3A2', skinSh: '#DEA684', skinDeep: '#C58867', lid: '#E5B391',
+    hair: '#1E1512', hairMid: '#33241D', hairHi: '#7A5644',
+    hood: '#E5485C', hoodHi: '#FF7385', hoodDk: '#A3243A', hoodDeep: '#7E1A2C', sleeve: '#DE4256',
+    denim: '#2E3A5C', denimHi: '#46557F', denimDk: '#1E2742',
+    shoe: '#F4F6F8', shoeSh: '#C9D2DA', sole: '#1C2029',
+    frame: '#1C2029', mouth: '#5E1E26', brow: '#22160F'
+  };
+  function tensoFigure(u) {
+    var S = [];
+    var golPatch = function (cx, cy, R) {
+      return '<rect x="' + f2(cx - R * 1.25) + '" y="' + f2(cy - R * 1.25) + '" width="' + f2(R * 2.5) + '" height="' + f2(R * 2.5) + '" rx="' + f2(R * 0.5) + '" fill="' + C.band + '" stroke="' + C.zaf + '" stroke-width=".9" stroke-dasharray="1.6 1.4"/>' +
+        '<polygon points="' + gol(cx, cy, R) + '" fill="' + C.fir + '" stroke="' + C.firDk + '" stroke-width=".5" stroke-linejoin="round"/>' +
+        '<polygon points="' + rhomb(cx, cy, R * 0.52) + '" fill="#fff"/>' +
+        '<polygon points="' + rhomb(cx, cy, R * 0.26) + '" fill="' + C.zaf + '"/>';
+    };
+    /* --- back layer that follows the head: short hair mass --- */
+    S.push('<g class="nz-g nz-headpose"><g class="nz-g nz-bob">',
+      '<path class="nz-rim" d="M66.5 106 C62 64 88 40 120 40 C152 40 178 64 173.5 106 C173 114 171 119 169 121 L71 121 C69 119 67 114 66.5 106Z" fill="url(#' + u + 'thair)"/>',
+      '</g></g>');
+
+    /* --- body (breathing) --- */
+    S.push('<g class="nz-g nz-body">');
+    /* jeans */
+    S.push('<path class="nz-rim" d="M92 254 L118.6 254 L117.6 287.5 L96.5 287.5Z" fill="' + T.denim + '"/>',
+      '<path class="nz-rim" d="M148 254 L121.4 254 L122.4 287.5 L143.5 287.5Z" fill="' + T.denim + '"/>',
+      '<path d="M100 262 L99.4 284 M140 262 L140.6 284" stroke="' + T.denimHi + '" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>',
+      '<path d="M96.6 283 L117.8 283 M122.2 283 L143.4 283" stroke="' + T.denimDk + '" stroke-width="2.2"/>');
+    /* sneakers: white uppers, nar stripe, ink sole */
+    S.push('<path class="nz-rim" d="M89 293.5 Q86.5 284 99 283 L113.5 283 Q118.5 285 118 293.5Z" fill="' + T.shoe + '"/>',
+      '<path d="M88.6 291.2 L118.2 291.2 L118 294.6 Q103 296.2 89.2 294.6Z" fill="' + T.sole + '"/>',
+      '<path d="M99 286.6 Q105 284.6 111 288.8" fill="none" stroke="' + C.nar + '" stroke-width="2.2" stroke-linecap="round"/>',
+      '<path d="M92 287 Q94.5 285.6 97 286" fill="none" stroke="' + T.shoeSh + '" stroke-width="1.2" stroke-linecap="round"/>',
+      '<path class="nz-rim" d="M151 293.5 Q153.5 284 141 283 L126.5 283 Q121.5 285 122 293.5Z" fill="' + T.shoe + '"/>',
+      '<path d="M151.4 291.2 L121.8 291.2 L122 294.6 Q137 296.2 150.8 294.6Z" fill="' + T.sole + '"/>',
+      '<path d="M141 286.6 Q135 284.6 129 288.8" fill="none" stroke="' + C.nar + '" stroke-width="2.2" stroke-linecap="round"/>',
+      '<path d="M148 287 Q145.5 285.6 143 286" fill="none" stroke="' + T.shoeSh + '" stroke-width="1.2" stroke-linecap="round"/>');
+    /* neck */
+    S.push('<path d="M110.5 154 L110.5 182 Q120 189 129.5 182 L129.5 154Z" fill="' + T.skin + '"/>',
+      '<path d="M110.5 158 Q120 168 129.5 158 L129.5 167 Q120 175 110.5 167Z" fill="' + T.skinSh + '" opacity=".8"/>');
+    /* hood resting on the shoulders (behind) */
+    S.push('<path class="nz-rim" d="M88 200 Q86 178 120 174.5 Q154 178 152 200Z" fill="' + T.hoodDk + '"/>');
+    /* hoodie torso */
+    S.push('<path class="nz-rim" d="M120 181 C102 181 92 187 87 199 C81.5 215 80 238 81 263 Q120 271 159 263 C160 238 158.5 215 153 199 C148 187 138 181 120 181Z" fill="url(#' + u + 'hood)"/>');
+    S.push('<g clip-path="url(#' + u + 'hoodClip)">',
+      '<rect x="74" y="176" width="92" height="100" fill="url(#' + u + 'robeSide)"/>',
+      '<ellipse cx="108" cy="214" rx="18" ry="24" fill="#fff" opacity=".07"/>',
+      /* kangaroo pocket */
+      '<path d="M97 233 L143 233 L149.5 254 Q120 259.5 90.5 254Z" fill="' + T.hoodDk + '" opacity=".38"/>',
+      '<path d="M97 233 L143 233 L149.5 254 M97 233 L90.5 254" fill="none" stroke="' + T.hoodDeep + '" stroke-opacity=".6" stroke-width="1.3" stroke-linejoin="round"/>',
+      '<path d="M98.5 235.5 L141.5 235.5" stroke="#fff" stroke-opacity=".22" stroke-width="1" stroke-dasharray="2 2"/>',
+      /* ribbed waistband with a thin kilim tape */
+      '<path d="M78 255.5 Q120 263.5 162 255.5 L162 272 L78 272Z" fill="' + T.hoodDk + '"/>',
+      '<path d="M78 256.4 Q120 264.4 162 256.4" fill="none" stroke="' + C.band + '" stroke-width="2.6"/>',
+      tapeRow(),
+      '</g>');
+    /* crew-neck tee + hood opening */
+    S.push('<path d="M109.5 183 Q120 192 130.5 183 L130.5 186 Q120 196 109.5 186Z" fill="' + C.ivory + '"/>',
+      '<path d="M98 186.5 Q102 181 110 181.5 Q120 197 130 181.5 Q138 181 142 186.5 Q138 201 120 202.5 Q102 201 98 186.5Z" fill="' + T.hood + '" stroke="' + T.hoodDeep + '" stroke-opacity=".55" stroke-width="1.1"/>',
+      '<path d="M106 187.5 Q120 205 134 187.5" fill="none" stroke="' + T.hoodDk + '" stroke-width="2.2" stroke-linecap="round"/>',
+      '<path d="M101 187.5 Q106 183.5 110 184" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.1" stroke-linecap="round"/>');
+    /* göl patch on the chest (viewer's right) */
+    S.push(golPatch(140.5, 214.5, 5.4));
+    /* drawstrings — sway like her braid tip */
+    S.push('<g class="nz-g nz-braid2">',
+      '<path d="M113.5 196 Q112.6 207 113.6 218" fill="none" stroke="' + C.ivory + '" stroke-width="2" stroke-linecap="round"/>',
+      '<path d="M126.5 196 Q127.4 205 126.4 214" fill="none" stroke="' + C.ivory + '" stroke-width="2" stroke-linecap="round"/>',
+      '<rect x="111.9" y="216.5" width="3.4" height="6" rx="1.3" fill="' + C.band + '"/>',
+      '<rect x="124.7" y="212.5" width="3.4" height="6" rx="1.3" fill="' + C.band + '"/>',
+      '</g>');
+    S.push('</g>'); /* /body */
+
+    /* --- arms --- */
+    var sleeve = function (x1, y1, x2, y2, w) { return '<path d="M' + x1 + ' ' + y1 + ' L' + x2 + ' ' + y2 + '" stroke="' + T.sleeve + '" stroke-width="' + w + '" stroke-linecap="round"/>'; };
+    S.push('<g class="nz-g nz-bob">');
+    /* left arm (viewer's left): closed book, or the phone on a streak */
+    S.push('<g class="nz-g nz-armL">', sleeve(90, 198, 82, 221, 17),
+      '<path d="M86.5 201 L80.5 218" stroke="#fff" stroke-opacity=".14" stroke-width="3" stroke-linecap="round"/>',
+      '<g class="nz-g nz-foreL">', sleeve(82, 221, 81, 239, 15.5),
+      '<path d="M81.6 234.5 L81.2 240" stroke="' + T.hoodDk + '" stroke-width="15" />',
+      '<path d="M76 236 L76 239.6 M79.4 236 L79.3 240 M82.8 236 L82.8 240 M86.2 236 L86.2 239.6" stroke="' + T.hoodDeep + '" stroke-opacity=".5" stroke-width=".9"/>',
+      '<g class="nz-g nz-handL">',
+      '<g class="nz-roll" transform="rotate(-10 81 246)">',
+      '<rect x="65" y="231" width="27" height="33" rx="2.6" fill="' + C.firDk + '"/>',
+      '<rect x="67" y="231" width="25" height="31.6" rx="2.2" fill="' + C.robe + '"/>',
+      '<path d="M91.6 233.5 L91.6 260.5" stroke="' + C.parch + '" stroke-width="2.2"/>',
+      '<rect x="67" y="231" width="3.4" height="31.6" fill="' + C.firDk + '" opacity=".55"/>',
+      '<polygon points="' + gol(79.8, 246.6, 6) + '" fill="' + C.zaf + '"/>',
+      '<polygon points="' + rhomb(79.8, 246.6, 3) + '" fill="' + C.firDk + '"/>',
+      '<path d="M73 237 L86 237 M73 256.5 L86 256.5" stroke="#fff" stroke-opacity=".55" stroke-width="1.1" stroke-linecap="round"/>',
+      '</g>',
+      '<g class="nz-phone" transform="rotate(-8 81 244)">',
+      '<rect x="71.5" y="221" width="20" height="34" rx="4" fill="' + C.band + '" stroke="#3A4150" stroke-width="1"/>',
+      '<rect x="73.6" y="224.6" width="15.8" height="26.6" rx="2" fill="url(#' + u + 'screen)"/>',
+      '<path d="M81.5 228.5 C86 233 86.6 237.5 84.6 241 C84.4 239 83.4 238 82.4 237.6 C82.8 240 81.6 242 80 242.6 C78.6 241.4 78 239.6 78.6 237.6 C77 239 76.8 241 77.6 243 C75.6 240 76.4 235.5 79.6 233 C80.6 232 81.4 230.5 81.5 228.5Z" fill="' + C.zaf + '"/>',
+      '<rect x="76.5" y="245.2" width="10" height="2.4" rx="1.2" fill="#fff" opacity=".85"/>',
+      '<rect x="78.5" y="222.4" width="6" height="1.2" rx=".6" fill="#3A4150"/>',
+      '</g>',
+      '<circle cx="81" cy="244" r="7.6" fill="' + T.skin + '"/>',
+      '<path d="M76.5 246 Q81 250 85.5 246" stroke="' + T.skinDeep + '" stroke-opacity=".55" stroke-width="1.1" fill="none" stroke-linecap="round"/>',
+      '</g></g></g>');
+    /* open notebook-book (read / write) */
+    S.push('<g class="nz-g nz-paper">',
+      '<path d="M73.5 227 Q94 219.5 113 225 Q132 219.5 152.5 227 L152.5 258 Q132 251.5 113 257 Q94 251.5 73.5 258Z" fill="' + C.robe + '" stroke="' + C.firDk + '" stroke-width="1"/>',
+      '<path d="M77 225.5 Q95 219 113 224 L113 254 Q95 248.5 77 254.5Z" fill="' + C.parch + '" stroke="' + C.parchSh + '" stroke-width="1"/>',
+      '<path d="M149 225.5 Q131 219 113 224 L113 254 Q131 248.5 149 254.5Z" fill="' + C.parch + '" stroke="' + C.parchSh + '" stroke-width="1"/>',
+      '<path d="M113 224 L113 254" stroke="' + C.parchSh + '" stroke-width="1.6"/>',
+      '<path d="M82 231 Q95 227.5 108 230 M82 237.5 Q95 234 108 236.5 M82 244 Q93 241 102 242.6" fill="none" stroke="#9AA6B2" stroke-width="1.4" stroke-linecap="round"/>',
+      '<g class="nz-ink" stroke="' + C.ink + '" stroke-width="1.6" stroke-linecap="round" fill="none">',
+      '<path d="M118 230 Q124 228 130 229.5 T143 228.6"/>',
+      '<path d="M118 236.5 Q124 234.5 130 236 T143 235.2"/>',
+      '<path d="M118 243 Q124 241 130 242.5 T139 242"/>',
+      '</g>',
+      '<path d="M133 248 Q137 244.5 141.5 247.5" fill="none" stroke="' + C.nar + '" stroke-width="1.8" stroke-linecap="round"/>',
+      '</g>');
+    /* right arm (viewer's right) with the pen */
+    S.push('<g class="nz-g nz-armR">', sleeve(150, 198, 158, 221, 17),
+      '<path d="M153.5 201 L159.5 218" stroke="#000" stroke-opacity=".1" stroke-width="3" stroke-linecap="round"/>',
+      '<g class="nz-g nz-foreR">', sleeve(158, 221, 159, 239, 15.5),
+      '<path d="M158.4 234.5 L158.8 240" stroke="' + T.hoodDk + '" stroke-width="15"/>',
+      '<path d="M153.8 236 L153.8 239.6 M157.2 236 L157.3 240 M160.6 236 L160.6 240 M164 236 L164 239.6" stroke="' + T.hoodDeep + '" stroke-opacity=".5" stroke-width=".9"/>',
+      '<g class="nz-g nz-handR">',
+      '<g class="nz-g nz-quill">',
+      '<path d="M154 258.6 L155.2 252.4 L158.6 253.8Z" fill="#9AA5B1"/>',
+      '<path d="M156.9 253.1 L160.9 244.6" stroke="' + C.fir + '" stroke-width="5" stroke-linecap="round"/>',
+      '<path d="M160.9 244.6 L173.6 217.6" stroke="' + C.band + '" stroke-width="5" stroke-linecap="round"/>',
+      '<path d="M172.4 220.2 L174.4 216" stroke="' + C.nar + '" stroke-width="5" stroke-linecap="round"/>',
+      '<path d="M169.6 220 L165.6 228.6" stroke="#B9C3CC" stroke-width="1.5" stroke-linecap="round"/>',
+      '<path d="M162.4 241.6 L171.6 222" stroke="#fff" stroke-opacity=".28" stroke-width="1.1" stroke-linecap="round"/>',
+      '</g>',
+      '<circle cx="159" cy="244" r="7.6" fill="' + T.skin + '"/>',
+      '<path d="M154.5 246 Q159 250 163.5 246" stroke="' + T.skinDeep + '" stroke-opacity=".55" stroke-width="1.1" fill="none" stroke-linecap="round"/>',
+      '</g></g></g>');
+    S.push('</g>'); /* /arms bob */
+
+    /* --- head --- */
+    S.push('<g class="nz-g nz-headpose"><g class="nz-g nz-bob">');
+    S.push('<circle cx="70" cy="119" r="8.6" fill="' + T.skin + '"/><path d="M67 115 Q71 118 68 123" stroke="' + T.skinDeep + '" stroke-width="1.4" fill="none" stroke-linecap="round"/>',
+      '<circle cx="170" cy="119" r="8.6" fill="' + T.skin + '"/><path d="M173 115 Q169 118 172 123" stroke="' + T.skinDeep + '" stroke-width="1.4" fill="none" stroke-linecap="round"/>');
+    S.push('<path d="M69 108 C69 74 92 58 120 58 C148 58 171 74 171 108 C171 136 154 160 120 163.5 C86 160 69 136 69 108Z" fill="url(#' + u + 'tskin)"/>');
+    S.push('<g class="nz-g nz-face">');
+    S.push('<ellipse class="nz-cheek" cx="84.5" cy="138" rx="10" ry="6" fill="url(#' + u + 'blush)" opacity=".3"/>',
+      '<ellipse class="nz-cheek" cx="155.5" cy="138" rx="10" ry="6" fill="url(#' + u + 'blush)" opacity=".3"/>');
+    S.push('<g class="nz-eyes-open nz-eyeset">', eye(u, 'L', 99, 117, -1, true), eye(u, 'R', 141, 117, 1, true), '</g>');
+    S.push('<g class="nz-eyes-happy" stroke="' + C.lash + '" stroke-width="3.4" fill="none" stroke-linecap="round">',
+      '<path d="M89 121 Q99 107 109 121"/><path d="M131 121 Q141 107 151 121"/></g>');
+    S.push('<g class="nz-eyes-closed" stroke="' + C.lash + '" stroke-width="3" fill="none" stroke-linecap="round">',
+      '<path d="M89 118 Q99 126 109 118"/><path d="M131 118 Q141 126 151 118"/></g>');
+    S.push('<path class="nz-brow" data-side="L" d="M89 96 Q99 90.5 109 94" fill="none" stroke="' + T.brow + '" stroke-width="4.8" stroke-linecap="round"/>',
+      '<path class="nz-brow" data-side="R" d="M131 94 Q141 90.5 151 96" fill="none" stroke="' + T.brow + '" stroke-width="4.8" stroke-linecap="round"/>');
+    S.push('<path d="M117.5 127 Q118 132.5 121 132.5 Q123.5 132 123 130" fill="none" stroke="' + T.skinDeep + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>');
+    S.push(mouths(u, T.mouth));
+    /* glasses: soft-square ink frames, faint lens glare */
+    S.push('<g class="nz-glasses">',
+      '<rect x="83" y="101.5" width="32" height="29" rx="11" fill="#fff" fill-opacity=".1" stroke="' + T.frame + '" stroke-width="3"/>',
+      '<rect x="125" y="101.5" width="32" height="29" rx="11" fill="#fff" fill-opacity=".1" stroke="' + T.frame + '" stroke-width="3"/>',
+      '<path d="M115 112.5 Q120 108.6 125 112.5" fill="none" stroke="' + T.frame + '" stroke-width="2.8" stroke-linecap="round"/>',
+      '<path d="M83.4 110 L71.5 107.5 M156.6 110 L168.5 107.5" stroke="' + T.frame + '" stroke-width="2.6" stroke-linecap="round"/>',
+      '<path d="M89 107.5 L94.5 103.8 M131 107.5 L136.5 103.8" stroke="#fff" stroke-opacity=".75" stroke-width="2" stroke-linecap="round"/>',
+      '<path d="M108.5 125.5 L111 122.5 M150.5 125.5 L153 122.5" stroke="#fff" stroke-opacity=".45" stroke-width="1.6" stroke-linecap="round"/>',
+      '</g>');
+    S.push('</g>'); /* /face */
+    /* short hair: swept fringe, tidy sides, a cowlick that flicks */
+    S.push('<g class="nz-g nz-fringe">');
+    S.push('<g class="nz-g nz-braid">',
+      '<path d="M114 52 C112 40 118 32 130 29 C125 35 125 40 128 44 C131 37 137 34 144 35 C138 40 137 46 136 53Z" fill="url(#' + u + 'thair)"/>',
+      '</g>');
+    S.push('<path d="M67.5 108 C64 70 88 47 120 47 C153 47 177 69 172.5 108 C171 99 168 93 163 88 C162 94 157 97 150 96 C153 90 152 84 149 80 C140 90 124 94 110 92 C113 88 114 84 113 80 C102 88 89 92 81 96 C76 99.5 71 103 67.5 108Z" fill="url(#' + u + 'thair)"/>',
+      '<path d="M68 102 C66.5 112 67.5 120 70.5 125 L74 124.5 C73.4 117 73.8 110 76.5 102Z" fill="' + T.hair + '"/>',
+      '<path d="M172 102 C173.5 112 172.5 120 169.5 125 L166 124.5 C166.6 117 166.2 110 163.5 102Z" fill="' + T.hair + '"/>',
+      '<path d="M84 72 C94 59 108 53 126 53 C110 57 99 63 90 74 Q86 77 84 72Z" fill="#fff" opacity=".14"/>',
+      '<path d="M100 83 Q110 72 122 64 M136 80 Q140 70 138 60 M158 88 Q160 78 156 70" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="1.3" stroke-linecap="round"/>');
+    S.push('</g>'); /* /fringe */
+    S.push('</g></g>'); /* /head */
+    return S.join('');
+  }
+  /* small kilim tape on the hoodie waistband: alternating zəfəran / firuzə triangles */
+  function tapeRow() {
+    var out = [];
+    for (var x = 84; x <= 156; x += 8) {
+      var t = (x - 78) / 84, y = 265.5 + 2 * t * (1 - t) * 8;
+      var up = Math.round((x - 84) / 8) % 2 === 0;
+      out.push('<path d="M' + f2(x - 3.4) + ' ' + f2(y + (up ? 2.8 : -2.8)) + ' L' + x + ' ' + f2(y + (up ? -2.8 : 2.8)) + ' L' + f2(x + 3.4) + ' ' + f2(y + (up ? 2.8 : -2.8)) + 'Z" fill="' + (up ? C.zaf : C.fir) + '"/>');
+    }
+    return out.join('');
   }
 
   /* ---------- expression + pose tables ---------- */
@@ -718,6 +961,28 @@
     return h || 'home';
   }
 
+  /* ---------- characters + default ----------
+     who: explicit mount option > Nuanza.setDefault() > <html data-mode="grammar"> → tenso > nuanza */
+  var CHARS = {
+    nuanza: { name: 'Nuanza', label: 'Nuanza — köməkçi qız. Toxunun', dock: 'Nuanza — köməkçi. Məsləhətləri aç', intro: 'Mən Nuanzayam — tərcümədə köməkçiniz. Bu ekranda faydalı ola biləcək bir neçə şey:' },
+    tenso: { name: 'Tenso', label: 'Tenso — köməkçi. Toxunun', dock: 'Tenso — köməkçi. Məsləhətləri aç', intro: 'Mən Tensoyam — qrammatikada köməkçiniz. Bu ekranda faydalı ola biləcək bir neçə şey:' }
+  };
+  var ALIAS = { nihad: 'tenso', boy: 'tenso', girl: 'nuanza' };
+  var explicitDefault = null;
+  function normWho(w) {
+    if (w == null || w === '' || w === 'auto') return null;
+    w = String(w).toLowerCase();
+    if (ALIAS[w]) w = ALIAS[w];
+    return CHARS[w] ? w : null;
+  }
+  function defaultWho() {
+    if (explicitDefault) return explicitDefault;
+    var m = '';
+    try { m = document.documentElement.getAttribute('data-mode') || ''; } catch (e) { m = ''; }
+    return m === 'grammar' ? 'tenso' : 'nuanza';
+  }
+  function charName(w) { return (CHARS[w] || CHARS.nuanza).name; }
+
   /* ---------- instance ---------- */
   function Inst(host, opts) {
     var self = this;
@@ -733,27 +998,28 @@
     this.lastChat = 0;
     this.flipped = false;
 
+    this.u = u;
+    this.opts = opts;
+    this.fixedWho = normWho(opts.who);
+    this.who = this.fixedWho || defaultWho();
+
     var root = document.createElement('div');
     root.className = 'nz';
     root.setAttribute('data-size', size);
+    root.setAttribute('data-who', this.who);
     if (opts.width) root.style.setProperty('--nz-w', typeof opts.width === 'number' ? opts.width + 'px' : opts.width);
-    var label = size === 'dock' ? 'Nuanza — köməkçi. Məsləhətləri aç' : (opts.label || 'Nuanza — köməkçi qız. Toxunun');
     root.innerHTML =
       '<div class="nz-bubble" aria-hidden="true" style="display:none"><span class="nz-btx"></span></div>' +
       '<span class="nz-sr" role="status" aria-live="polite"></span>' +
-      '<button class="nz-hit" type="button" aria-label="' + esc(label) + '">' + buildSVG(u, size) + '</button>' +
+      '<button class="nz-hit" type="button" aria-label="' + esc(this._label()) + '">' + buildSVG(u, size, this.who) + '</button>' +
       (size === 'dock' ? '<span class="nz-dot" aria-hidden="true"></span>' : '');
     this.root = this.el = root;
     this.bubble = root.querySelector('.nz-bubble');
     this.btx = root.querySelector('.nz-btx');
     this.sr = root.querySelector('.nz-sr');
     this.hit = root.querySelector('.nz-hit');
-    this.svg = root.querySelector('svg');
     this.dot = root.querySelector('.nz-dot');
-    this.irises = root.querySelectorAll('.nz-iris');
-    this.face = root.querySelector('.nz-face');
-    this.fringe = root.querySelector('.nz-fringe');
-    this.brows = root.querySelectorAll('.nz-brow');
+    this._bind();
     if (opts.interactive === false) { this.hit.tabIndex = -1; this.hit.setAttribute('aria-hidden', 'true'); this.hit.style.cursor = 'default'; }
 
     this.hit.addEventListener('click', function (e) {
@@ -774,6 +1040,43 @@
     if (opts.state && STATES[opts.state]) this.set(opts.state, { say: opts.say, ms: opts.ms });
     else if (opts.say) this.say(opts.say, opts.ms);
   }
+
+  Inst.prototype._label = function () {
+    var ch = CHARS[this.who] || CHARS.nuanza;
+    if (this.size === 'dock') return ch.dock;
+    /* a caller label that names the other character follows the swap */
+    var l = this.opts.label;
+    if (l && this.who === 'tenso') l = String(l).replace(/\bNuanza\b/g, 'Tenso');
+    return l || ch.label;
+  };
+  Inst.prototype._bind = function () {
+    var root = this.root;
+    this.svg = root.querySelector('svg');
+    this.irises = root.querySelectorAll('.nz-iris');
+    this.face = root.querySelector('.nz-face');
+    this.fringe = root.querySelector('.nz-fringe');
+    this.brows = root.querySelectorAll('.nz-brow');
+  };
+  Inst.prototype.character = function () { return this.who; };
+  /* switch character in place (keeps state, bubble and timers). null/'auto' → follow the default */
+  Inst.prototype.setWho = function (who, _auto) {
+    if (this.dead) return this;
+    if (!_auto) this.fixedWho = normWho(who);
+    var w = this.fixedWho || defaultWho();
+    if (w === this.who) return this;
+    this.who = w;
+    var root = this.root, old = this.svg;
+    root.setAttribute('data-who', w);
+    this.hit.setAttribute('aria-label', this._label());
+    var tmp = document.createElement('div');
+    tmp.innerHTML = buildSVG(this.u, this.size, w);
+    if (old && old.parentNode) old.parentNode.replaceChild(tmp.firstChild, old);
+    this._bind();
+    this._apply(this.cur);
+    this._gaze(this.gazeLock ? this.gazeLock[0] : 0, this.gazeLock ? this.gazeLock[1] : 0.1);
+    if (!this._calmCheck() && root.isConnected) this._flash('nz-swap', 520);
+    return this;
+  };
 
   Inst.prototype._calmCheck = function () {
     var r = reduced();
@@ -862,7 +1165,7 @@
     if (text == null || text === '') { this.hideBubble(); return this; }
     text = String(text);
     this.sr.textContent = '';
-    this.sr.textContent = 'Nuanza: ' + text;
+    this.sr.textContent = charName(this.who) + ': ' + text;
     if (this.dot) this.dot.classList.remove('on');
     var calm = this._calmCheck();
     /* full text reserved invisibly so the bubble keeps its final size while typing */
@@ -1143,17 +1446,17 @@
     var body = h('div', { class: 'nz-menu' },
       h('div', { class: 'nz-menu-hero' }, art,
         h('p', null, h('b', { text: greet + (name ? ', ' + name : '') + '!' }),
-          h('small', { text: 'Mən Nuanzayam — tərcümədə köməkçiniz. Bu ekranda faydalı ola biləcək bir neçə şey:' }))),
+          h('small', { text: (CHARS[this.who] || CHARS.nuanza).intro }))),
       h('div', { class: 'list' }, rows));
     sheet = App.sheet({
-      title: 'Nuanza məsləhət verir',
+      title: charName(this.who) + ' məsləhət verir',
       body: body,
       actions: [
         { label: 'Gizlət', kind: 'ghost', onClick: function () { close(); self.hideDock(); } },
         { label: 'Köməkçi ayarları', kind: 'secondary', onClick: function () { close(); if (App.go) App.go('settings'); } }
       ]
     });
-    mini = Nuanza.mount(art, { size: 'mini', width: 64, interactive: false });
+    mini = Nuanza.mount(art, { size: 'mini', width: 64, interactive: false, who: this.who });
     mini.set('wave', { ms: 1800 });
     this.set('wave', { ms: 1400 });
   };
@@ -1163,7 +1466,7 @@
     var s = store();
     try { if (s) s.set('companion', c); } catch (e) { /* storage blocked */ }
     this.root.setAttribute('data-hidden', '1');
-    if (window.App && window.App.toast) window.App.toast('Nuanza gizləndi. Ayarlar › Köməkçi bölməsindən qaytara bilərsiniz.', 'info');
+    if (window.App && window.App.toast) window.App.toast(charName(this.who) + ' gizləndi. Ayarlar › Köməkçi bölməsindən qaytara bilərsiniz.', 'info');
   };
 
   Inst.prototype.show = function () {
@@ -1184,6 +1487,16 @@
     if (this.root.parentNode) this.root.parentNode.removeChild(this.root);
   };
 
+  /* re-render every instance that follows the default (dock, minis…) when it changes */
+  function refreshWho() { for (var i = 0; i < INSTS.length; i++) { if (!INSTS[i].fixedWho) INSTS[i].setWho(null, true); } }
+  (function watchMode() {
+    try {
+      if (window.MutationObserver) new MutationObserver(refreshWho).observe(document.documentElement, { attributes: true, attributeFilter: ['data-mode'] });
+    } catch (e) { /* no observer */ }
+    var hook = function () { try { if (window.App && typeof window.App.on === 'function') { window.App.on('mode', function () { setTimeout(refreshWho, 0); }); return true; } } catch (e) { /* ignore */ } return false; };
+    if (!hook()) { var tries = 0, iv = setInterval(function () { if (hook() || ++tries > 40) clearInterval(iv); }, 250); }
+  })();
+
   var Nuanza = {
     states: STATE_NAMES.slice(),
     tips: TIPS,
@@ -1193,6 +1506,10 @@
       return new Inst(el || null, opts || {});
     },
     instances: function () { return INSTS.slice(); },
+    characters: { nuanza: { name: 'Nuanza' }, tenso: { name: 'Tenso' } },
+    /* product-wide default: 'tenso' | 'nuanza' (aliases: 'nihad'); null/'auto' → follow <html data-mode> */
+    setDefault: function (who) { explicitDefault = normWho(who); refreshWho(); return defaultWho(); },
+    getDefault: defaultWho,
     applyConfig: function () { INSTS.forEach(function (x) { if (x.size === 'dock') x._applyCfg(); else x._calmCheck(); }); },
     config: cfg
   };
