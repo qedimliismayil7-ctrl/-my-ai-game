@@ -300,15 +300,16 @@ function wsHtmlToText(html) {
   s = s.replace(/[\s]+/g, " ");                                          // HTML boşluqları
   s = s.replace(/<br\b[^>]*>/gi, "\n");
   s = s.replace(/<\/?(p|div|h[1-6]|blockquote|pre|ol|ul|dl|table|tbody|thead|center|section|poem|hr)\b[^>]*>/gi, "\n\n");
-  s = s.replace(/<li\b[^>]*>/gi, "\n• ").replace(/<\/li>/gi, "\n");
+  s = s.replace(/<li\b[^>]*>/gi, "\n• ").replace(/<\/li>/gi, "");
   s = s.replace(/<(dd|dt)\b[^>]*>/gi, "\n").replace(/<\/(dd|dt)>/gi, "\n");
   s = s.replace(/<tr\b[^>]*>/gi, "\n").replace(/<\/tr>/gi, "\n");
-  s = s.replace(/<\/t[dh]>\s*<t[dh]\b[^>]*>/gi, "    ").replace(/<\/?t[dh]\b[^>]*>/gi, "");
+  s = s.replace(/<\/t[dh]>\s*<t[dh]\b[^>]*>/gi, " | ").replace(/<\/?t[dh]\b[^>]*>/gi, "");
   s = s.replace(/<[^>]*>/g, "");
   s = wsDecode(s).replace(/ /g, " ").replace(/[​‎‏﻿]/g, "");
   s = s.split("\n").map(function (l) { return l.replace(/[ \t]+/g, " ").trim(); }).join("\n");
   s = s.replace(/\n{3,}/g, "\n\n").replace(/^\s+|\s+$/g, "");
-  // tək qalmış «• » sətirləri
+  // istinadlar silindikdən sonra boş qalan «Qeydlər» başlıqları və tək qalmış «• » sətirləri
+  s = s.replace(/^(Qeydlər|İstinadlar|Mənbələr|Notes|References|Footnotes)$/gm, "");
   s = s.replace(/^•\s*$/gm, "").replace(/\n{3,}/g, "\n\n");
   return s;
 }
