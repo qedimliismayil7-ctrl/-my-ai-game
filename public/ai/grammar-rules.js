@@ -206,7 +206,12 @@
     });
     /* «married with him» → «married to him» (married with two children düzgündür) */
     scan(new RegExp('(^|' + W + ')(married|marry)\\s+with\\s+(him|her|me|you|them|my|his|their|our|your|[A-Z][a-z]+)(?=' + W + '|$)', 'gu'), text, function (m, at) {
-      out.push(issue(at, m[0].slice(m[1].length), m[2] + ' to ' + m[3], 'en.verb_pattern', 'İngilis dilində kiminləsə evlənmək «married to» olur: She is married to Tom. («ilə» sözbəsöz «with» deyil.)', 'mid'));
+      var pre = text.slice(Math.max(0, at - 16), at);
+      if (/\b(is|am|are|was|were|be|been|being|get|gets|got|getting|'s|'re|'m)\s*$/i.test(pre) || m[2] === 'marry' && /\bget\s*$/i.test(pre)) {
+        out.push(issue(at, m[0].slice(m[1].length), m[2] + ' to ' + m[3], 'en.verb_pattern', 'İngilis dilində «evlidir» — «be married to» olur: She is married to Tom. («ilə» sözbəsöz «with» deyil.)', 'mid'));
+      } else {
+        out.push(issue(at, m[0].slice(m[1].length), m[2] + ' ' + m[3], 'en.verb_pattern', '«marry» felindən sonra sözönü işlənmir: I married him. («Onunla evləndim» — «with» lazım deyil.)', 'mid'));
+      }
     });
     /* «people is» → «people are» */
     scan(new RegExp('(^|' + W + ')(people|children|police)\\s+(is|was|has)(?=' + W + '|$)', 'giu'), text, function (m, at) {
@@ -270,6 +275,7 @@
       var re = new RegExp('(^|' + W + ')(I|we|We|they|They|you|You)\\s+(' + BASES.join('|') + ')(?=' + W + '|$)', 'gu');
       scan(re, S.t, function (m, at) {
         var v = m[3];
+        if (/\b(do|does|did|don't|doesn't|didn't|will|would|can|could|should|must|may|might|to|let|if|when|unless)\s+$/i.test(S.t.slice(0, at))) return;
         if (v === 'have' && /^\s+(\p{L}+ed|been|gone|seen|done|made|taken|read|written|met|had|got|eaten|bought|known|found|told|said|left)\b/u.test(S.t.slice(at + m[0].length - m[1].length))) return;
         out.push(issue(S.s + at, m[0].slice(m[1].length), m[2] + ' ' + pastOf(v), 'en.past_simple', 'Cümlədə keçmiş vaxt var (yesterday, last…, ago) — fel Past Simple-da olur: Yesterday I ' + pastOf(v) + '.', 'high'));
       });
@@ -347,7 +353,7 @@
       out.push(issue(at, m[2] + ' ' + m[3], fix, 'en.zero_article', 'Ümumi anlayışdan danışanda (təhsil, həyat) «the» işlənmir: Education is important.', 'mid'));
     });
     /* kiçik «i» → «I» */
-    scan(/(^|[\s("“«])(i)(?=(['’](m|ve|ll|d))?([\s,.!?;:)]|$))/g, text, function (m, at) {
+    scan(/(^|[\s("“«])(i)(?=(['’](m|ve|ll|d))?([\s,.!?;:)]|$))(?!\.\s?[a-z]\.)/g, text, function (m, at) {
       out.push(issue(at, 'i', 'I', 'en.capital', '«I» (mən) ingilis dilində həmişə böyük hərflə yazılır: I think so.', 'mid'));
     });
   }

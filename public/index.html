@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Nuanza — Azərbaycan dili ilə işləyən tərcüməçilər üçün iş masası: layihələr, redaktor, keyfiyyət yoxlaması, Mirzə Məclisi və Akademiya.">
+<meta name="description" content="Nuanza — tərcüməçilər üçün iş masası (layihələr, redaktor, QA, Mirzə Məclisi, Akademiya) və Tenso — ingilis dilini öyrənənlər üçün qrammatika yoxlaması və kursu.">
 <meta name="theme-color" content="#0A0B0E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -28,7 +28,9 @@
       var t = JSON.parse(localStorage.getItem('nuanza2:theme'));
       if (t !== 'system') r.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
       var m = JSON.parse(localStorage.getItem('nuanza2:mode'));
-      r.setAttribute('data-mode', m === 'academy' ? 'academy' : 'pro');
+      var pr = JSON.parse(localStorage.getItem('nuanza2:product'));
+      if (m === 'grammar' && pr === 'translate') m = JSON.parse(localStorage.getItem('nuanza2:tmode'));
+      r.setAttribute('data-mode', m === 'academy' || m === 'grammar' ? m : 'pro');
       var mo = JSON.parse(localStorage.getItem('nuanza2:motion'));
       r.setAttribute('data-motion', (mo === 'reduce' || mo === true) ? 'reduce' : mo === 'system' ? 'system' : 'full');
     } catch (e) { r.setAttribute('data-mode', 'pro'); r.setAttribute('data-theme', 'dark'); }
@@ -98,6 +100,15 @@
 <script src="ai/qa.js"></script>
 <script src="ai/lesson.js"></script>
 <script src="app.js"></script>
+<script src="data-grammar-1.js"></script>
+<script src="data-grammar-2.js"></script>
+<script src="data-prompts.js"></script>
+<script src="data-placement.js"></script>
+<script src="ai/grammar-rules.js"></script>
+<script src="ai/grammar.js"></script>
+<script src="s-grammar.js"></script>
+<script src="s-tenso-learn.js"></script>
+<script src="s-tenso-extra.js"></script>
 <script src="s-home.js"></script>
 <script src="s-translate.js"></script>
 <script src="s-projects.js"></script>
