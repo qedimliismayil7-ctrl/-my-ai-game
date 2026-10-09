@@ -43,6 +43,7 @@ export default {
       if (p === "/manifest.webmanifest") return json(MANIFEST, 200, { "content-type": "application/manifest+json", "cache-control": "public, max-age=3600" });
       if (p === "/sw.js") return new Response(SW, { headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" } });
       if (request.method !== "GET" && request.method !== "HEAD") return new Response("Tapılmadı", { status: 404 });
+      if (p === "/welcome" || p === "/welcome/" || p === "/salam" || p === "/salam/") return serveAsset("/welcome.html");
       return serveAsset(p === "/" ? "/index.html" : p);
     } catch (e) {
       return new Response("Xəta baş verdi", { status: 500 });
