@@ -7,6 +7,7 @@
 //    MODEL       — istəyə bağlı. Standart: gemini-flash-latest
 //    TG_ALLOWED  — istəyə bağlı. Botdan istifadə edə bilən Telegram ID-ləri, vergüllə
 //    API_LIMIT   — istəyə bağlı. Bir IP üçün 10 dəqiqədə AI sorğusu (standart 40)
+//    GRAMMAR_LIMIT — istəyə bağlı. Bir IP üçün 10 dəqiqədə /grammar sorğusu (standart 40)
 //  Quraşdırmadan sonra bir dəfə açın:  https://SIZIN-UNVAN/setup?key=ACCESS_CODE
 //  Bu fayl build.mjs ilə yığılır: ASSETS obyekti public/ qovluğundan gəlir.
 // ===================================================================
@@ -150,6 +151,204 @@ async function handleApi(request, env) {
   const speed = ["fast", "normal", "deep"].indexOf(body && body.speed) >= 0 ? body.speed : "normal";
   try { return json({ ok: true, data: await gemini(env, prompt, speed) }); }
   catch (e) { return json({ error: e.code || "server_error" }, e.status || 502); }
+}
+
+// ---------- Nuanza Qrammatika: POST /grammar ----------
+// Müstəqil API (başqa müştərilər də istifadə edə bilər). Prompt serverdə qurulur.
+// Sorğu:  POST /grammar  {text, lang?: "auto"|"en"|"az", mode?: "fast"|"deep"}   başlıq: x-access-code (ACCESS_CODE varsa)
+// Cavab:  {ok:true, data:{lang, score, level:{cefr, why}, issues:[{start,end,wrong,fix,type,why,sev,rule,ruleTitle}], corrected, summary}}
+// start/end modelin dediyinə görə yox, `wrong` mətndə tapılaraq hesablanır; tapılmayan qeydlər atılır.
+const GRAMMAR_MAX = 20000;
+const GRAMMAR_TYPES = {
+  en: ["Grammar", "Spelling", "Punctuation", "Article", "Tense", "Word choice", "Style"],
+  az: ["Orfoqrafiya", "Türk forması", "Durğu", "Qrammatika", "Söz sırası", "Üslub", "Kalka", "Böyük/kiçik hərf", "Bitişik/ayrı yazılış", "Rus kalkası"]
+};
+// Qayda kataloqu: id → [Azərbaycanca qısa başlıq, növ]. Müştəri tərəfi (public/ai/grammar-rules.js) eyni id-ləri işlədir.
+const GRAMMAR_RULES = {
+  en: {
+    "en.article": ["Artikllər: a / an / the", "Article"],
+    "en.a_an": ["a yoxsa an", "Article"],
+    "en.zero_article": ["Ümumi anlayışlarda «the» işlənmir", "Article"],
+    "en.be_agree": ["«agree» feldir: I agree", "Grammar"],
+    "en.be_verb": ["to be: am / is / are", "Grammar"],
+    "en.sv_agreement": ["Mübtəda ilə xəbərin uzlaşması", "Grammar"],
+    "en.third_person_s": ["He/she/it + fel-s", "Grammar"],
+    "en.did_base": ["did / didn't + felin 1-ci forması", "Tense"],
+    "en.modal_base": ["can / must / should + felin 1-ci forması", "Grammar"],
+    "en.past_simple": ["Past Simple: keçmişdə bitmiş iş", "Tense"],
+    "en.present_perfect": ["Present Perfect yoxsa Past Simple", "Tense"],
+    "en.continuous": ["Present Continuous / Simple", "Tense"],
+    "en.future": ["Gələcək zaman: will / going to", "Tense"],
+    "en.comparative": ["Müqayisə dərəcəsi: better, more…", "Grammar"],
+    "en.plural": ["Cəm: rəqəmdən sonra -s", "Grammar"],
+    "en.uncountable": ["Sayılmayan isimlər", "Grammar"],
+    "en.preposition": ["Sözönülər: in / on / at", "Word choice"],
+    "en.verb_pattern": ["Fel + sözönü birləşmələri", "Word choice"],
+    "en.word_order": ["Söz sırası: S + V + O", "Grammar"],
+    "en.questions": ["Sual cümləsi: do / does / did", "Grammar"],
+    "en.pronoun": ["he / she / it — cinsə görə əvəzlik", "Grammar"],
+    "en.false_friend": ["Yalançı dostlar", "Word choice"],
+    "en.calque": ["Kalka: sözbəsöz tərcümə", "Word choice"],
+    "en.capital": ["Böyük hərf: I, cümlə əvvəli, adlar", "Spelling"],
+    "en.spelling": ["Orfoqrafiya", "Spelling"],
+    "en.punctuation": ["Durğu işarələri", "Punctuation"],
+    "en.style": ["Üslub və aydınlıq", "Style"]
+  },
+  az: {
+    "az.turkish": ["Türk formaları", "Türk forması"],
+    "az.russian": ["Rus sözləri və kalkalar", "Rus kalkası"],
+    "az.calque": ["Kalka", "Kalka"],
+    "az.ki": ["«ki» bağlayıcısı ayrı yazılır", "Bitişik/ayrı yazılış"],
+    "az.mi": ["Sual ədatı -mı/-mi bitişik yazılır", "Bitişik/ayrı yazılış"],
+    "az.compound": ["Bitişik və ayrı yazılış", "Bitişik/ayrı yazılış"],
+    "az.punct_space": ["Durğu işarəsi və boşluq", "Durğu"],
+    "az.comma": ["Vergül: çünki, lakin, amma", "Durğu"],
+    "az.quotes": ["Dırnaq: « »", "Durğu"],
+    "az.capital": ["Böyük hərf", "Böyük/kiçik hərf"],
+    "az.month": ["Ay və həftə günləri kiçik hərflə", "Böyük/kiçik hərf"],
+    "az.ortho": ["Orfoqrafiya", "Orfoqrafiya"],
+    "az.suffix": ["Şəkilçi və uzlaşma", "Qrammatika"],
+    "az.order": ["Söz sırası", "Söz sırası"],
+    "az.colloquial": ["Danışıq forması", "Üslub"],
+    "az.style": ["Üslub", "Üslub"]
+  }
+};
+const CEFR = ["A1", "A2", "B1", "B2", "C1"];
+const GRAMMAR_DOCS = {
+  name: "Nuanza Qrammatika API",
+  version: 1,
+  endpoint: "POST /grammar",
+  auth: "ACCESS_CODE qurulubsa, «x-access-code» başlığı məcburidir.",
+  limits: { maxChars: GRAMMAR_MAX, rate: "IP başına 10 dəqiqədə GRAMMAR_LIMIT (standart 40) sorğu" },
+  request: { text: "string, məcburi", lang: "auto | en | az (standart auto)", mode: "fast | deep (standart fast)" },
+  response: {
+    ok: true,
+    data: {
+      lang: "en | az",
+      score: "0–100",
+      level: { cefr: "A1–C1 (yalnız en)", why: "bir cümləlik izah (az)" },
+      issues: [{ start: "int", end: "int", wrong: "mətndəki dəqiq parça", fix: "düzəliş", type: "növ", why: "qısa qayda izahı (həmişə Azərbaycanca)", sev: "high | mid | low", rule: "qayda id", ruleTitle: "qayda başlığı" }],
+      corrected: "bütün düzəlişlər tətbiq olunmuş mətn",
+      summary: "qısa xülasə (az)"
+    }
+  },
+  types: GRAMMAR_TYPES,
+  rules: Object.keys(GRAMMAR_RULES.en).concat(Object.keys(GRAMMAR_RULES.az)),
+  errors: ["bad_code", "rate_limited", "invalid_request", "text_too_large", "not_configured", "model_unavailable", "refused", "invalid_json", "empty_completion", "server_error"]
+};
+
+function grammarDetect(t) {
+  if (/[əƏğĞıİşŞçÇöÖüÜ]/.test(t)) {
+    const en = (t.match(/\b(the|and|is|are|was|were|have|has|with|this|that|I|you)\b/g) || []).length;
+    const az = (t.match(/[əƏ]/g) || []).length + (t.match(/(^|\s)(və|bu|ilə|deyil|üçün|mən|sən|bir|ki)(?=\s|$|[.,!?])/gi) || []).length * 2;
+    return en > az * 2 ? "en" : "az";
+  }
+  return "en";
+}
+
+function grammarPrompt(text, lang) {
+  const types = GRAMMAR_TYPES[lang].join(", ");
+  const rules = Object.keys(GRAMMAR_RULES[lang]).map(function (k) { return k + " (" + GRAMMAR_RULES[lang][k][0] + ")"; }).join("; ");
+  const common = "Return ONLY JSON: {\"issues\": [{\"wrong\": \"exact substring copied from TEXT\", \"fix\": \"replacement\", \"type\": \"...\", \"rule\": \"rule id\", \"why\": \"...\", \"sev\": \"high|mid|low\"}], \"score\": 0-100, " +
+    (lang === "en" ? "\"level\": {\"cefr\": \"A1|A2|B1|B2|C1\", \"why\": \"one short sentence in Azerbaijani\"}, " : "") +
+    "\"summary\": \"one or two friendly sentences in Azerbaijani\"}.\n" +
+    "RULES FOR ISSUES: `wrong` must be copied character-for-character from TEXT (same case, same spaces), as short as possible but containing whole words (2–6 words is ideal; include a neighbouring word when needed to make it unique). `fix` replaces exactly `wrong`. List every occurrence separately. Do not report correct text, personal taste or alternative wording that is not an error. " +
+    "sev: high = changes meaning or is a clear grammar error; mid = clear error that does not block understanding; low = punctuation, style, polish. " +
+    "`type` must be one of: " + types + ". `rule` must be one of: " + rules + ". " +
+    "`why` is ALWAYS in simple, friendly Azerbaijani (" + "standard Azerbaijani Latin orthography with ə ğ ı ö ü ş ç, never Turkish forms" + "), 1–2 short sentences: name the rule simply and give one short correct example, e.g. «İngilis dilində \\\"agree\\\" feldir, \\\"be\\\" ilə işlənmir: I agree.» Never scold.\n";
+  if (lang === "en") {
+    return "You are a kind English teacher checking text written by an Azerbaijani speaker who is LEARNING English. Find real errors in the English TEXT. " +
+      "Pay special attention to typical Azerbaijani-speaker errors: articles a/an/the (Azerbaijani has none; also 'the' with general/abstract nouns like 'the education is important'), verb-final word order, tenses (past simple after 'yesterday/last year/ago'; present perfect vs past simple; -mış calques), prepositions (in/on/at, 'married with' → 'married to', 'discuss about'), 'I am agree', 'more better', 'didn't went', 'people is', plural after numbers, he/she confusion (Azerbaijani 'o' has no gender), false friends (actual, eventually, sympathetic, magazine, accurate, artist, fabric, decade), Russian/Azerbaijani calques ('make a photo' → 'take a photo', 'in the last year' → 'last year'). " +
+      "Also estimate the writer's CEFR level from vocabulary and structures (A1–C1) with a one-line reason in Azerbaijani.\n" + common + "TEXT:\n\"\"\"" + text.replace(/"""/g, "\"") + "\"\"\"";
+  }
+  return "You are an expert Azerbaijani editor (proofreader). Find real errors in the Azerbaijani TEXT according to the official orthography of the Azerbaijani language. " +
+    "Check: spelling, Turkish words and forms (değil → deyil, için → üçün, -yor), Russian words and calques, punctuation (comma before çünki/lakin/amma; comma after «ki» introducing a clause; «» quotes), capitalisation (months and weekdays are lowercase), separate/joined writing (ki, da/də are separate; the question particle -mı/-mi is joined), suffixes and agreement, word order, colloquial forms in writing (gələcəm → gələcəyəm).\n" +
+    common + "TEXT:\n\"\"\"" + text.replace(/"""/g, "\"") + "\"\"\"";
+}
+
+const GR_WORD = /[\p{L}\p{N}]/u;
+// `wrong` mətndə harada? Model ofsetləri səhv verir — özümüz tapırıq. Söz sərhədinə düşən, hələ tutulmamış, ipucuna ən yaxın yer.
+function grammarLocate(text, wrong, hint, taken) {
+  const firstW = GR_WORD.test(wrong.charAt(0)), lastW = GR_WORD.test(wrong.charAt(wrong.length - 1));
+  let best = -1, bestD = Infinity, from = 0;
+  for (let guard = 0; guard < 500; guard++) {
+    const i = text.indexOf(wrong, from);
+    if (i < 0) break;
+    from = i + 1;
+    const e = i + wrong.length;
+    if (firstW && i > 0 && GR_WORD.test(text.charAt(i - 1))) continue;
+    if (lastW && e < text.length && GR_WORD.test(text.charAt(e))) continue;
+    if (taken.some(function (t) { return i < t[1] && e > t[0]; })) continue;
+    const d = typeof hint === "number" && isFinite(hint) ? Math.abs(i - hint) : i;
+    if (d < bestD) { best = i; bestD = d; }
+  }
+  return best;
+}
+
+function grammarScore(text, issues) {
+  const words = (text.match(/[\p{L}\p{N}]+/gu) || []).length;
+  let pen = 0;
+  issues.forEach(function (x) { pen += x.sev === "high" ? 4 : x.sev === "mid" ? 2 : 1; });
+  return Math.max(0, Math.min(100, Math.round(100 * Math.exp(-1.5 * pen / Math.max(words, 15)))));
+}
+
+function grammarApply(text, issues) {
+  let out = text;
+  issues.slice().sort(function (a, b) { return b.start - a.start; }).forEach(function (x) { out = out.slice(0, x.start) + x.fix + out.slice(x.end); });
+  return out;
+}
+
+function grammarClean(raw, text, lang) {
+  const cat = GRAMMAR_RULES[lang], types = GRAMMAR_TYPES[lang];
+  const list = Array.isArray(raw && raw.issues) ? raw.issues : [];
+  const taken = [], out = [];
+  list.slice(0, 300).forEach(function (x) {
+    if (!x || typeof x !== "object") return;
+    const wrong = String(x.wrong == null ? "" : x.wrong), fix = String(x.fix == null ? "" : x.fix);
+    if (!wrong.trim() || wrong.length > 300 || fix.length > 400 || wrong === fix) return;
+    const at = grammarLocate(text, wrong, parseInt(x.start, 10), taken);
+    if (at < 0) return;
+    let rule = String(x.rule || "");
+    if (!cat[rule]) rule = lang + ".style";
+    let type = String(x.type || "");
+    if (types.indexOf(type) < 0) type = cat[rule] && cat[rule][1] !== "Style" && cat[rule][1] !== "Üslub" ? cat[rule][1] : (lang === "en" ? "Grammar" : "Qrammatika");
+    const sev = x.sev === "high" || x.sev === "low" ? x.sev : "mid";
+    const issue = { start: at, end: at + wrong.length, wrong: wrong, fix: fix, type: type, why: String(x.why || "").trim().slice(0, 500), sev: sev, rule: rule, ruleTitle: cat[rule][0] };
+    taken.push([issue.start, issue.end]);
+    out.push(issue);
+  });
+  out.sort(function (a, b) { return a.start - b.start; });
+  return out;
+}
+
+async function handleGrammar(request, env) {
+  if (env.ACCESS_CODE && !sameText(request.headers.get("x-access-code") || "", env.ACCESS_CODE)) return json({ ok: false, error: "bad_code" }, 401);
+  const limit = parseInt(env.GRAMMAR_LIMIT, 10) || 40;
+  if (!allow("grammar:" + clientIp(request), limit, 10 * 60 * 1000)) return json({ ok: false, error: "rate_limited" }, 429);
+  let body = null; try { body = await request.json(); } catch (e) {}
+  const text = typeof (body && body.text) === "string" ? body.text : "";
+  if (!text.trim()) return json({ ok: false, error: "invalid_request" }, 400);
+  if (text.length > GRAMMAR_MAX) return json({ ok: false, error: "text_too_large" }, 400);
+  const want = body.lang === "en" || body.lang === "az" ? body.lang : "auto";
+  const lang = want === "auto" ? grammarDetect(text) : want;
+  const speed = body.mode === "deep" ? "deep" : "fast";
+  let raw;
+  try { raw = await gemini(env, grammarPrompt(text, lang), speed, 0.2); }
+  catch (e) { return json({ ok: false, error: e.code || "server_error" }, e.status || 502); }
+  const issues = grammarClean(raw, text, lang);
+  const data = {
+    lang: lang,
+    score: grammarScore(text, issues),
+    issues: issues,
+    corrected: grammarApply(text, issues),
+    summary: String((raw && raw.summary) || "").trim().slice(0, 600) || (issues.length ? issues.length + " qeyd tapıldı." : "Səhv tapılmadı.")
+  };
+  if (lang === "en") {
+    const lv = raw && raw.level && typeof raw.level === "object" ? raw.level : {};
+    const cefr = String(lv.cefr || "").toUpperCase();
+    data.level = { cefr: CEFR.indexOf(cefr) >= 0 ? cefr : "", why: String(lv.why || "").trim().slice(0, 300) };
+  } else data.level = null;
+  return json({ ok: true, data: data });
 }
 
 // ---------- Kitabxana: Vikimənbə (Wikisource) proksisi ----------
