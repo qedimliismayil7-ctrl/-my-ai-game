@@ -266,10 +266,11 @@
     /* «Yesterday I go» → «Yesterday I went» */
     sents.forEach(function (S) {
       if (!/\b(yesterday|last\s+(night|week|month|year|summer|winter|spring|autumn|weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|\d+\s+(days|weeks|months|years)\s+ago|ago)\b/i.test(S.t)) return;
-      if (/\b(will|tomorrow|next|usually|always|every)\b/i.test(S.t)) return;
+      if (/\b(will|tomorrow|next|usually|always|every|since|so far|ever|never|in the (last|past)|for the (last|past))\b/i.test(S.t)) return;
       var re = new RegExp('(^|' + W + ')(I|we|We|they|They|you|You)\\s+(' + BASES.join('|') + ')(?=' + W + '|$)', 'gu');
       scan(re, S.t, function (m, at) {
         var v = m[3];
+        if (v === 'have' && /^\s+(\p{L}+ed|been|gone|seen|done|made|taken|read|written|met|had|got|eaten|bought|known|found|told|said|left)\b/u.test(S.t.slice(at + m[0].length - m[1].length))) return;
         out.push(issue(S.s + at, m[0].slice(m[1].length), m[2] + ' ' + pastOf(v), 'en.past_simple', 'Cümlədə keçmiş vaxt var (yesterday, last…, ago) — fel Past Simple-da olur: Yesterday I ' + pastOf(v) + '.', 'high'));
       });
     });
@@ -494,7 +495,8 @@
     scan(/(^|[^\p{L}\p{N}])(\p{L}+)[ \t]+(çünki|lakin|amma)(?=[ \t]+\p{L})/gu, text, function (m, at) {
       var prev = lower(m[2]);
       if (/^(və|ya|yaxud|həm|ki|ancaq|nə)$/.test(prev)) return;
-      out.push(issue(at, m[0].slice(m[1].length), m[2] + ', ' + m[3], 'az.comma', '«' + m[3] + '» ilə başlayan hissədən əvvəl vergül qoyulur: Gəlmədim, ' + m[3] + ' …', 'low'));
+      var sp = m[0].slice(m[1].length + m[2].length, m[0].length - m[3].length);
+      out.push(issue(at + m[2].length, sp + m[3], ', ' + m[3], 'az.comma', '«' + m[3] + '» ilə başlayan hissədən əvvəl vergül qoyulur: Gəlmədim, ' + m[3] + ' …', 'low'));
     });
     /* pleonazm */
     scan(wordRe(Object.keys(PLEO), 'i'), text, function (m, at) {
@@ -535,13 +537,14 @@
     var az = lang === 'az', rp = az ? 'az.punct_space' : 'en.punctuation', rc = az ? 'az.capital' : 'en.capital';
     /* ikiqat boşluq (sətir əvvəlindəki girinti istisna) */
     scan(/(\S)( {2,})(?=\S)/g, text, function (m, at) {
-      out.push(issue(at + m[1].length - m[1].length + 1 - 1 + 1 - 1 + m[1].length - m[1].length + m[1].length - 1 + 1, m[2], ' ', rp, az ? 'Sözlər arasında bir boşluq qoyulur.' : 'Sözlər arasında bir boşluq kifayətdir.', 'low'));
+      out.push(issue(at, m[2], ' ', rp, az ? 'Sözlər arasında bir boşluq qoyulur.' : 'Sözlər arasında bir boşluq kifayətdir.', 'low'));
     });
     /* durğu işarəsindən əvvəl boşluq: «Salam ,» */
     scan(/([\p{L}\p{N})»"])([ \t]+)([,;:!?]|\.(?!\.)(?=\s|$))/gu, text, function (m, at) {
       var s = m.index + m[1].length;
       if (m[3] === ':' && /\d/.test(text.charAt(s + m[2].length + 1))) return;
-      out.push(issue(s, m[2] + m[3], m[3], rp, az ? 'Durğu işarəsi əvvəlki sözə bitişik yazılır: Salam, dost.' : 'İngilis dilində də durğu işarəsindən əvvəl boşluq qoyulmur: Hello, world.', 'low'));
+      var glue = IS_W.test(text.charAt(s + m[2].length + 1)) ? ' ' : '';
+      out.push(issue(s, m[2] + m[3], m[3] + glue, rp, az ? 'Durğu işarəsi əvvəlki sözə bitişik yazılır: Salam, dost.' : 'İngilis dilində də durğu işarəsindən əvvəl boşluq qoyulmur: Hello, world.', 'low'));
     });
     /* durğu işarəsindən sonra boşluq yoxdur: «salam,dost» */
     scan(/(\p{Ll}{2,})([,;!?])(\p{L}{2,})/gu, text, function (m) {
