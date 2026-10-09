@@ -1813,8 +1813,9 @@
     R.setAttribute('data-mode', curMode);
     if (els.modeSeg) $$('button', els.modeSeg).forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-mode') === curMode)); });
     var gr = curMode === 'grammar';
-    if (els.brandName) els.brandName.textContent = gr ? 'Tenso' : 'Nuanza';
-    if (els.brandSmall) { els.brandSmall.hidden = curMode === 'pro'; els.brandSmall.textContent = gr ? '· Qrammatika' : 'Akademiya'; }
+    var onHub = /^#hub\b/.test(W.location.hash || '');
+    if (els.brandName) els.brandName.textContent = onHub ? 'Loquela' : gr ? 'Tenso' : 'Nuanza';
+    if (els.brandSmall) { els.brandSmall.hidden = onHub || curMode === 'pro'; els.brandSmall.textContent = gr ? '· Qrammatika' : 'Akademiya'; }
     if (els.brand) {
       els.brand.setAttribute('aria-label', gr ? 'Tenso · Qrammatika — məhsullar' : curMode === 'academy' ? 'Nuanza Akademiya — məhsullar' : 'Nuanza — məhsullar');
       els.brand.setAttribute('href', '#hub');
@@ -2521,8 +2522,10 @@
      17b. HUB — məhsul seçimi: Tərcümə (Nuanza) · Qrammatika (Tenso)
      ------------------------------------------------------------------ */
   var hubMounts = [];
-  function hubLeave() { hubMounts.forEach(function (m) { try { if (m && m.destroy) m.destroy(); } catch (e) { log(e); } }); hubMounts = []; }
+  function hubLeave() { hubMounts.forEach(function (m) { try { if (m && m.destroy) m.destroy(); } catch (e) { log(e); } }); hubMounts = []; syncModeUI(); }
   function renderHub(sec) {
+    /* the hub belongs to the umbrella brand, not to one product */
+    W.setTimeout(syncModeUI, 0);
     hubLeave();
     var p = profile(), last = store.get('product', '');
     function card(prod, who, cls, eyebrow, title, text, feats, cta) {
@@ -2545,9 +2548,9 @@
     }
     sec.appendChild(h('div', { class: 'page hub' },
       h('div', { class: 'page-h' }, h('div', null,
-        h('span', { class: 'eyebrow', text: 'Nuanza · məhsullar' }),
+        h('span', { class: 'eyebrow', text: 'Loquela · məhsullar' }),
         h('h1', { html: p.firstName ? 'Salam, <em>' + esc(p.firstName) + '</em>. Nə edirik?' : 'Bu gün <em>nə</em> edirik?' }),
-        h('p', { text: 'İki məhsul, bir hesab. İstədiyiniz vaxt başlıqdakı loqoya toxunub buraya qayıda bilərsiniz.' }))),
+        h('p', { text: 'Loquela — iki məhsul, bir hesab: Nuanza tərcümə edir, Tenso ingilis dilini öyrədir. Başlıqdakı loqoya toxunub istənilən vaxt buraya qayıdın.' }))),
       h('div', { class: 'hub-grid' },
         card('translate', 'nuanza', 'hub-tr', 'Nuanza', 'Tərcümə', 'Tərcümə masası: layihələr, redaktor, QA və Akademiya.', ['EN/RU/TR ↔ AZ', 'Mirzə Məclisi', 'Akademiya'], 'Tərcüməyə keç'),
         card('grammar', 'tenso', 'hub-gr', 'Tenso', 'Qrammatika · Tenso', 'İngilis dili · yazdığını yoxla, səhvdən öyrən', ['Yoxla və düzəlt', 'A1–C1 kursu', 'Gündəlik yazı'], 'Qrammatikaya keç')),

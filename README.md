@@ -1,6 +1,6 @@
-# Nuanza
+# Loquela — Nuanza (tərcümə) və Tenso (qrammatika)
 
-Azərbaycan dili ilə işləyən tərcüməçilərin iş masası: sayt (Telegram Mini App kimi də açılır) və Telegram botu.
+Bir tətbiqdə iki məhsul: **Nuanza** — Azərbaycan dili ilə işləyən tərcüməçilərin iş masası, **Tenso** — ingilis dilini öyrənənlər üçün qrammatika yoxlaması və kursu. Sayt Telegram Mini App kimi də açılır, Telegram botu da var.
 Hamısı bir Cloudflare Worker-də işləyir. AI üçün Google Gemini istifadə olunur.
 
 - **Peşəkar rejim:** iş masası, tərcüməçi (Danışıq / Neytral / Rəsmi / Hüquqi), layihələr, seqment redaktoru, keyfiyyət yoxlaması (QA), Mirzə Məclisi.

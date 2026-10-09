@@ -1,5 +1,5 @@
 // ===================================================================
-//  Nuanza — tərcüməçinin iş masası (sayt + Telegram botu)
+//  Loquela — Nuanza (tərcümə) və Tenso (qrammatika): sayt + Telegram botu
 //  Cloudflare Worker. Settings → Variables and Secrets:
 //    GEMINI_KEY  — məcburi (Secret). aistudio.google.com açarı
 //    TG_TOKEN    — istəyə bağlı (Secret). Telegram @BotFather açarı
@@ -16,7 +16,7 @@ const ORTHO = "All Azerbaijani text must use standard Azerbaijani Latin orthogra
 const MAX_PROMPT = 30000;
 const SW = "self.addEventListener('install',function(){self.skipWaiting()});self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim())});";
 const MANIFEST = {
-  name: "Nuanza — tərcüməçinin iş masası", short_name: "Nuanza", lang: "az", start_url: "/", display: "standalone",
+  name: "Loquela — Nuanza və Tenso", short_name: "Loquela", lang: "az", start_url: "/", display: "standalone",
   background_color: "#0A0B0E", theme_color: "#0A0B0E",
   icons: [{ src: "/icon.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }, { src: "/icon.svg", sizes: "any", type: "image/svg+xml" }]
 };
@@ -551,7 +551,7 @@ async function send(env, chat, html, markup) {
 }
 function menu(origin) {
   return { inline_keyboard: [
-    [{ text: "Nuanzanı aç", web_app: { url: origin + "/" } }],
+    [{ text: "Loquela-nı aç", web_app: { url: origin + "/" } }],
     [{ text: "Tərcüməmi yoxla", callback_data: "help_check" }, { text: "Termin axtar", callback_data: "help_term" }],
     [{ text: "Yalançı dostlar", callback_data: "ff" }, { text: "Necə işləyir", callback_data: "help" }]
   ] };
@@ -603,7 +603,7 @@ async function processUpdate(env, upd, origin) {
 async function command(env, chat, t, origin) {
   const parts = t.trim().split(/\s+/), c = parts[0].toLowerCase().replace(/@.*$/, ""), arg = parts.slice(1).join(" ").trim();
   if (c === "/start" || c === "/menu")
-    return send(env, chat, "<b>Salam! Mən Nuanzayam</b> — tərcüməçinin köməkçisi.\n\nMənə mətn göndərin: tərcümə edim, işlənən transformasiyaları və terminləri göstərim.\n\nTam iş masası — layihələr, redaktor, keyfiyyət yoxlaması, Mirzə Məclisi və Akademiya — aşağıdakı düymədədir.", menu(origin));
+    return send(env, chat, "<b>Loquela-ya xoş gəldiniz!</b>\nMən Nuanzayam — tərcümə köməkçisi. Qrammatika üçün tətbiqdə Tenso sizi gözləyir.\n\nMənə mətn göndərin: tərcümə edim, işlənən transformasiyaları və terminləri göstərim.\n\nTam iş masası — layihələr, redaktor, keyfiyyət yoxlaması, Mirzə Məclisi və Akademiya — aşağıdakı düymədədir.", menu(origin));
   if (c === "help")
     return send(env, chat, "<b>Nə edə bilərəm</b>\n\n• Mətn göndərin — tərcümə, transformasiyalar, terminlər\n• Mənbə, ayrıca sətirdə <code>---</code>, sonra öz tərcüməniz — 100 ballıq qiymət və səhvlər\n• <code>/termin söz</code> — termin izahı və qarşılıqları\n• /dost — yalançı dostlar\n\nMüştəri sənədlərini, şəxsiyyət vəsiqəsi və pasport məlumatlarını bura göndərməyin.", menu(origin));
   if (c === "/termin" || c === "help_term") {
@@ -682,12 +682,12 @@ async function handleSetup(request, env, url) {
     const a = await tg(env, "setWebhook", { url: origin + "/tg", secret_token: await tgSecret(env.TG_TOKEN), allowed_updates: ["message", "callback_query"], drop_pending_updates: true });
     lines.push(a.ok ? "✅ Telegram botu saytla birləşdirildi." : "❌ Telegram: " + (a.description || "bot açarını yoxlayın"));
     await tg(env, "setMyCommands", { commands: [{ command: "start", description: "Menyu" }, { command: "termin", description: "Termin axtar" }, { command: "yoxla", description: "Tərcüməmi yoxla" }, { command: "dost", description: "Yalançı dostlar" }] });
-    await tg(env, "setChatMenuButton", { menu_button: { type: "web_app", text: "Nuanza", web_app: { url: origin + "/" } } });
+    await tg(env, "setChatMenuButton", { menu_button: { type: "web_app", text: "Loquela", web_app: { url: origin + "/" } } });
     const me = await tg(env, "getMe", {});
     if (me && me.ok && me.result) lines.push("🤖 Botunuz: @" + me.result.username);
     lines.push(env.TG_ALLOWED ? "🔒 Botdan yalnız TG_ALLOWED siyahısındakılar istifadə edə bilər." : "⚠️ Bot hamıya açıqdır. Yalnız özünüz üçün istəyirsinizsə, TG_ALLOWED dəyişəninə Telegram ID-nizi yazın.");
   }
   lines.push("🌐 Saytınız: " + origin + "/");
-  const page = "<!doctype html><html lang='az'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Nuanza quraşdırma</title></head><body style='font-family:system-ui,-apple-system,sans-serif;padding:24px;line-height:1.7;max-width:640px;margin:auto'><h2>Nuanza — quraşdırma yoxlaması</h2>" + lines.map(function (l) { return "<p>" + hx(l) + "</p>"; }).join("") + "</body></html>";
+  const page = "<!doctype html><html lang='az'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Loquela quraşdırma</title></head><body style='font-family:system-ui,-apple-system,sans-serif;padding:24px;line-height:1.7;max-width:640px;margin:auto'><h2>Loquela — quraşdırma yoxlaması</h2>" + lines.map(function (l) { return "<p>" + hx(l) + "</p>"; }).join("") + "</body></html>";
   return new Response(page, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 }
