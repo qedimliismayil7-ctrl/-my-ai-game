@@ -34,6 +34,7 @@ export default {
     try {
       if (p === "/api") return request.method === "POST" ? handleApi(request, env) : json({ error: "method" }, 405);
       if (p === "/tg") return request.method === "POST" ? handleTelegram(request, env, ctx) : new Response("ok");
+      if (p === "/lib") return request.method === "GET" ? handleLib(request, env, url, ctx) : json({ ok: false, error: "method" }, 405);
       if (p === "/setup") return handleSetup(request, env, url);
       if (p === "/health") return json({ ok: true, ai: !!env.GEMINI_KEY, bot: !!env.TG_TOKEN, locked: !!env.ACCESS_CODE });
       if (p === "/manifest.webmanifest") return json(MANIFEST, 200, { "content-type": "application/manifest+json", "cache-control": "public, max-age=3600" });
