@@ -867,8 +867,12 @@
 
   function renderTask(page, params) {
     var lvParam = params.level && levelById(params.level) ? params.level : null;
-    T = { page: page, task: null, hints: 0, result: null, checking: false, level: lvParam || sget('academy:level', 'B2'), lastChecked: null };
+    T = { page: page, task: null, hints: 0, result: null, checking: false, level: lvParam || sget('academy:level', 'B2'), lastChecked: null,
+      mode: params.mode === 'hunt' || params.mode === 'tr' ? params.mode : sget('academy:tmode', 'tr'), col: sget('academy:col', 'base'), hunt: null };
     if (!levelById(T.level)) T.level = 'B2';
+    if (T.mode !== 'hunt' || !HUNT.length) T.mode = 'tr';
+    if (!COLS.some(function (c) { return c.id === T.col; })) T.col = 'base';
+    if (params.col && COLS.some(function (c) { return c.id === params.col; })) { T.col = params.col; T.mode = 'tr'; }
 
     page.appendChild(h('div', { class: 'page-h' },
       h('div', null,
@@ -878,23 +882,32 @@
       userCards().length ? h('div', { class: 'actions' },
         h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { App.go('cards'); } }, ie('cards'), 'Səhv kartları')) : null));
 
+    page.appendChild(modeCard());
     T.getCard = levelCard();
     page.appendChild(T.getCard);
     T.briefSlot = h('div', { class: 'task-slot', hidden: true });
     T.srcSlot = h('div', { class: 'task-slot' });
     page.appendChild(T.briefSlot);
     page.appendChild(T.srcSlot);
-    page.appendChild(translationCard());
+    T.trCard = translationCard();
+    page.appendChild(T.trCard);
     T.resSlot = h('div', { class: 'task-res-slot', 'aria-live': 'polite' });
     page.appendChild(T.resSlot);
+    T.huntSlot = h('div', { class: 'task-slot', hidden: true });
+    page.appendChild(T.huntSlot);
 
     var st = sget('academy:task', null);
     var pick = params.id ? taskById(params.id) : null;
-    if (pick) {
+    if (pick) T.mode = 'tr';
+    paintMode();
+    if (T.mode === 'hunt') {
+      loadHunt(nextHunt(T.level));
+    } else if (pick) {
+      T.col = colOf(pick); paintMode();
       setLevel(pick.level);
       loadTask(pick, {});
       later(function () { nz('read', pick.tip, 3200); }, 700);
-    } else if (!lvParam && !params.domain && st && taskById(st.id)) {
+    } else if (!lvParam && !params.domain && !params.col && st && taskById(st.id) && colOf(taskById(st.id)) === T.col) {
       var t0 = taskById(st.id);
       setLevel(t0.level);
       loadTask(t0, { text: st.text, hints: st.hints, reg: st.reg });
@@ -938,8 +951,63 @@
       T.getBtn);
   }
 
+  /* «Tərcümə et» / «Səhvi tap» + collection choice */
+  function segBtns(items, cur, onPick, label, cls) {
+    var wrap = h('div', { class: 'seg ' + cls, role: 'group', 'aria-label': label });
+    var btns = items.map(function (it) {
+      var b = h('button', { type: 'button', 'aria-pressed': 'false' }, it.icon ? ie(it.icon) : null, it.label);
+      b.addEventListener('click', function () { onPick(it.id); });
+      wrap.appendChild(b);
+      return b;
+    });
+    wrap._paint = function (v) { btns.forEach(function (b, i) { b.setAttribute('aria-pressed', items[i].id === v ? 'true' : 'false'); }); };
+    wrap._paint(cur);
+    return wrap;
+  }
+  function modeCard() {
+    var modes = segBtns([{ id: 'tr', label: 'Tərcümə et', icon: 'edit' }, { id: 'hunt', label: 'Səhvi tap', icon: 'search' }], T.mode, setMode, 'Tapşırıq növü', 'block');
+    if (!HUNT.length) modes.hidden = true;
+    var cols = segBtns(COLS, T.col, setCol, 'Mətn toplusu', 'wrap sm');
+    T.colRow = h('div', { class: 'task-mode-row' }, h('span', { class: 'eyebrow plain', text: 'Mətnlər' }), cols);
+    if (COLS.length < 2) T.colRow.hidden = true;
+    T.paintCol = function () { cols._paint(T.col); };
+    T.paintModeBtns = function () { modes._paint(T.mode); };
+    T.modeNote = h('p', { class: 'small muted' });
+    return h('section', { class: 'card task-mode', 'aria-label': 'Tapşırıq növü və mətnlər' }, modes, T.colRow, T.modeNote);
+  }
+  function paintMode() {
+    if (!T) return;
+    var hunt = T.mode === 'hunt';
+    if (T.paintModeBtns) T.paintModeBtns();
+    if (T.paintCol) T.paintCol();
+    T.colRow.hidden = hunt || COLS.length < 2;
+    T.srcSlot.hidden = hunt; T.trCard.hidden = hunt; T.resSlot.hidden = hunt; T.huntSlot.hidden = !hunt;
+    if (hunt) T.briefSlot.hidden = true; else T.briefSlot.hidden = !(T.task && T.task.sim);
+    T.modeNote.textContent = hunt
+      ? 'Dərc olunmuş real tərcümədə (NTREX-128) səhvləri tapın: şübhəli sözlərə toxunun və «Yoxla».'
+      : T.col === 'news' ? 'Real xəbər mətnləri — nümunə kimi dərc olunmuş peşəkar tərcümə göstəriləcək.'
+      : T.col === 'docs' ? 'İnsan Hüquqları haqqında Ümumi Bəyannamə — BMT-nin rəsmi tərcüməsi ilə müqayisə.'
+      : 'Mətni oxuyun, öz variantınızı yazın — Mirzə Məclisi yoxlayacaq.';
+    if (T.getBtn) { T.getBtn.lastChild.textContent = hunt ? 'Başqa mətn' : 'Yeni mətn al'; }
+  }
+  function setMode(m) {
+    if (!T || T.mode === m || T.checking) return;
+    T.mode = m; sset('academy:tmode', m);
+    paintMode();
+    if (m === 'hunt') { if (!T.hunt) loadHunt(nextHunt(T.level)); scrollToEl(T.huntSlot); }
+    else if (!T.task) fetchTask(null, true);
+  }
+  function setCol(c) {
+    if (!T || T.col === c || T.checking) return;
+    var prev = T.col;
+    T.col = c; sset('academy:col', c); paintMode();
+    fetchTask(null, false, function () { T.col = prev; sset('academy:col', prev); paintMode(); });
+  }
+
   function nextTask(level, domain) {
-    var base = TASKS.filter(function (t) { return !t.sim; });
+    var col = (T && T.col) || 'base';
+    var base = TASKS.filter(function (t) { return !t.sim && colOf(t) === col; });
+    if (!base.length) base = TASKS.filter(function (t) { return !t.sim && !t.col; });
     var pool = base.filter(function (t) { return t.level === level; });
     if (domain) {
       var d = pool.filter(function (t) { return t.domain === domain; });
@@ -972,6 +1040,7 @@
 
   function fetchTask(domain, initial, onCancel) {
     if (!T || isBusy(T.getBtn) || T.checking) return;
+    if (T.mode === 'hunt') { loadHunt(nextHunt(T.level)); return; }
     (initial ? Promise.resolve(true) : confirmDiscard()).then(function (ok) {
       if (!T) return;
       if (!ok) { if (onCancel) onCancel(); return; }
@@ -1008,6 +1077,7 @@
     if (task.sim) T.briefSlot.appendChild(briefCard(task));
     T.srcSlot.textContent = '';
     T.srcSlot.appendChild(sourceCard(task));
+    if (T.draftBtn) T.draftBtn.hidden = !task.draft;
     T.ta.disabled = false;
     T.ta.value = o.text || '';
     T.ta.removeAttribute('aria-invalid'); T.err.hidden = true;
@@ -1072,6 +1142,7 @@
         badge(words(task.src) + ' söz'),
         badge('~' + task.minutes + ' dəq', '', 'clock')),
       h('p', { class: 'task-src-tx', lang: 'en', text: task.src }),
+      task.credit ? h('p', { class: 'task-credit', text: task.credit }) : null,
       h('div', { class: 'task-src-foot' }, hintBtn, hintCount),
       hintBox);
   }
@@ -1084,7 +1155,7 @@
     var wc = h('span', { class: 'badge tnum', text: '0 söz' });
     var draft = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, ie('file'), 'Nümunə qaralama');
     var check = h('button', { class: 'btn btn-primary', type: 'button' }, ie('sparkle'), 'Nuanza yoxlasın');
-    T.ta = ta; T.err = err; T.wc = wc; T.check = check;
+    T.ta = ta; T.err = err; T.wc = wc; T.check = check; T.draftBtn = draft;
     var wrote = false;
     ta.addEventListener('input', function () {
       updateWC();
@@ -1094,7 +1165,7 @@
     });
     ta.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runCheck(); } });
     draft.addEventListener('click', function () {
-      if (!T || !T.task || ta.disabled) return;
+      if (!T || !T.task || ta.disabled || !T.task.draft) return;
       ta.value = T.task.draft; updateWC(); saveTask(); flash(ta); focusSoft(ta);
       ta.removeAttribute('aria-invalid'); err.hidden = true;
       nz('point', 'Bu, tipik tələbə qaralamasıdır. Göndərin — Məclis səhvləri tapsın!', 3000);
@@ -1271,10 +1342,11 @@
 
     var model = h('section', { class: 'card framed task-model', 'aria-labelledby': 'task-m-h' },
       h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Nümunə' }), h('h2', { id: 'task-m-h', text: 'Məclisin variantı' })),
-        h('div', { class: 'actions' }, h('button', { class: 'icon-btn sm ghost', type: 'button', 'aria-label': 'Variantı kopyala', title: 'Kopyala', html: App.icon('copy'), onclick: function () { copyText(task.model, 'Məclisin variantı kopyalandı'); } }))),
+        h('div', null, h('span', { class: 'eyebrow', text: 'Nümunə' }), h('h2', { id: 'task-m-h', text: task.modelLabel || 'Məclisin variantı' })),
+        h('div', { class: 'actions' }, h('button', { class: 'icon-btn sm ghost', type: 'button', 'aria-label': 'Variantı kopyala', title: 'Kopyala', html: App.icon('copy'), onclick: function () { copyText(task.model, (task.modelLabel || 'Məclisin variantı') + ' kopyalandı'); } }))),
       h('p', { class: 'task-model-tx', lang: 'az', text: task.model }),
-      h('p', { class: 'muted', text: 'Yeganə düzgün variant deyil — amma terminlər, rəqəmlər və üslub burada qorunub.' }));
+      h('p', { class: 'muted', text: task.modelNote || 'Yeganə düzgün variant deyil — amma terminlər, rəqəmlər və üslub burada qorunub.' }),
+      task.credit ? h('p', { class: 'task-credit', text: task.credit }) : null);
 
     var counter = badge('0 / ' + out.errors.length + ' düzəldilib', 'navy');
     T.counter = counter;
