@@ -2005,7 +2005,7 @@
     qa: 'Rəqəm, ad, tarix — hamısını yoxlayacağıq.', review: 'Mirzələr hazırdır. Mətni verin, yoxlayaq.',
     memory: 'Tərcümə yaddaşı hər təhvildən sonra böyüyür.', tm: 'Tərcümə yaddaşı hər təhvildən sonra böyüyür.',
     academy: 'Bu gün 30 XP üçün bir dərs kifayətdir!', lessons: 'Qısa dərs, böyük fayda. Başlayaq?',
-    practice: 'Səhv etməkdən qorxmayın — kart olub geri qayıdacaq.', cards: 'Bu gün 10 kart təkrar edək?'
+    practice: 'Səhv etməkdən qorxmayın — kart olub geri qayıdacaq.', cards: 'Səhvlərinizdən kartlar yaranır — birlikdə təkrar edək.'
   };
   var hinted = {};
   function hintFor(id) {

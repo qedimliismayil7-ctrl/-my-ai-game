@@ -265,8 +265,12 @@
      minus 'pj:removed', with 'pj:prog' / 'pj:status' overrides. The labelled sample
      («Nümunə layihə») never counts here. */
   function isSample(p) { return !!(p && (p.sample || p.isSample || p.demo || p.kind === 'sample' || /^(sample|demo|numune)/i.test(String(p.id || '')))); }
+  function pjApi(name) { return typeof App.projects === 'function' && typeof App.projects[name] === 'function' ? App.projects[name] : null; }
   function realProjects() {
-    var list = sget('pj:created', []); if (!Array.isArray(list)) list = [];
+    var list = null;
+    /* preferred: the Projects screen's own API (sample already excluded) */
+    if (typeof App.projects === 'function') { try { list = App.projects(); } catch (e) { list = null; } }
+    if (!Array.isArray(list)) { list = sget('pj:created', []); if (!Array.isArray(list)) list = []; }
     var removed = sget('pj:removed', {}) || {}, prog = sget('pj:prog', {}) || {}, status = sget('pj:status', {}) || {};
     var last = sget('pj:last', null);
     var out = list.filter(function (p) { return p && p.id && p.name && !removed[p.id] && !isSample(p); }).map(function (p) {
@@ -319,7 +323,7 @@
       var delivered = pj.status === 'delivered';
       var meta = [pairLabel(pj.pair), pj.words ? num(pj.words) + ' söz' : '', pj.created ? relTime(pj.created) : ''].filter(Boolean).join(' · ');
       return h('button', { class: 'list-row', type: 'button', 'aria-label': pj.name + ' — ' + (delivered ? 'təhvil verilib' : pj.done + '% hazır') + '. Redaktorda aç',
-        onclick: function () { goFirst(['editor', 'projects'], { project: pj.id }, 'Redaktor hələ yüklənməyib'); } },
+        onclick: function () { var o = pjApi('open'); if (o) o(pj.id); else goFirst(['editor', 'projects'], { project: pj.id }, 'Redaktor hələ yüklənməyib'); } },
         icTile(delivered ? 'check' : 'file', delivered ? 'green' : 'fir'),
         h('span', { class: 'tx' }, h('b', { text: pj.name }), h('small', { text: meta })),
         h('span', { class: 'end' }, delivered ? badge('Təhvil verilib', 'green') :
@@ -336,8 +340,8 @@
       icTile('folder'),
       h('span', { class: 'tx' }, h('b', { text: 'Hələ layihə yoxdur' }), h('small', { text: 'İlk layihənizi yaradın — sənəd, dil cütü və hazırdır.' })),
       h('span', { class: 'home-empty-acts' },
-        h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: newProjectSheet }, ie('plus'), 'Layihə yarat'),
-        h('button', { class: 'link small', type: 'button', onclick: function () { goFirst(['projects'], {}, 'Layihələr bölməsi hazırlanır'); } }, 'Nümunəyə baxın')));
+        h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { var c = pjApi('create'); if (c) c(); else newProjectSheet(); } }, ie('plus'), 'Layihə yarat'),
+        h('button', { class: 'link small', type: 'button', onclick: function () { var o = pjApi('openSample'); if (o) o(); else goFirst(['projects'], {}, 'Layihələr bölməsi hazırlanır'); } }, 'Nümunəyə baxın')));
   }
 
   /* 5.3 compact tools */
