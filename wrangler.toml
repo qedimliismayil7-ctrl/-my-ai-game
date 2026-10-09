@@ -1,7 +1,7 @@
 # Cloudflare Worker ayarları. Sirləri (GEMINI_KEY, TG_TOKEN, ACCESS_CODE) buraya YAZMAYIN —
 # Cloudflare → Workers → nuanza → Settings → Variables and Secrets bölməsində əlavə edin
 # və ya: npx wrangler secret put GEMINI_KEY
-name = "nuanza"
+name = "nuanza-d7c7"
 main = "dist/worker.js"
 compatibility_date = "2026-10-01"
 
