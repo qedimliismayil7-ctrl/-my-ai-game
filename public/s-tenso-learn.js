@@ -100,8 +100,7 @@
     if (diff < 0) return true;
     var x = a[diff], y = b[diff];
     if (y.length < 6 || lev(x, y) !== 1) return false;
-    var tail = 3;
-    return x.slice(-tail) === y.slice(-tail);
+    return x.slice(-2) === y.slice(-2);
   }
   function stripLead(q) { return str(q).replace(/^\s*(choose|seçin|select)\s*[:.-]\s*/i, ''); }
   function fill(q, ans) {
@@ -552,7 +551,7 @@
   }
   function testStart() {
     T.idx = 2; T.asked = []; T.used = {}; T.ans = null;
-    tenso('think', 'Başlayaq! Tələsməyin — ilk ağlınıza gələni seçin.');
+    tenso('think', null, 1600);
     testNext();
   }
   function pickQ() {
@@ -924,7 +923,7 @@
   function dueIn(ms) {
     var d = Math.ceil(ms / DAY);
     if (ms <= 0) return 'indi';
-    if (ms < DAY) return Math.max(1, Math.round(ms / 36e5)) + ' saat sonra';
+    if (ms < DAY - 36e5) return Math.max(1, Math.round(ms / 36e5)) + ' saat sonra';
     return d === 1 ? 'sabah' : d + ' gün sonra';
   }
   function renderCards(el) {
@@ -977,10 +976,15 @@
       h('div', { class: 'actions' }, h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { cardsStart(true); } }, ic('refresh'), 'Hamısını təkrarla'),
         h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { App.go('g-practice'); } }, 'Şəxsi məşq'))));
   }
-  function markIn(sentence, part, tag, cls) {
-    var i = part ? sentence.indexOf(part) : -1;
-    if (i < 0 || part === sentence) return [h(tag, { class: cls, text: sentence })];
-    return [sentence.slice(0, i), h(tag, { class: cls, text: part }), sentence.slice(i + part.length)];
+  /* shared words at both ends stay plain; only the changed middle is struck / marked */
+  function wordDiff(a, b) {
+    var x = str(a).split(/(\s+)/), y = str(b).split(/(\s+)/), i = 0, j = 0;
+    while (i < x.length && i < y.length && x[i] === y[i]) i++;
+    while (j < x.length - i && j < y.length - i && x[x.length - 1 - j] === y[y.length - 1 - j]) j++;
+    var mid = function (arr) { return arr.slice(i, arr.length - j).join(''); };
+    var out = { pre: x.slice(0, i).join(''), a: mid(x), b: mid(y), post: x.slice(x.length - j).join('') };
+    if (!out.a.trim() || !out.b.trim()) return { pre: '', a: str(a), b: str(b), post: '' };
+    return out;
   }
   function cardsShow() {
     var m = C.queue[0], s = srsAll(), rec = cardOf(m, s), box = C.box;
@@ -988,15 +992,16 @@
     C.flipped = false;
     var total = C.done + C.queue.length, pct = total ? Math.round(C.done / total * 100) : 0;
     var sent = m.sentence && m.sentence.indexOf(m.wrong) >= 0 ? m.sentence : '';
+    var wrongS = sent || m.wrong, fixedS = sent ? sent.replace(m.wrong, m.fix) : m.fix;
+    var dd = sent ? { pre: sent.slice(0, sent.indexOf(m.wrong)), a: m.wrong, b: m.fix, post: sent.slice(sent.indexOf(m.wrong) + m.wrong.length) } : wordDiff(m.wrong, m.fix);
     var front = h('div', { class: 'tl-face tl-front' },
       h('div', { class: 'tl-face-top' }, badge(m.ruleTitle || ruleTitle(m.rule), 'gold'), h('span', { class: 'tl-pips', title: 'Qutu ' + (rec.box || 0) + ' / 4' }, [1, 2, 3, 4].map(function (i) { return h('i', { class: i <= (rec.box || 0) ? 'on' : '' }); }))),
       h('span', { class: 'tl-lbl', text: 'Sizin cümləniz' }),
-      h('p', { class: 'tl-sent', lang: 'en' }, sent ? markIn(sent, m.wrong, 's', 'tl-strike') : h('s', { class: 'tl-strike', text: m.wrong })),
+      h('p', { class: 'tl-sent', lang: 'en', 'aria-label': wrongS }, dd.pre, h('s', { class: 'tl-strike', text: dd.a }), dd.post),
       h('p', { class: 'small muted tl-face-hint' }, ic('refresh'), 'Düzgün variantı xatırlayın, sonra kartı çevirin'));
-    var fixed = sent ? sent.replace(m.wrong, m.fix) : m.fix;
     var back = h('div', { class: 'tl-face tl-back', hidden: true },
       h('div', { class: 'tl-face-top' }, badge('Düzgün variant', 'green', 'check'), m.n > 1 ? badge(m.n + ' dəfə', 'red') : null),
-      h('p', { class: 'tl-sent', lang: 'en' }, sent ? markIn(fixed, m.fix, 'mark', 'tl-good') : h('mark', { class: 'tl-good', text: m.fix })),
+      h('p', { class: 'tl-sent', lang: 'en', 'aria-label': fixedS }, dd.pre, h('mark', { class: 'tl-good', text: dd.b }), dd.post),
       h('div', { class: 'callout navy' }, ic('bulb'), h('div', null, h('b', { text: (m.ruleTitle || ruleTitle(m.rule)) + '. ' }), m.why || 'Qaydanı kurs vahidində təkrar edin.')),
       m.unit && unitById(m.unit) ? h('button', { class: 'btn btn-sm btn-ghost tl-unit-link', type: 'button', onclick: function (e) { e.stopPropagation(); openUnit(m.unit); } }, ic('book'), 'Dərs: ' + unitById(m.unit).title) : null);
     var card = h('div', { class: 'tl-card', role: 'button', tabindex: '0', 'aria-label': 'Kart: ' + m.wrong + '. Çevirmək üçün basın' }, front, back);
@@ -1187,6 +1192,8 @@
     '.tl-unit-link{justify-self:start;max-width:100%}',
     /* map */
     '.tl-legend{display:grid;gap:12px}',
+    '.tl-legend .stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}',
+    '@media (max-width:479px){.tl-legend .stat > b{font-size:1.375rem}}',
     '.tl-s-good > b{color:var(--ok)}.tl-s-weak > b{color:var(--zafaran-ink)}',
     '.tl-lvl-sec{display:grid;gap:12px;min-width:0}',
     '.tl-lvl-sec .sec-h h2{display:flex;align-items:center;gap:8px}',
