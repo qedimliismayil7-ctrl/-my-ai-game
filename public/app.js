@@ -1814,8 +1814,9 @@
     if (els.modeSeg) $$('button', els.modeSeg).forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-mode') === curMode)); });
     var gr = curMode === 'grammar';
     var onHub = /^#hub\b/.test(W.location.hash || '');
-    if (els.brandName) els.brandName.textContent = onHub ? 'Loquela' : gr ? 'Tenso' : 'Nuanza';
-    if (els.brandSmall) { els.brandSmall.hidden = onHub || curMode === 'pro'; els.brandSmall.textContent = gr ? '· Qrammatika' : 'Akademiya'; }
+    /* the umbrella brand always leads; the small label names the product you are in */
+    if (els.brandName) els.brandName.textContent = 'Loquela';
+    if (els.brandSmall) { els.brandSmall.hidden = onHub; els.brandSmall.textContent = gr ? 'Tenso' : curMode === 'academy' ? 'Akademiya' : 'Nuanza'; }
     if (els.brand) {
       els.brand.setAttribute('aria-label', gr ? 'Tenso · Qrammatika — məhsullar' : curMode === 'academy' ? 'Nuanza Akademiya — məhsullar' : 'Nuanza — məhsullar');
       els.brand.setAttribute('href', '#hub');
