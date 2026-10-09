@@ -4,6 +4,10 @@
      • 'task'      Tapşırıq — səviyyəyə görə mətn al, mənbə + ipucu, tərcümə,
                    «Nuanza yoxlasın» → Mirzə Məclisi → böyük qiymət hərfi, bal
                    halqası, bacarıqlar, səhv kartları, XP (+ rütbə medalı).
+                   Mətn topluları: Nuanza tapşırıqları · Xəbərlər (NTREX-128) ·
+                   Məşhur sənədlər (BMT Ümumi Bəyannaməsi) — data-real.js.
+                   «Səhvi tap» rejimi: dərc olunmuş real tərcümədə səhvləri tapmaq
+                   (oflayn; buraxılan səhvlər səhv kartlarına düşür).
      • 'practice'  Məşq — 7 oyun kartı; «Detektiv» səhifədə oynanılır, digərləri
                    vərəqdə (Sən vs AI, Düzəlt, Kontekst dəyiş, Sürət, Şifahi,
                    Simulyator).
@@ -555,6 +559,17 @@
     '.task-lv-tx small{color:var(--soft)}',
     '@media (max-width:479px){.task-get > .btn{width:100%}}',
     '.task-slot{display:grid;gap:20px;min-width:0}',
+    '.task-mode{display:grid;gap:12px;min-width:0}',
+    '.task-mode-row{display:grid;gap:6px;min-width:0}',
+    '.task-mode .seg.wrap button{white-space:normal;text-align:center}',
+    '.task-credit{margin-top:10px;color:var(--faint);font-size:var(--fs-xs);line-height:1.45;overflow-wrap:anywhere}',
+    '.task-hunt{min-width:0}',
+    '.task-hunt .task-meta{margin-bottom:0}',
+    '.task-hunt-why{color:var(--soft);font-size:.9rem;line-height:1.55}',
+    '.task-hunt-fixed p{color:var(--ink);font-family:var(--f-display);font-size:1.0625rem;line-height:1.6}',
+    '.task-hunt-next{justify-content:flex-end;flex-wrap:wrap;gap:8px}',
+    '.task-hunt-sheet{display:grid;gap:16px;min-width:0}',
+    '.task-hunt-sheet .task-hunt{padding:0;border:0;background:none;box-shadow:none}',
     '.task-src .card-h{margin-bottom:12px}',
     '.task-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}',
     '.task-src-tx{font-family:var(--f-display);font-size:1.1875rem;line-height:1.6;letter-spacing:-.003em}',
@@ -1488,6 +1503,191 @@
     inp.addEventListener('input', function () { inp.removeAttribute('aria-invalid'); });
     bShow.addEventListener('click', function () { resolve('show'); });
     return card;
+  }
+
+  /* ------------------------------------------------------------------
+     5b. «SƏHVİ TAP» — find the real errors in a published translation
+         (NTREX-128, annotated by Nuanza). Fully offline.
+     ------------------------------------------------------------------ */
+  function nextHunt(level) {
+    if (!HUNT.length) return null;
+    var pool = HUNT.filter(function (x) { return x.level === level; });
+    if (!pool.length) pool = HUNT;
+    var cur = T && T.hunt ? T.hunt.id : null;
+    var cand = pool.filter(function (x) { return x.id !== cur; });
+    if (!cand.length) cand = pool;
+    var rot = Number(sget('academy:huntrot', 0)) || 0;
+    sset('academy:huntrot', rot + 1);
+    return cand[rot % cand.length];
+  }
+
+  function loadHunt(item) {
+    if (!T || !T.huntSlot) return;
+    T.huntSlot.textContent = '';
+    if (!item) { T.huntSlot.appendChild(h('p', { class: 'muted', text: 'Real mətnlər yüklənmədi.' })); return; }
+    T.hunt = item;
+    if (item.level !== T.level) setLevel(item.level);
+    T.huntSlot.appendChild(huntView(item, { onNext: function () { loadHunt(nextHunt(T.level)); scrollToEl(T.huntSlot); } }));
+    nz('point', 'Bu tərcümədə ' + item.errors.length + ' real səhv var. Tapa bilərsinizmi?', 2800);
+  }
+
+  /* character spans of each annotated error inside the published text */
+  function huntSpans(item) {
+    var txt = item.model, sp = [];
+    item.errors.forEach(function (e, k) {
+      (e.w || []).forEach(function (w) {
+        if (!w) return;
+        var from = 0, x;
+        while ((x = txt.indexOf(w, from)) >= 0) {
+          var b = txt.charAt(x - 1), a = txt.charAt(x + w.length);
+          var okB = !(b && /\p{L}/u.test(b) && /\p{L}/u.test(w.charAt(0)));
+          var okA = !(a && /\p{L}/u.test(a) && /\p{L}/u.test(w.charAt(w.length - 1)));
+          var free = !sp.some(function (o) { return x < o.e && x + w.length > o.s; });
+          if (okB && okA && free) sp.push({ s: x, e: x + w.length, k: k });
+          from = x + 1;
+        }
+      });
+    });
+    return sp;
+  }
+
+  function huntView(item, opts) {
+    opts = opts || {};
+    var sec = h('section', { class: 'card pad-lg practice-det task-hunt', 'aria-label': 'Səhvi tap' });
+    function build() {
+      var checked = false, toks = [], spans = huntSpans(item);
+      sec.textContent = '';
+      var count = h('span', { class: 'small muted tnum', 'aria-live': 'polite', text: 'Seçilib: 0' });
+      var text = h('p', { class: 'practice-det-text', lang: 'az' });
+      var re = /[\p{L}\p{N}]+(?:[.,'’-][\p{L}\p{N}]+)*%?/gu, last = 0, m, txt = item.model;
+      while ((m = re.exec(txt))) {
+        if (m.index > last) text.appendChild(D.createTextNode(txt.slice(last, m.index)));
+        var s0 = m.index, e0 = m.index + m[0].length, sIdx = -1;
+        for (var q = 0; q < spans.length; q++) if (s0 < spans[q].e && e0 > spans[q].s) { sIdx = q; break; }
+        var b = h('button', { class: 'practice-w', type: 'button', 'aria-pressed': 'false', text: m[0] });
+        b._span = sIdx; b._err = sIdx >= 0 ? spans[sIdx].k : -1;
+        b.addEventListener('click', onTap);
+        toks.push(b); text.appendChild(b);
+        last = re.lastIndex;
+      }
+      if (last < txt.length) text.appendChild(D.createTextNode(txt.slice(last)));
+      function sel(t) { return t.getAttribute('aria-pressed') === 'true'; }
+      function selected() { return toks.filter(sel); }
+      function onTap(ev) {
+        if (checked) return;
+        var t = ev.currentTarget;
+        t.setAttribute('aria-pressed', sel(t) ? 'false' : 'true');
+        count.textContent = 'Seçilib: ' + selected().length;
+      }
+      var clearBtn = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, 'Təmizlə');
+      var checkBtn = h('button', { class: 'btn btn-primary', type: 'button' }, ie('search'), 'Yoxla');
+      var res = h('div', { class: 'practice-det-res', hidden: true, 'aria-live': 'polite' });
+      clearBtn.addEventListener('click', function () {
+        if (checked) return;
+        toks.forEach(function (t) { t.setAttribute('aria-pressed', 'false'); });
+        count.textContent = 'Seçilib: 0';
+      });
+      checkBtn.addEventListener('click', function () {
+        if (checked) return;
+        if (!selected().length) { shake(text); App.toast('Əvvəlcə şübhəli sözləri seçin', 'warn', { sub: 'Səhv olduğunu düşündüyünüz sözə toxunun' }); return; }
+        checked = true;
+        var total = item.errors.length, found = {}, falses = 0, prevFalse = false;
+        toks.forEach(function (t) {
+          var on = sel(t);
+          if (t._err >= 0 && on) found[t._err] = true;
+          if (t._err < 0 && on) { if (!prevFalse) falses++; prevFalse = true; } else prevFalse = false;
+        });
+        var hits = Object.keys(found).length, misses = total - hits;
+        var lastTok = {};
+        toks.forEach(function (t) {
+          var on = sel(t);
+          t.removeAttribute('aria-pressed'); t.setAttribute('aria-disabled', 'true');
+          if (t._err >= 0) {
+            var e = item.errors[t._err];
+            t.classList.add(found[t._err] ? 'hit' : 'miss');
+            t.setAttribute('aria-label', t.textContent + ' — ' + (found[t._err] ? 'tapdınız' : 'buraxdınız') + '. Düzgün: ' + (e.now === '—' ? 'artıqdır' : e.now));
+            lastTok[t._span] = t;
+          } else if (on) {
+            t.classList.add('false');
+            t.setAttribute('aria-label', t.textContent + ' — bu söz düzgün idi');
+          }
+        });
+        Object.keys(lastTok).forEach(function (si) {
+          var e = item.errors[spans[si].k];
+          lastTok[si].insertAdjacentElement('afterend', h('ins', { class: 'practice-fix', text: e.now === '—' ? 'artıqdır' : e.now }));
+        });
+        var score = Math.round(clamp(hits / total * 100 - falses * 10, 0, 100));
+        var prev = bestOf('realhunt'), rec = prev == null || score > prev;
+        if (rec && score > 0) setBest('realhunt', score);
+        checkBtn.disabled = true; clearBtn.disabled = true;
+        /* missed errors become the user's own error cards */
+        var added = 0;
+        item.errors.forEach(function (e, k) {
+          if (found[k] || !e.w || !e.w[0] || !e.now || e.now === '—') return;
+          if (addUserCard({ was: e.w[0], now: e.now, type: e.type, why: e.why, elder: TYPE_ELDER[e.type] || 'Mənaçı Mirzə' }, { id: item.id, src: item.src }, item.model, [])) added++;
+        });
+        var ring = App.ring(score, 'bal', null, { size: 'sm' });
+        res.hidden = false;
+        res.appendChild(h('div', { class: 'practice-det-sum' }, ring,
+          h('div', { class: 'stats' },
+            h('div', { class: 'stat' }, h('b', { text: hits + '/' + total }), h('span', { text: 'tapıldı' })),
+            h('div', { class: 'stat' }, h('b', { text: String(misses) }), h('span', { text: 'buraxıldı' })),
+            h('div', { class: 'stat' }, h('b', { text: String(falses) }), h('span', { text: 'yanlış həyəcan' }))),
+          rec && score > 0 ? badge('Yeni rekord!', 'gold', 'trophy') : null));
+        res.appendChild(h('div', { class: 'task-errs' }, item.errors.map(function (e, k) {
+          var sev = SEV[e.type] || 'mid';
+          return h('article', { class: 'task-err', 'data-sev': sev },
+            h('div', { class: 'task-err-top' }, badge(e.type, SEV_BADGE[sev] || 'gold'), found[k] ? badge('Tapdınız', 'green', 'check') : badge('Buraxdınız', 'red', 'alert')),
+            h('div', { class: 'task-err-fix' },
+              h('s', { class: 'task-was', text: e.w[0] }),
+              h('span', { class: 'task-arrow', html: App.icon('arrow'), 'aria-hidden': 'true' }),
+              h('b', { class: 'task-now', text: e.now === '—' ? '(silinməlidir)' : e.now })),
+            h('p', { class: 'task-hunt-why', text: e.why }),
+            e.ex ? h('p', { class: 'task-ex' }, h('span', { class: 'eyebrow plain', text: 'Nümunə' }), h('span', { text: e.ex })) : null);
+        })));
+        if (item.fixed) res.appendChild(h('div', { class: 'practice-det-src task-hunt-fixed' },
+          h('span', { class: 'eyebrow plain', text: 'Düzəldilmiş tərcümə · Nuanza redaktəsi' }),
+          h('p', { lang: 'az', text: item.fixed })));
+        res.appendChild(h('div', { class: 'row task-hunt-next' },
+          h('button', { class: 'btn btn-ghost', type: 'button', onclick: build }, ie('refresh'), 'Yenidən'),
+          opts.onNext ? h('button', { class: 'btn btn-secondary', type: 'button', onclick: opts.onNext }, 'Növbəti mətn', ie('arrow')) : null));
+        refreshGrid();
+        var xp = hits ? Math.max(5, Math.round((LV_XP[item.level] || 30) * score / 100)) : 0;
+        later(function () {
+          if (xp) addXP(xp, pointOf(ring));
+          if (added) App.toast('Səhv kartlarına əlavə olundu', 'ok', { sub: added + ' buraxılmış səhv — təkrarda qarşınıza çıxacaq', action: { label: 'Bax', onClick: function () { App.go('cards'); } } });
+          if (score >= 80) { burstAt(ring, 'confetti'); nz('celebrate', 'Peşəkar redaktor gözü! ' + hits + ' / ' + total + ' səhv tapıldı.', 3000); }
+          else if (score >= 50) nz('success', hits + ' səhv tapdınız. Buraxılanlar kartlara düşdü.', 3000);
+          else nz('worried', 'Real tərcümələrdə səhv gizlənir — buraxılanlara baxın.', 3000);
+        }, 300);
+      });
+      var lv = levelById(item.level);
+      sec.appendChild(h('div', { class: 'card-h' },
+        h('div', null, h('span', { class: 'eyebrow', text: 'Səhvi tap · real tərcümə' }), h('h2', { text: item.title || 'Real xəbər' })),
+        h('div', { class: 'actions' }, badge(lv ? lv.id + ' · ' + lv.name : item.level, 'navy'))));
+      sec.appendChild(h('div', { class: 'task-meta' }, badge(item.domain || 'Xəbər', 'gold'), badge(words(item.src) + ' söz')));
+      sec.appendChild(h('div', { class: 'practice-det-src' }, h('span', { class: 'eyebrow plain', text: 'Mənbə · EN' }), h('p', { lang: 'en', text: item.src })));
+      sec.appendChild(h('p', { class: 'muted', html: 'Aşağıdakı <b>dərc olunmuş tərcümədə ' + item.errors.length + ' səhv</b> var. Səhv olduğunu düşündüyünüz sözlərə toxunun, sonra «Yoxla». Yanlış həyəcan −10 bal.' }));
+      sec.appendChild(h('div', { class: 'stack-sm' }, h('span', { class: 'eyebrow plain', text: 'Dərc olunmuş tərcümə · AZ' }), text));
+      sec.appendChild(h('div', { class: 'practice-det-bar' }, count, h('div', { class: 'row' }, clearBtn, checkBtn)));
+      sec.appendChild(res);
+      sec.appendChild(h('p', { class: 'task-credit', text: NTREX_LINE + ' · annotasiya: Nuanza (CC BY-SA 4.0)' }));
+    }
+    build();
+    return sec;
+  }
+
+  /* Məşq → «Real səhv ovu»: the same round in a sheet */
+  function playHunt(g) {
+    var item = nextHunt(null) || null;
+    if (!item) return;
+    var body = h('div', { class: 'task-hunt-sheet' });
+    var s = App.sheet({ title: g.name, body: body, wide: true });
+    function show(it) {
+      body.textContent = '';
+      body.appendChild(huntView(it, { onNext: function () { show(nextHunt(null)); try { s.body.scrollTop = 0; } catch (e) { /* ignore */ } } }));
+    }
+    show(item);
   }
 
   /* ------------------------------------------------------------------

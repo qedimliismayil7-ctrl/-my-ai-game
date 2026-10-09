@@ -1813,7 +1813,9 @@
     licenses: { title: 'Açıq mənbə lisenziyaları', paras: [
       'Unbounded və Plus Jakarta Sans şriftləri — SIL Open Font License 1.1.',
       'Xalça naxışları və göl motivi Nuanza komandası tərəfindən çəkilib.',
-      'Nuanza və Mirzə Məclisi personajları — © 2026 Nuanza, Bakı.'] }
+      'Nuanza və Mirzə Məclisi personajları — © 2026 Nuanza, Bakı.',
+      'Akademiyadakı real xəbər mətnləri — NTREX-128 (Microsoft), CC BY-SA 4.0; səhv annotasiyaları və düzəldilmiş tərcümələr Nuanzanındır və eyni lisenziya (CC BY-SA 4.0) ilə paylaşılır.',
+      'İnsan Hüquqları haqqında Ümumi Bəyannamə (BMT, 1948) — rəsmi ingilis mətni və rəsmi Azərbaycan tərcüməsi.'] }
   };
   function legalSheet(id) {
     var L = LEGAL[id];
