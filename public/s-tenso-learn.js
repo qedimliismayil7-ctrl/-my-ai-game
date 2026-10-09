@@ -59,7 +59,6 @@
   function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function ic(name) { return App.iconEl(name); }
   function lvlIdx(l) { var i = LEVELS.indexOf(str(l).toUpperCase().slice(0, 2)); return i; }
-  function plural(n, w) { return n + ' ' + w; }
   function badge(text, kind, icon) { return h('span', { class: 'badge' + (kind ? ' ' + kind : '') }, icon ? ic(icon) : null, text); }
   function progressBar(pct, label) {
     return h('div', { class: 'progress', role: 'progressbar', 'aria-label': label || 'Gediş', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: 'width:' + pct + '%' }));
@@ -589,6 +588,7 @@
     var next = h('button', { class: 'btn btn-primary btn-lg btn-block', type: 'button', hidden: true, onclick: testNext }, n >= TEST_N ? 'Nəticəni gör' : 'Növbəti', ic('arrow'));
     order.forEach(function (oi, k) {
       var b = h('button', { class: 'tl-opt', type: 'button', lang: 'en', 'data-k': String(k + 1) }, h('span', { class: 'tl-key', text: String(k + 1) }), h('span', { text: q.options[oi] === '—' ? '— (artikl lazım deyil)' : q.options[oi] }));
+      b._oi = oi;
       b.addEventListener('click', function () { testAnswer(oi, b, opts, fb, next); });
       opts.appendChild(b);
     });
@@ -603,7 +603,7 @@
     var q = cur.q; cur.pick = oi; cur.ok = oi === q.a;
     Array.prototype.forEach.call(opts.children, function (b) { b.disabled = true; });
     btn.classList.add(cur.ok ? 'ok' : 'bad');
-    if (!cur.ok) Array.prototype.forEach.call(opts.children, function (b) { if (b.lastChild.textContent.indexOf(q.options[q.a]) === 0) b.classList.add('ok'); });
+    if (!cur.ok) Array.prototype.forEach.call(opts.children, function (b) { if (b._oi === q.a) b.classList.add('ok'); });
     fb.appendChild(h('div', { class: 'callout ' + (cur.ok ? 'green' : 'red') }, ic(cur.ok ? 'check' : 'bulb'), h('div', null, h('b', { text: cur.ok ? 'Düzdür. ' : 'Düzgün cavab: ' + q.options[q.a] + '. ' }), q.why || '')));
     T.asked.push(cur);
     T.idx = cur.ok ? Math.min(LEVELS.length - 1, T.idx + 1) : Math.max(0, T.idx - 1);

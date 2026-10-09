@@ -21,6 +21,10 @@
   --lacquer:#3341B0; --nar:#CF2E46; --zafaran:#D3961A; --ivory:#FFFFFF;
   --zafaran-ink:#8A5C06; --gold-hi:#F2C14E;
   --rug:#CF2E46;
+  /* product colours for the hub (fixed per product, not per mode) */
+  --hub-tr:#08857D; --hub-tr-t:rgba(8,133,125,.10); --hub-gr:#CF2E46; --hub-gr-t:rgba(207,46,70,.09); --on-hub:#FFFFFF;
+  /* Tenso severities (never red): high amber, mid indigo, low grey */
+  --sev-high:#B26A00; --sev-high-t:rgba(178,106,0,.12); --sev-mid:#3341B0; --sev-mid-t:rgba(51,65,176,.09); --sev-low:#8A90A0;
   /* deep panels (hero cards, drawer profile) — near-black with light text in both themes */
   --deep:#111318; --deep-2:#08090C; --on-deep:#F2F4F6; --on-deep-soft:rgba(242,244,246,.7);
   /* text on solid accent fills */
@@ -87,6 +91,8 @@
   --lacquer:#8E9BFF; --nar:#FF5C70; --zafaran:#F4BD48; --ivory:#F2F4F6;
   --zafaran-ink:#F4BD48; --gold-hi:#FFD77A;
   --rug:#E23B52;
+  --hub-tr:#3DDBCB; --hub-tr-t:rgba(61,219,203,.12); --hub-gr:#FF5468; --hub-gr-t:rgba(255,84,104,.13); --on-hub:#0A0B0E;
+  --sev-high:#FFB020; --sev-high-t:rgba(255,176,32,.14); --sev-mid:#8E9BFF; --sev-mid-t:rgba(142,155,255,.13); --sev-low:#8A7F83;
   --deep:#0E2725; --deep-2:#091A19; --on-deep:#F2F4F6; --on-deep-soft:rgba(242,244,246,.72);
   --on-nar:#0A0B0E; --on-lacquer:#0A0B0E; --on-zafaran:#0A0B0E;
   --ok:#5FD99A; --ok-t:rgba(95,217,154,.14);
@@ -112,6 +118,8 @@
   --lacquer:#8E9BFF; --nar:#FF5C70; --zafaran:#F4BD48; --ivory:#F2F4F6;
   --zafaran-ink:#F4BD48; --gold-hi:#FFD77A;
   --rug:#E23B52;
+  --hub-tr:#3DDBCB; --hub-tr-t:rgba(61,219,203,.12); --hub-gr:#FF5468; --hub-gr-t:rgba(255,84,104,.13); --on-hub:#0A0B0E;
+  --sev-high:#FFB020; --sev-high-t:rgba(255,176,32,.14); --sev-mid:#8E9BFF; --sev-mid-t:rgba(142,155,255,.13); --sev-low:#8A7F83;
   --deep:#0E2725; --deep-2:#091A19; --on-deep:#F2F4F6; --on-deep-soft:rgba(242,244,246,.72);
   --on-nar:#0A0B0E; --on-lacquer:#0A0B0E; --on-zafaran:#0A0B0E;
   --ok:#5FD99A; --ok-t:rgba(95,217,154,.14);
@@ -955,6 +963,87 @@ textarea.seg-tgt{display:block;width:calc(100% + 16px);border:0;background:trans
 @keyframes draw{to{stroke-dashoffset:0}}
 @keyframes fill-in{to{fill-opacity:1}}
 @keyframes rug-unroll{from{clip-path:inset(0 calc(100% + 12px) 0 -12px)}to{clip-path:inset(0 -12px 0 -12px)}}
+
+/* ---------------------------------------------------------------------
+   15b. TENSO — grammar product theme (<html data-mode="grammar">)
+   Red brand on wine-tinted near-black (dark) or warm off-white (light).
+   Severities are amber / indigo / grey — never red (red is the brand here).
+   --------------------------------------------------------------------- */
+:root[data-mode="grammar"]{
+  --bg:#F8F4F4; --surface:#FFFFFF; --surface2:#F1E9EA; --surface3:#FFFFFF;
+  --ink:#1A1214; --soft:#6B5A5E; --faint:#9A8A8E;
+  --line:#EADFE1; --line-2:#D8C7CB;
+  --firuze:#CF2E46; --fir-t:rgba(207,46,70,.09); --on-firuze:#FFFFFF;
+  --heading:#1A1214; --heading-em:#CF2E46;
+  --deep:#2A0F16; --deep-2:#170709;
+  --focus:#CF2E46; --rug:#CF2E46;
+  --sev-high:#B26A00; --sev-high-t:rgba(178,106,0,.12); --sev-mid:var(--lacquer); --sev-mid-t:var(--lac-t); --sev-low:#8E7F83;
+}
+@media (prefers-color-scheme:dark){:root[data-mode="grammar"]:not([data-theme="light"]){
+  --bg:#0E0A0C; --surface:#181214; --surface2:#201719; --surface3:#2A1E21;
+  --ink:#F4ECEE; --soft:#B39FA4; --faint:#7D6A6F;
+  --line:#2E2226; --line-2:#3E2D32;
+  --firuze:#FF5468; --fir-t:rgba(255,84,104,.13); --on-firuze:#1A0509;
+  --heading:#FF5468; --heading-em:#F4ECEE;
+  --deep:#2A0F16; --deep-2:#14070A;
+  --focus:#FF5468; --rug:#FF5468;
+  --sev-high:#FFB020; --sev-high-t:rgba(255,176,32,.14); --sev-mid:var(--lacquer); --sev-mid-t:var(--lac-t); --sev-low:#8A777C;
+}}
+:root[data-mode="grammar"][data-theme="dark"]{
+  --bg:#0E0A0C; --surface:#181214; --surface2:#201719; --surface3:#2A1E21;
+  --ink:#F4ECEE; --soft:#B39FA4; --faint:#7D6A6F;
+  --line:#2E2226; --line-2:#3E2D32;
+  --firuze:#FF5468; --fir-t:rgba(255,84,104,.13); --on-firuze:#1A0509;
+  --heading:#FF5468; --heading-em:#F4ECEE;
+  --deep:#2A0F16; --deep-2:#14070A;
+  --focus:#FF5468; --rug:#FF5468;
+  --sev-high:#FFB020; --sev-high-t:rgba(255,176,32,.14); --sev-mid:var(--lacquer); --sev-mid-t:var(--lac-t); --sev-low:#8A777C;
+}
+/* kilim band: red + saffron triangles */
+:root[data-mode="grammar"] .rugband::before{background:var(--firuze)}
+:root[data-mode="grammar"] .rugband::after{background:var(--zafaran)}
+:root[data-mode="grammar"] .card.lacquer::before{background:repeating-linear-gradient(90deg,var(--firuze) 0 24px,var(--zafaran) 24px 48px)}
+:root[data-mode="grammar"] .eyebrow::before{background:var(--zafaran)}
+
+/* product switch in the drawer */
+.dr-prod{flex:none;display:grid;gap:6px;padding:12px 20px 4px 12px}
+.dr-prod-l{padding-left:4px;font-size:.6875rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.dr-prod .seg button[data-prod="translate"][aria-pressed="true"]{color:var(--hub-tr)}
+.dr-prod .seg button[data-prod="grammar"][aria-pressed="true"]{color:var(--hub-gr)}
+.dr-mode[hidden]{display:none}
+
+/* HUB — two product cards */
+.hub-grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:720px){.hub-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.hub-card{--hc:var(--hub-tr);--hc-t:var(--hub-tr-t);
+  position:relative;isolation:isolate;overflow:hidden;display:grid;gap:14px;align-content:start;min-width:0;width:100%;
+  padding:20px;border:1px solid color-mix(in srgb,var(--hc) 34%,var(--line));border-radius:var(--r-xl);
+  background:radial-gradient(120% 80% at 100% 0%,var(--hc-t),transparent 62%),var(--surface);
+  color:var(--ink);text-align:left;font:inherit;cursor:pointer;box-shadow:var(--sh-1),inset 0 1px 0 var(--hl);
+  transition:transform var(--t-base) var(--ease-out),box-shadow var(--t-base),border-color var(--t-base)}
+.hub-card.hub-gr{--hc:var(--hub-gr);--hc-t:var(--hub-gr-t)}
+.hub-card::before{content:"";position:absolute;left:0;right:0;bottom:0;height:8px;z-index:-1;opacity:.85;pointer-events:none;
+  background:repeating-linear-gradient(90deg,var(--hc) 0 24px,var(--zafaran) 24px 48px);
+  -webkit-mask:var(--m-band) 0 100%/24px 8px repeat-x;mask:var(--m-band) 0 100%/24px 8px repeat-x}
+.hub-card::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:var(--hc);opacity:.06;
+  -webkit-mask:var(--m-field) 0 0/56px 56px repeat;mask:var(--m-field) 0 0/56px 56px repeat}
+@media (hover:hover){.hub-card:hover{transform:translateY(-3px);box-shadow:var(--sh-2),inset 0 1px 0 var(--hl);border-color:var(--hc)}}
+.hub-card:active{transform:scale(.99)}
+.hub-card:focus-visible{outline:2px solid var(--hc);outline-offset:3px}
+.hub-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-height:84px}
+.hub-art{display:block;width:84px;min-height:84px;flex:none}
+.hub-art .medal{margin:12px}
+.hub-last{background:var(--hc-t);color:var(--hc)}
+.hub-tx{display:grid;gap:6px;min-width:0}
+.hub-eb{font-size:.6875rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--hc)}
+.hub-h{font-family:var(--f-display);font-size:var(--fs-xl);font-weight:600;line-height:var(--lh-tight);color:var(--ink)}
+.hub-p{color:var(--soft);line-height:1.5}
+.hub-feats{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.hub-f{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:var(--r-pill);background:var(--hc-t);color:var(--hc);font-size:var(--fs-xs);font-weight:600}
+.hub-go{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:14px;justify-self:start;
+  background:var(--hc);color:var(--on-hub);font-weight:700}
+.hub-go svg{width:18px;height:18px}
+.hub-note{text-align:center}
 
 /* ---------------------------------------------------------------------
    16. REDUCED MOTION — only when the in-app setting asks for it:
