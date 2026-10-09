@@ -2106,7 +2106,8 @@
         var note = !live ? '' : !r || r.ok === false ? 'Mirzələrin dərin yoxlaması alınmadı — yalnız yerli yoxlamalar (rəqəm, termin, türk forması, durğu) göstərilir. Bir az sonra «Yenidən yoxla»ya basın.'
           : r.checked != null && r.segments != null && r.checked < r.segments ? (r.segments - r.checked) + ' seqment dərin yoxlamadan keçmədi — «Yenidən yoxla»ya basın.' : '';
         if (note) host.insertBefore(h('div', { class: 'callout', role: 'note' }, ie('alert'), h('div', { text: note })), host.firstChild);
-        setMap('pj:qa', p.id, M.score);
+        /* an untranslated project has nothing to score — keep it out of «orta QA balı» */
+        if (segs.some(function (x) { return x && String(x.t || '').trim(); })) setMap('pj:qa', p.id, M.score);
         nz(M.score >= 85 ? 'success' : 'worried', M.score >= 85 ? M.score + ' bal — təhvilə az qalıb!' : M.score + ' bal. Kritik qeydlərdən başlayaq.', 2800);
       });
     }
@@ -2148,7 +2149,7 @@
       M = model();
       if (ring && ring.setValue) ring.setValue(M.score);
       if (ringSub) ringSub.textContent = sealOf(M.score);
-      setMap('pj:qa', p.id, M.score);
+      if (segs.some(function (x) { return x && String(x.t || '').trim(); })) setMap('pj:qa', p.id, M.score);
       subP.textContent = p.name + ' — ' + num(p.segs) + ' seqment yoxlanıldı · ' + set.title.split(' · ')[0] + ' ətraflı · ' + hm(new Date());
       scoreH.innerHTML = esc(gradeOf(M.score)) + ' — <em>' + M.act.length + ' qeyd</em>';
       scoreP.textContent = M.sev.high ? M.sev.high + ' kritik qeyd təhvildən əvvəl bağlanmalıdır. Seqment nömrəsinə toxunun — redaktorda açılacaq.' : M.act.length ? 'Kritik səhv yoxdur. Qalan qeydlər üslub və durğu ilə bağlıdır.' : 'Bütün yoxlamalar keçdi. Təhvil paketini hazırlaya bilərsiniz.';
