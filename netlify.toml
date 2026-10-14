@@ -1,0 +1,5 @@
+# Loquela on Netlify. The whole app (pages + /api AI + /grammar + /lib + /tg Telegram bot) is served by
+# one Edge Function that runs dist/worker.js — see netlify/edge-functions/loquela.js.
+[build]
+  command = "node build.mjs"
+  publish = "public"
