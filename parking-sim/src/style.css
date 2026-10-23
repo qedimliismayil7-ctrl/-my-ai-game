@@ -229,3 +229,4 @@ body.photo .photo-btn { display: block; background: var(--accent); }
 .speed { font-size: 30px; }
 .pedals i { height: 34px; }
 .sensor svg { width: 64px; height: 112px; }
+body.touch-ui .photo-btn { right: auto; left: 8px; top: auto; bottom: 8px; }

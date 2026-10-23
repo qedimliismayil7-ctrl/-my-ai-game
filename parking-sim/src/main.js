@@ -363,12 +363,14 @@ function viewRect(v) {
     const rw = Math.min(W * (TOUCH ? 0.3 : 0.32), 480), rh = rw * 0.6;
     return { x: (W - rw) / 2, y: TOUCH ? 112 : 96, w: rw, h: rh };
   }
-  if (game.camMode === 'driver' && game.mode === 'play') {
+  // telefonda ekran idarəsi yer tutur — güzgülər yuxarıda sabit sırada qalır
+  if (game.camMode === 'driver' && game.mode === 'play' && !TOUCH) {
     driverCam.updateMatrixWorld();
     model.root.localToWorld(_v3.set(...v.pos));
     const dist = _v3.distanceTo(driverCam.getWorldPosition(new THREE.Vector3()));
     _v3.project(driverCam);
-    if (_v3.z > 1 || Math.abs(_v3.x) > 1.25 || Math.abs(_v3.y) > 1.25) return null;
+    // arxada qalırsa (başı çevirəndə) gizlət; ekrandan bir az kənardadırsa kənara sıx (salon güzgüsü yuxarıda, yan güzgülər kənarda)
+    if (_v3.z > 1 || Math.abs(_v3.x) > 2.2 || Math.abs(_v3.y) > 2.2) return null;
     const pxPerRad = H / (2 * Math.tan((driverCam.fov * Math.PI) / 360));
     let w = (v.glass[0] / dist) * pxPerRad * v.boost, h = (v.glass[1] / dist) * pxPerRad * v.boost;
     const minW = Math.min(W * (v.key === 'C' ? 0.26 : 0.17), 400);
