@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="az">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Park Ustası — 3D park simulyatoru</title>
+</head>
+<body>
+  <div id="stage"></div>
+
+  <!-- Güzgü və kamera yazıları (şəkillər kanvasda çəkilir) -->
+  <div id="views"></div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="panel left">
+      <div class="speed"><span id="spd">0</span><small>km/saat</small></div>
+      <div class="gears" id="gears"><b data-g="P">P</b><b data-g="R">R</b><b data-g="N">N</b><b data-g="D">D</b></div>
+      <div class="blink"><span id="bl">◀</span><span id="br">▶</span></div>
+      <div class="wheel"><svg id="wheelIcon" viewBox="-50 -50 100 100"><circle r="40" fill="none" stroke="currentColor" stroke-width="8"/><path d="M-40 0H40M0 0V40" stroke="currentColor" stroke-width="8"/><circle r="9" fill="currentColor"/><rect x="-4" y="-48" width="8" height="12" fill="#ff9a2e"/></svg><span id="wdeg">0°</span></div>
+      <div class="pedals">
+        <div><i id="pq"></i><span>Qaz</span></div>
+        <div><i id="pb"></i><span>Əyləc</span></div>
+        <div><i id="pc"></i><span>Debr.</span></div>
+      </div>
+    </div>
+    <div class="panel right">
+      <div class="stat"><span>Səviyyə</span><b id="lvName">—</b></div>
+      <div class="stat"><span>Vaxt</span><b id="tm">0:00</b></div>
+      <div class="stat"><span>Toqquşma</span><b id="col">0</b></div>
+      <div class="stat"><span>Manevr</span><b id="mv">0</b></div>
+      <div class="stat"><span>Kamera</span><b id="camName">Sürücü</b></div>
+      <div class="sensor">
+        <svg viewBox="0 0 80 140" id="sensorSvg">
+          <g id="sFront"></g>
+          <rect x="25" y="35" width="30" height="70" rx="8" fill="#e9ecef"/>
+          <rect x="29" y="48" width="22" height="14" rx="3" fill="#6c7a89"/>
+          <g id="sRear"></g>
+        </svg>
+        <div class="sdist"><span id="sdF">—</span><span id="sdR">—</span></div>
+      </div>
+    </div>
+    <div id="coach" class="coach">
+      <div class="coach-head"><span>👨‍🏫 Təlimatçı</span><span id="coachStep"></span></div>
+      <div id="coachText" class="coach-text"></div>
+      <div id="coachHint" class="coach-hint"></div>
+    </div>
+    <div class="keys-hint" id="keysHint">Esc — menyu · C — kamera · H — təlimatçı · G — köməkçi · Enter — bitir</div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- Ekranlar -->
+  <div id="screens">
+    <section id="scr-menu" class="screen">
+      <div class="card hero">
+        <h1>🅿️ Park Ustası</h1>
+        <p class="sub">Real həyatda park etməyi öyrədən 3D simulyator</p>
+        <div id="padStatus" class="pad-status"></div>
+        <div class="btns">
+          <button data-go="levels" class="primary">▶ Səviyyələr</button>
+          <button data-go="lessons">📘 Real həyatda park — dərslər</button>
+          <button data-go="calib">🎮 Sükan kalibrasiyası</button>
+          <button data-go="settings">⚙️ Ayarlar</button>
+          <button data-go="controls">⌨️ İdarəetmə</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scr-levels" class="screen">
+      <div class="card wide">
+        <h2>Səviyyələr</h2>
+        <div id="levelList" class="levels"></div>
+        <div class="btns row"><button data-go="menu">← Geri</button></div>
+      </div>
+    </section>
+
+    <section id="scr-brief" class="screen">
+      <div class="card wide">
+        <h2 id="briefTitle"></h2>
+        <p id="briefShort" class="sub"></p>
+        <h3>Real həyatda bunu necə edirlər:</h3>
+        <ol id="briefTheory" class="theory"></ol>
+        <label class="check"><input type="checkbox" id="briefCoach" checked /> Təlimatçı addım-addım yol göstərsin</label>
+        <label class="check"><input type="checkbox" id="briefGhost" checked /> Yaşıl “ideal maşın” və trayektoriya göstərilsin</label>
+        <div class="btns row">
+          <button data-go="levels">← Geri</button>
+          <button id="briefStart" class="primary">Başla</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scr-lessons" class="screen">
+      <div class="card wide">
+        <h2>📘 Real həyatda park</h2>
+        <div class="tabs" id="lessonTabs"></div>
+        <div id="lessonBody" class="lesson-body"></div>
+        <div class="btns row"><button data-go="menu">← Geri</button></div>
+      </div>
+    </section>
+
+    <section id="scr-calib" class="screen">
+      <div class="card wide">
+        <h2>🎮 Sükan kalibrasiyası</h2>
+        <p class="sub" id="calibPad"></p>
+        <div class="calib-step" id="calibText">—</div>
+        <div class="calib-sub" id="calibSub"></div>
+        <div class="progress"><i id="calibProg"></i></div>
+        <div class="axes" id="calibAxes"></div>
+        <div class="btns row">
+          <button data-go="menu">← Geri</button>
+          <button id="calibSkip">Keç</button>
+          <button id="calibRestart">Yenidən başla</button>
+        </div>
+        <p class="note">Sükan sürücüsü (Logitech G HUB və s.) quraşdırılmalıdır, fırlanma bucağı 900° olmalıdır. Brauzerdə güc əks-əlaqəsi (force feedback) yalnız titrəmə kimi dəstəklənir; mərkəzə qayıdan yay effekti sürücü proqramından ayarlanır.</p>
+      </div>
+    </section>
+
+    <section id="scr-settings" class="screen">
+      <div class="card">
+        <h2>⚙️ Ayarlar</h2>
+        <div id="settingsList" class="settings"></div>
+        <div class="btns row"><button data-go="menu">← Geri</button></div>
+      </div>
+    </section>
+
+    <section id="scr-controls" class="screen">
+      <div class="card wide">
+        <h2>⌨️ İdarəetmə</h2>
+        <table class="ctl">
+          <tr><th>Klaviatura</th><th>Əməliyyat</th></tr>
+          <tr><td>W / ↑</td><td>Qaz</td></tr>
+          <tr><td>S / ↓</td><td>Əyləc</td></tr>
+          <tr><td>A / D, ← / →</td><td>Sükanı çevirmək (Shift — sürətli). Buraxanda sükan yerində qalır.</td></tr>
+          <tr><td>K</td><td>Sükanı mərkəzə qaytarmaq</td></tr>
+          <tr><td>E / Q</td><td>Ötürmə yuxarı / aşağı (P → R → N → D)</td></tr>
+          <tr><td>1 2 3 4</td><td>P, R, N, D birbaşa</td></tr>
+          <tr><td>Boşluq</td><td>Əl əyləci</td></tr>
+          <tr><td>Z / X</td><td>Sol / sağ dönmə siqnalı</td></tr>
+          <tr><td>C</td><td>Kamera: sürücü → yuxarıdan → arxadan</td></tr>
+          <tr><td>V</td><td>Arxa görüntü kamerası (R-də avtomatik)</td></tr>
+          <tr><td>B (saxla)</td><td>Çiyin üstündən arxaya baxmaq</td></tr>
+          <tr><td>Siçan sürüşdürmə</td><td>Başı çevirmək (sürücü görünüşü); təkər — yuxarıdan görünüşdə yaxınlaşdırmaq</td></tr>
+          <tr><td>M</td><td>Güzgüləri gizlətmək / göstərmək</td></tr>
+          <tr><td>H / G</td><td>Təlimatçı / köməkçi xətlər</td></tr>
+          <tr><td>Enter</td><td>Bitirmək və qiymətləndirmək</td></tr>
+          <tr><td>T</td><td>Səviyyəni yenidən başlatmaq</td></tr>
+          <tr><td>Esc</td><td>Pauza / menyu</td></tr>
+        </table>
+        <p class="note">Avtomat qutu kimi: D və ya R-də qaza basmadan maşın yavaş sürünür — sürəti əyləclə idarə edin. Ötürməni dəyişmək üçün maşın dayanmalı və əyləc basılı olmalıdır (ayarlarda söndürmək olar).</p>
+        <div class="btns row"><button data-go="menu">← Geri</button></div>
+      </div>
+    </section>
+
+    <section id="scr-pause" class="screen">
+      <div class="card">
+        <h2>Pauza</h2>
+        <div class="btns">
+          <button id="resume" class="primary">Davam et</button>
+          <button id="restart">Yenidən başla</button>
+          <button id="pauseTheory">Bu manevr necə edilir?</button>
+          <button data-go="levels">Səviyyələr</button>
+          <button data-go="menu">Ana menyu</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scr-result" class="screen">
+      <div class="card wide">
+        <h2 id="resTitle"></h2>
+        <div class="stars" id="resStars"></div>
+        <div class="res-score"><b id="resScore"></b><span>/100</span></div>
+        <div class="res-grid" id="resGrid"></div>
+        <ul id="resNotes" class="notes"></ul>
+        <div class="btns row">
+          <button id="resRetry">↻ Təkrar</button>
+          <button data-go="levels">Səviyyələr</button>
+          <button id="resNext" class="primary">Növbəti ▶</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
