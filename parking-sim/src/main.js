@@ -516,7 +516,7 @@ addEventListener('pointermove', (e) => {
 });
 renderer.domElement.addEventListener('dblclick', () => { game.yawTarget = 0; game.pitch = -0.1; });
 renderer.domElement.addEventListener('wheel', (e) => {
-  game.topZoom = Math.max(8, Math.min(50, game.topZoom * (e.deltaY > 0 ? 1.1 : 0.9)));
+  game.topZoom = Math.max(8, Math.min(game.city ? 250 : 50, game.topZoom * (e.deltaY > 0 ? 1.1 : 0.9)));
 }, { passive: true });
 
 // ---------- Ötürmə və siqnal ----------
@@ -759,6 +759,8 @@ function leaveCity() {
   game.city = null;
   input.selfCenter = 0;
   input.steerRate = 1;
+  scene.fog.near = 70;
+  scene.fog.far = 190;
   document.body.classList.remove('city');
 }
 
@@ -811,6 +813,8 @@ function startCity(data) {
   $('coach').classList.remove('hidden');
   document.querySelector('.sensor').classList.add('hidden');
   document.body.classList.add('city');
+  scene.fog.near = 150;
+  scene.fog.far = 700;
   setMode('play');
   drawMinimapBase();
 }
