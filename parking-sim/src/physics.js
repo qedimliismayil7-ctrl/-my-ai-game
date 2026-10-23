@@ -48,6 +48,13 @@ CAR.steerRatio = CAR.wheelLock / (CAR.maxSteer / DEG);
 CAR.centerOffset = CAR.length / 2 - CAR.rearOverhang; // arxa oxdan gövdə mərkəzinə
 CAR.minRadius = CAR.wheelbase / Math.tan(CAR.maxSteer); // arxa oxun minimum dönmə radiusu
 
+// Yan güzgülər (gövdədən kənara çıxır) — toqquşma üçün. Ölçülər fotolardan təxminidir (rəsmi "güzgülərlə en" tapılmadı).
+export const MIRROR = { lz: 1.92, out: 0.12, hl: 0.11, est: true };
+// Təkər izi (205/55R16): en 0.205 m, yerlə təmas uzunluğu sadələşdirilib — bordür yalnız təkərlə yoxlanılır
+export const TIRE = { hw: 0.103, hl: 0.31 };
+// Sükan çarxının ən böyük fırlanma sürəti (klaviatura/telefon). Real əl ilə "əl-ələ" çevirmə ≈ 1.5 dövrə/s — təxmini.
+export const STEER_RATE = { hands: 540 / 446, wheel: 4 };
+
 // Dayanacaqdakı digər maşınlar (ABŞ-da tipik orta sedan/krossover ölçüsü — təxmini)
 export const PARKED = { length: 4.8, width: 1.86 };
 
@@ -58,11 +65,6 @@ export const LIMITS = {
 };
 
 export const GEARS = ['P', 'R', 'N', 'D'];
-
-// Şəhər sürüşü üçün (təxmini): kütlə sürücü ilə, güc, hava müqaviməti əmsalı 0.5·ρ·Cd·A/m
-export const CITY = { mass: 1380, power: 110000, drag: (0.5 * 1.2 * 0.27 * 2.2) / 1380 };
-// Yan dinamika (təxmini): təkər yan sərtliyi N/rad, ətalət momenti kq·m², sürtünmə
-export const DYN = { mass: 1380, Iz: 2250, Cf: 95000, Cr: 105000, mu: 0.9, frontShare: 0.39 };
 
 export function wrapAngle(a) {
   while (a > Math.PI) a -= 2 * Math.PI;
@@ -103,33 +105,6 @@ export function obbOverlap(a, b) {
     if (amax < bmin || bmax < amin) return false;
   }
   return true;
-}
-
-// Qabarıq çoxbucaqlı (bina) ilə maşının OBB-si kəsişirmi (SAT)
-export function polyOverlap(box, poly) {
-  const ca = obbCorners(box);
-  const axes = [...obbAxes(box.h)];
-  for (let i = 0; i < poly.length; i++) {
-    const [ax, az] = poly[i], [bx, bz] = poly[(i + 1) % poly.length];
-    const l = Math.hypot(bx - ax, bz - az) || 1;
-    axes.push([-(bz - az) / l, (bx - ax) / l]);
-  }
-  for (const axis of axes) {
-    let amin = Infinity, amax = -Infinity, bmin = Infinity, bmax = -Infinity;
-    for (const p of ca) { const d = p[0] * axis[0] + p[1] * axis[1]; amin = Math.min(amin, d); amax = Math.max(amax, d); }
-    for (const p of poly) { const d = p[0] * axis[0] + p[1] * axis[1]; bmin = Math.min(bmin, d); bmax = Math.max(bmax, d); }
-    if (amax < bmin || bmax < amin) return false;
-  }
-  return true;
-}
-
-export function convexHull(points) {
-  const p = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-  const lower = [], upper = [];
-  for (const q of p) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop(); lower.push(q); }
-  for (const q of p.reverse()) { while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop(); upper.push(q); }
-  return lower.slice(0, -1).concat(upper.slice(0, -1));
 }
 
 // Nöqtənin OBB-yə ən yaxın nöqtəsi və məsafəsi
@@ -173,11 +148,7 @@ export class CarPhysics {
     this.reset({ x: 0, z: 0, h: 0 });
   }
 
-  reset(pose, profile = 'park') {
-    this.profile = profile;
-    this.vy = 0;
-    this.r = 0;
-    this.slip = 0;
+  reset(pose) {
     this.x = pose.x;
     this.z = pose.z;
     this.h = pose.h;
@@ -206,27 +177,17 @@ export class CarPhysics {
 
   // inp: { steer (−1..1), throttle, brake, clutch (0..1), handbrake (bool), clutchMode (bool) }
   step(dt, inp, obstacles = null) {
-    this.steer = clamp(inp.steer, -1, 1);
+    // sükan çarxı ani fırlanmır: tam sağdan tam sola ≈ 1.65 s (klaviatura/telefon); fiziki sükanda əl özü məhdudlaşdırır
+    const sr = (inp.steerRate ?? STEER_RATE.hands) * dt;
+    this.steer = clamp(this.steer + clamp(clamp(inp.steer, -1, 1) - this.steer, -sr, sr), -1, 1);
     // ön təkərlər sükanı bir az gecikmə ilə izləyir (sükan sütununun elastikliyi)
     const targetDelta = -this.steer * CAR.maxSteer;
     const maxRate = 120 * DEG * dt;
     this.delta += clamp(targetDelta - this.delta, -maxRate, maxRate);
 
     const dir = this.gear === 'D' ? 1 : this.gear === 'R' ? -1 : 0;
-    let aDrive = 0, aDrag = 0;
-    if (this.profile === 'city') {
-      // Şəhər: 2.0 MPI (147 at ≈ 110 kVt) — gücdən asılı sürətlənmə, hava müqaviməti (Cd≈0.27, A≈2.2 m² — təxmini)
-      if (dir) {
-        const vd = this.v * dir;
-        const vmax = dir > 0 ? 50 : 4.5;
-        let a = inp.throttle * Math.min(3.4, CITY.power / (CITY.mass * Math.max(vd, 1)));
-        if (vd < LIMITS.creep) a = Math.max(a, Math.min(0.8, (LIMITS.creep - vd) * 1.5));
-        if (vd > vmax) a = 0;
-        if (inp.clutchMode) a *= 1 - clamp(inp.clutch, 0, 1);
-        aDrive = a * dir;
-      }
-      aDrag = CITY.drag * this.v * this.v;
-    } else if (dir) {
+    let aDrive = 0;
+    if (dir) {
       const vmax = dir > 0 ? LIMITS.vmaxForward : LIMITS.vmaxReverse;
       const target = LIMITS.creep + inp.throttle * (vmax - LIMITS.creep);
       const vd = this.v * dir;
@@ -236,7 +197,7 @@ export class CarPhysics {
       aDrive = f * dir;
     }
     let vNew = this.v + aDrive * dt;
-    let brakeA = inp.brake * (this.profile === 'city' ? 8.5 : 7) + (inp.handbrake ? 5 : 0) + 0.12 + aDrag;
+    let brakeA = inp.brake * 7 + (inp.handbrake ? 5 : 0) + 0.12;
     if (this.gear === 'P') brakeA = 20;
     const db = brakeA * dt;
     if (Math.abs(vNew) <= db) vNew = 0;
@@ -245,62 +206,23 @@ export class CarPhysics {
     this.v = vNew;
 
     const px = this.x, pz = this.z, ph = this.h;
-    if (this.profile === 'city') this.dynamicStep(dt);
-    else {
-      // velosiped modeli (kinematik — park sürətlərində dəqiqdir)
-      this.h = wrapAngle(this.h + (this.v / CAR.wheelbase) * Math.tan(this.delta) * dt);
-      this.x += Math.sin(this.h) * this.v * dt;
-      this.z += Math.cos(this.h) * this.v * dt;
-    }
+    // velosiped modeli (kinematik — park sürətlərində dəqiqdir)
+    this.h = wrapAngle(this.h + (this.v / CAR.wheelbase) * Math.tan(this.delta) * dt);
+    this.x += Math.sin(this.h) * this.v * dt;
+    this.z += Math.cos(this.h) * this.v * dt;
     this.odometer += Math.abs(this.v * dt);
 
     if (obstacles) {
-      const box = this.box;
-      for (const o of obstacles) {
-        if (o.poly ? polyOverlap(box, o.poly) : obbOverlap(box, o)) {
-          this.x = px; this.z = pz; this.h = ph;
-          const impact = Math.hypot(this.v, this.vy);
-          this.v = -this.v * 0.15;
-          this.vy = 0;
-          this.r = 0;
-          return { hit: o, impact };
-        }
+      const hit = collide(this.pose, obstacles);
+      if (hit) {
+        // əvvəlki mövqeyə qayıt və dayan — rezin top kimi geri sıçrama yoxdur
+        this.x = px; this.z = pz; this.h = ph;
+        const impact = Math.abs(this.v);
+        this.v = 0;
+        return { hit: hit.o, part: hit.part, impact };
       }
     }
     return null;
-  }
-
-  // Dinamik velosiped modeli (şəhər sürətləri): təkərlərin yan sürüşməsi, sürtünmə həddi, kütlənin ətaləti.
-  // Aşağı sürətdə kinematik modelə keçir. Parametrlər təxminidir (ön ağırlıq ~61%, μ≈0.9 quru asfalt).
-  dynamicStep(dt) {
-    const L = CAR.wheelbase, a = L * DYN.frontShare, b = L - a;
-    const vx = this.v, d = this.delta;
-    const rKin = (vx / L) * Math.tan(d);
-    const w = vx > 0 ? clamp((vx - 3) / 2, 0, 1) : 0; // 3–5 m/s arası keçid; geri hərəkət kinematik
-    let r = this.r, vy = this.vy;
-    this.slip = 0;
-    if (w > 0) {
-      const Fzf = (DYN.mass * 9.81 * b) / L, Fzr = (DYN.mass * 9.81 * a) / L;
-      const af = d - Math.atan2(vy + a * r, vx);
-      const ar = -Math.atan2(vy - b * r, vx);
-      const Fyf = clamp(DYN.Cf * af, -DYN.mu * Fzf, DYN.mu * Fzf);
-      const Fyr = clamp(DYN.Cr * ar, -DYN.mu * Fzr, DYN.mu * Fzr);
-      vy += ((Fyf * Math.cos(d) + Fyr) / DYN.mass - vx * r) * dt;
-      r += ((a * Fyf * Math.cos(d) - b * Fyr) / DYN.Iz) * dt;
-      this.slip = Math.max(Math.abs(af), Math.abs(ar));
-    }
-    this.r = w * r + (1 - w) * rKin;
-    this.vy = w * vy;
-    // ağırlıq mərkəzi arxa oxdan b qədər irəlidədir
-    let fx = Math.sin(this.h), fz = Math.cos(this.h);
-    let cx = this.x + fx * b, cz = this.z + fz * b;
-    const lx = fz, lz = -fx; // sol
-    cx += (fx * vx + lx * this.vy) * dt;
-    cz += (fz * vx + lz * this.vy) * dt;
-    this.h = wrapAngle(this.h + this.r * dt);
-    fx = Math.sin(this.h); fz = Math.cos(this.h);
-    this.x = cx - fx * b;
-    this.z = cz - fz * b;
   }
 
   // Cari sükanla gələcək trayektoriya (arxa ox nöqtələri + künclər)
@@ -316,5 +238,77 @@ export class CarPhysics {
       z += Math.cos(h) * ds;
     }
     return pts;
+  }
+}
+
+// Maşının hissələri ilə maneələrin yoxlanması:
+//  - gövdə (bamperlər, künclər) və yan güzgülər — hündür maneələrlə (maşın, dirək, divar, ağac)
+//  - təkərlər — bordürlə (gövdənin çıxıntısı alçaq bordürün üstündən keçə bilər)
+export function carParts(pose) {
+  const parts = [{ part: 'body', b: carBox(pose.x, pose.z, pose.h) }];
+  for (const s of [1, -1]) {
+    const m = toWorld(s * (CAR.width / 2 + MIRROR.out / 2), MIRROR.lz, pose);
+    parts.push({ part: s > 0 ? 'mirrorL' : 'mirrorR', b: { cx: m.x, cz: m.z, h: pose.h, hw: MIRROR.out / 2, hl: MIRROR.hl } });
+  }
+  return parts;
+}
+export function tireBoxes(pose) {
+  const out = [];
+  for (const [lx, lz, name] of [[CAR.track / 2, CAR.wheelbase, 'frontL'], [-CAR.track / 2, CAR.wheelbase, 'frontR'], [CAR.track / 2, 0, 'rearL'], [-CAR.track / 2, 0, 'rearR']]) {
+    const c = toWorld(lx, lz, pose);
+    out.push({ part: 'tire_' + name, b: { cx: c.x, cz: c.z, h: pose.h, hw: TIRE.hw, hl: TIRE.hl } });
+  }
+  return out;
+}
+export function collide(pose, obstacles) {
+  const body = carBox(pose.x, pose.z, pose.h);
+  const reach = CAR.length / 2 + 0.5;
+  let parts = null, tires = null;
+  for (const o of obstacles) {
+    if (Math.abs(o.cx - body.cx) > reach + o.hl + o.hw || Math.abs(o.cz - body.cz) > reach + o.hl + o.hw) continue;
+    if (o.type === 'curb') {
+      tires ||= tireBoxes(pose);
+      for (const t of tires) if (obbOverlap(t.b, o)) return { o, part: t.part };
+    } else {
+      parts ||= carParts(pose);
+      for (const p of parts) if (obbOverlap(p.b, o)) return { o, part: p.part };
+    }
+  }
+  return null;
+}
+
+// Davamlı təmas bir hadisə sayılır: maşın maneədən ayrılıb ən azı `gap` saniyə təmassız qalmasa, yeni toqquşma sayılmır.
+export class ContactTracker {
+  constructor(gap = 0.6) { this.gap = gap; this.t = 0; this.lastContact = -1e9; this.active = false; }
+  // hər fizika addımında çağırılır; yeni hadisə başlayırsa true qaytarır
+  step(dt, hit) {
+    this.t += dt;
+    if (!hit) { if (this.t - this.lastContact > this.gap) this.active = false; return false; }
+    this.lastContact = this.t;
+    if (this.active) return false;
+    this.active = true;
+    return true;
+  }
+}
+
+// Sabit addımla inteqrasiya: kadr müddəti nə olursa olsun fizika eyni addımla (h) işləyir.
+// fn(h) hər addımda çağırılır. Çox yavaş kadrda geridə qalan vaxt atılır (spiral of death qarşısı).
+export class FixedStepper {
+  constructor(h = 1 / 120, maxSteps = 15) {
+    this.h = h;
+    this.maxSteps = maxSteps;
+    this.acc = 0;
+  }
+  reset() { this.acc = 0; }
+  advance(dt, fn) {
+    this.acc += dt;
+    let n = 0;
+    while (this.acc >= this.h && n < this.maxSteps) {
+      this.acc -= this.h;
+      n++;
+      fn(this.h);
+    }
+    if (n === this.maxSteps) this.acc = 0;
+    return n;
   }
 }

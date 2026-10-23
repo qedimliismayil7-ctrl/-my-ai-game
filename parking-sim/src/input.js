@@ -61,11 +61,9 @@ export class Input {
     const right = k.has('KeyD') || k.has('ArrowRight');
     // klaviatura sükanı: əllə çevrilən sükan kimi — buraxanda yerində qalır
     const cfg = this.cfg || {};
-    const rate = (k.has('ShiftLeft') || k.has('ShiftRight') ? 2.0 : 1.0) * (this.steerRate ?? 1) * (cfg.kbSteerSpeed || 1);
+    const rate = (k.has('ShiftLeft') || k.has('ShiftRight') ? 2.0 : 1.0) * (cfg.kbSteerSpeed || 1);
     if (left) this.kbSteer -= rate * dt;
     if (right) this.kbSteer += rate * dt;
-    // şəhərdə: düymə buraxılanda sükan özü mərkəzə qayıdır (sürətdən asılı)
-    if (!left && !right && this.selfCenter) this.kbSteer -= Math.sign(this.kbSteer) * Math.min(Math.abs(this.kbSteer), this.selfCenter * dt);
     if (k.has('KeyK')) this.kbSteer *= Math.max(0, 1 - 6 * dt);
     this.kbSteer = clamp(this.kbSteer, -1, 1);
 

@@ -1,17 +1,14 @@
 import * as THREE from 'three';
 import './style.css';
-import { CarPhysics, CAR, SPEC, GEARS, toWorld, carBox } from './physics.js';
-import { buildCar, buildParkedCar, updateCarVisual, buildGhost, LAYER, VIEW } from './carModel.js';
+import { CarPhysics, CAR, SPEC, GEARS, toWorld, carBox, FixedStepper, ContactTracker, STEER_RATE, closestOnObb } from './physics.js';
+import { buildCar, updateCarVisual, buildGhost, drawCluster, LAYER, VIEW } from './carModel.js';
+import { QUALITY, QUALITY_ORDER, TIMES, makeSky, makeEnvironment, makeComposer, FpsMeter } from './gfx.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { decal } from './textures.js';
 import { buildWorld } from './world.js';
 import { LEVELS, GENERAL_LESSONS, makeLevel, randomVariant } from './levels.js';
 import { bumperClearance } from './sim.js';
-import { RoadNetwork, nextManeuver } from './city/network.js';
-import { buildCity } from './city/cityWorld.js';
-import { RuleMonitor } from './city/rules.js';
-import { Traffic } from './city/traffic.js';
 
-// data/ qovluğundakı şəhər xəritələri (tools/osm-to-city.mjs ilə OSM-dən yaradılır)
-const CITIES = Object.values(import.meta.glob('../data/*.json', { eager: true, import: 'default' }));
 import { Input, Calibrator } from './input.js';
 import { Sound, speak } from './audio.js';
 import { Coach } from './coach.js';
@@ -27,9 +24,9 @@ const SETTINGS_KEY = 'park-sim-settings';
 const RESULTS_KEY = 'park-sim-results';
 const DEFAULTS = {
   sensors: true, details: false, voice: false, realGear: true, clutchMode: false,
-  mirrors: true, autoRearCam: true, shadows: !TOUCH, volume: 0.7,
+  mirrors: true, autoRearCam: true, quality: 'auto', timeOfDay: 'day', showFps: false, volume: 0.7,
   touchMode: 'wheel', touchSens: 2, touchSize: 1, touchSwap: false,
-  steerDeadzone: 0.02, steerCurve: 1, pedalCurve: 1, kbSteerSpeed: 1, traffic: 1,
+  steerDeadzone: 0.02, steerCurve: 1, pedalCurve: 1, kbSteerSpeed: 1,
 };
 const SETTING_LABELS = {
   sensors: 'Park sensoru köməkçisi (2023 SEL-də standart deyil — İmtahanda sönülüdür)',
@@ -39,7 +36,9 @@ const SETTING_LABELS = {
   clutchMode: 'Debriyaj rejimi (ötürmə üçün debriyaj)',
   mirrors: 'Güzgüləri göstər',
   autoRearCam: 'R-də arxa kamera avtomatik açılsın',
-  shadows: 'Kölgələr',
+  quality: 'Qrafika keyfiyyəti',
+  timeOfDay: 'Günün vaxtı / hava',
+  showFps: 'Ölçmə paneli (FPS, kadr vaxtı, draw call, yaddaş)',
   volume: 'Səs səviyyəsi',
   touchMode: 'Telefon: sükan növü',
   touchSens: 'Telefon: sükan həssaslığı',
@@ -49,7 +48,6 @@ const SETTING_LABELS = {
   steerCurve: 'Sükan: əyri (1 — xətti, böyük — mərkəzdə yumşaq)',
   pedalCurve: 'Qaz/əyləc pedalı: əyri (1 — xətti, böyük — başlanğıcda yumşaq)',
   kbSteerSpeed: 'Klaviatura: sükanın fırlanma sürəti',
-  traffic: 'Şəhər: trafikin sıxlığı',
 };
 const DRIVE_MODES = {
   learn: { name: 'Öyrənmə', desc: 'Təlimatçı, köməkçi xətlər, səhvdən geri qayıtma' },
@@ -62,45 +60,120 @@ const settings = loadJSON(SETTINGS_KEY, DEFAULTS);
 const results = loadJSON(RESULTS_KEY, {});
 
 // ---------- Renderer və səhnə ----------
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, TOUCH ? 1.25 : 1.5));
+// Keyfiyyət: "auto" — telefonda Orta, kompüterdə Yüksək ilə başlayır, FPS 48-dən aşağı düşəndə endirilir.
+let quality = settings.quality === 'auto' ? (TOUCH ? 'medium' : 'high') : settings.quality;
+const renderer = new THREE.WebGLRenderer({ antialias: quality !== 'low', powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false;
 $('stage').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const SKY = 0xbcd6ea;
-scene.background = new THREE.Color(SKY);
-scene.fog = new THREE.Fog(SKY, 70, 190);
+const HORIZON = 0xcfe0ee;
+scene.fog = new THREE.Fog(HORIZON, 80, 260);
+const sky = makeSky();
+for (let i = 0; i < 5; i++) sky.layers.enable(i);
+scene.add(sky);
+scene.environment = makeEnvironment(renderer);
 
-const hemi = new THREE.HemisphereLight(0xdfefff, 0x5a5348, 1.1);
+const hemi = new THREE.HemisphereLight(0xe4f0ff, 0x6b665c, 0.55);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xfff3dd, 1.9);
+const sun = new THREE.DirectionalLight(0xfff1dc, 2.6);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 120 });
-sun.shadow.bias = -0.0005;
+Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 120 });
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.02;
+sun.shadow.radius = 3;
 sun.shadow.camera.layers.enable(LAYER.BODY);
 scene.add(sun, sun.target);
 for (const l of [hemi, sun]) for (let i = 0; i < 5; i++) l.layers.enable(i);
+renderer.info.autoReset = false; // draw call sayını bütün kadr üzrə (güzgülər daxil) ölçmək üçün
+
+// Gecə: ən yaxın dirək fənərləri real işıq saçır (hamısı yox — performans üçün 4 ədəd)
+const lampLights = [];
+for (let i = 0; i < 4; i++) {
+  const l = new THREE.SpotLight(0xffc98a, 0, 22, 0.9, 0.6, 1.6);
+  l.visible = false;
+  for (let k = 0; k < 5; k++) l.layers.enable(k);
+  scene.add(l, l.target);
+  lampLights.push(l);
+}
+let timeKey = null;
+let curWorld = null; // işıqlandırılan səhnə (menyu və ya səviyyə)
+function applyTime(key) {
+  const t = TIMES[key] || TIMES.day;
+  timeKey = key;
+  const u = sky.material.uniforms;
+  u.top.value.set(t.top); u.horizon.value.set(t.horizon); u.ground.value.set(t.ground);
+  u.sunDir.value.set(...t.sun).normalize();
+  u.sunAmt.value = t.night ? 0 : 1;
+  scene.environment?.dispose();
+  scene.environment = makeEnvironment(renderer, t);
+  scene.fog.color.set(t.fog);
+  scene.fog.near = t.night ? 30 : 80; scene.fog.far = t.night ? 160 : 260;
+  hemi.color.set(t.hemiSky); hemi.groundColor.set(t.hemiGround); hemi.intensity = t.hemiInt;
+  sun.color.set(t.sunColor); sun.intensity = t.sunInt;
+  renderer.toneMappingExposure = t.exposure;
+  for (const l of lampLights) l.visible = t.night || !!t.evening;
+  for (const l of lampLights) l.intensity = t.night ? 60 : 12;
+  headL.visible = !!t.night || !!t.evening;
+  if (curWorld) curWorld.setAtmosphere(t);
+  lampT = 0;
+}
+let lampT = 0;
+function updateLampLights(dt) {
+  if (!curWorld || !lampLights[0].visible) return;
+  lampT -= dt;
+  if (lampT > 0) return;
+  lampT = 0.5;
+  const near = curWorld.lamps.map((l) => ({ l, d: (l.pos.x - car.x) ** 2 + (l.pos.z - car.z) ** 2 })).sort((a, b) => a.d - b.d);
+  lampLights.forEach((s, i) => {
+    const n = near[i];
+    s.visible = !!n;
+    if (!n) return;
+    s.position.copy(n.l.pos);
+    s.target.position.set(n.l.pos.x, 0, n.l.pos.z);
+  });
+}
 
 // ---------- Maşın ----------
 const car = new CarPhysics();
-const model = buildCar(0x8d9095, true); // Elantra — boz metallik (fotolardakı kimi)
+const model = buildCar(0x8f9396, true); // Elantra — boz metallik (fotolardakı kimi; rəngin zavod adı təsdiqlənməyib)
 scene.add(model.root);
+// fənərlər (gecə/axşam): iki spot işıq, maşınla birlikdə hərəkət edir
+const headL = new THREE.Group();
+for (const sx of [0.6, -0.6]) {
+  const h = new THREE.SpotLight(0xf2f4ff, 40, 30, 0.42, 0.5, 1.4);
+  h.position.set(sx, 0.7, CAR.length - CAR.rearOverhang - 0.1);
+  h.target.position.set(sx * 1.4, 0, CAR.length + 12);
+  for (let k = 0; k < 5; k++) h.layers.enable(k);
+  headL.add(h, h.target);
+}
+headL.visible = false;
+model.root.add(headL);
+// kontakt kölgəsi: təkərlərin və altlığın yerə toxunduğu yerdə yumşaq qaralma (kölgə xəritəsi olmasa da)
+{
+  const cs = new THREE.Mesh(new THREE.PlaneGeometry(CAR.width + 0.35, CAR.length + 0.3), new THREE.MeshBasicMaterial({ map: decal('shadow'), transparent: true, depthWrite: false, opacity: 0.85, color: 0x000000 }));
+  cs.rotation.x = -Math.PI / 2;
+  cs.position.set(0, 0.012, CAR.length / 2 - CAR.rearOverhang);
+  cs.renderOrder = 1;
+  cs.layers.set(LAYER.BODY);
+  model.root.add(cs);
+}
 const ghost = buildGhost();
 ghost.visible = false;
 scene.add(ghost);
 
 // ---------- Kameralar ----------
-const driverCam = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.05, 400);
+const driverCam = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.05, 500);
 driverCam.rotation.order = 'YXZ';
 driverCam.position.set(...VIEW.eye);
 model.root.add(driverCam);
 
-const freeCam = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 400);
+const freeCam = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 500);
 scene.add(freeCam);
 
 function mirrorCam(fov, aspect, pos, yaw, pitch, layers) {
@@ -113,9 +186,10 @@ function mirrorCam(fov, aspect, pos, yaw, pitch, layers) {
   model.root.add(c);
   return c;
 }
-const camL = mirrorCam(24, 1.6, VIEW.mirrorL, -0.2, -0.08, [LAYER.WORLD, LAYER.BODY]);
-const camR = mirrorCam(24, 1.6, VIEW.mirrorR, 0.26, -0.12, [LAYER.WORLD, LAYER.BODY]);
-const camC = mirrorCam(20, 3.4, VIEW.mirrorC, 0, -0.1, [LAYER.WORLD]);
+// Sürücü tərəfi düz güzgü, sərnişin tərəfi qabarıq (ABŞ: geniş bucaq — obyektlər göründüyündən yaxındır)
+const camL = mirrorCam(24, 1.6, VIEW.mirrorL, -0.22, -0.08, [LAYER.WORLD, LAYER.BODY]);
+const camR = mirrorCam(34, 1.6, VIEW.mirrorR, 0.3, -0.12, [LAYER.WORLD, LAYER.BODY]);
+const camC = mirrorCam(22, 3.4, VIEW.mirrorC, 0, -0.06, [LAYER.WORLD]);
 // Arxa kamera baqaj qapağında (standart). Dinamik xətlər rəsmi təsdiqlənmədiyi üçün köməkçi kimi göstərilir.
 const camRear = mirrorCam(110, 1.6, VIEW.rearCam, 0, -0.55, [LAYER.WORLD, LAYER.REARCAM]);
 
@@ -193,46 +267,94 @@ function updateTrajectory() {
 const overlay = new THREE.Scene();
 const orthoCam = new THREE.OrthographicCamera(0, innerWidth, innerHeight, 0, -10, 10);
 const views = [
-  { key: 'L', cam: camL, label: 'Sol güzgü', mirror: true },
-  { key: 'C', cam: camC, label: 'Salon güzgüsü', mirror: true },
-  { key: 'R', cam: camR, label: 'Sağ güzgü', mirror: true },
-  { key: 'B', cam: camRear, label: 'Arxa kamera', mirror: true },
+  { key: 'L', cam: camL, label: '', mirror: true, glass: [0.19, 0.115], boost: 1.9, pos: VIEW.mirrorL, shape: 'side' },
+  { key: 'C', cam: camC, label: '', mirror: true, glass: [0.25, 0.068], boost: 1.25, pos: VIEW.mirrorC, shape: 'center' },
+  { key: 'R', cam: camR, label: 'Obyektlər göründüyündən yaxındır', mirror: true, glass: [0.19, 0.115], boost: 1.9, pos: VIEW.mirrorR, shape: 'side' },
+  { key: 'B', cam: camRear, label: 'Arxa kamera — ətrafı yoxlayın', mirror: true, shape: 'screen' },
 ];
+// güzgü formaları (alfa maskası): yan güzgü — yuvarlaq trapesiya, salon — uzun oval, ekran — düzbucaqlı
+function maskTex(kind) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, 256, 128);
+  g.fillStyle = '#fff';
+  g.beginPath();
+  if (kind === 'side') {
+    g.moveTo(14, 18); g.quadraticCurveTo(10, 4, 40, 6); g.lineTo(226, 10); g.quadraticCurveTo(250, 12, 248, 40);
+    g.lineTo(242, 96); g.quadraticCurveTo(236, 124, 200, 122); g.lineTo(46, 116); g.quadraticCurveTo(10, 112, 8, 80); g.closePath();
+  } else if (kind === 'center') {
+    g.roundRect(4, 8, 248, 112, 52);
+  } else g.roundRect(2, 2, 252, 124, 10);
+  g.fill();
+  const t = new THREE.CanvasTexture(c);
+  return t;
+}
+const rtType = THREE.HalfFloatType;
 for (const v of views) {
-  v.rt = new THREE.WebGLRenderTarget(256, 128, { samples: 4 });
-  v.frame = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0x0b0d10 }));
-  v.quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: v.rt.texture, side: THREE.DoubleSide }));
+  v.rt = new THREE.WebGLRenderTarget(256, 128, { type: rtType, samples: 2 });
+  const mask = maskTex(v.shape);
+  v.frame = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0x07080a, alphaMap: mask, transparent: true, toneMapped: false }));
+  v.quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: v.rt.texture, alphaMap: mask, transparent: true, side: THREE.DoubleSide }));
   v.quad.position.z = 1;
   overlay.add(v.frame, v.quad);
   v.el = document.createElement('div');
-  v.el.className = 'vlabel';
+  v.el.className = 'vlabel ' + v.key;
   v.el.textContent = v.label;
+  if (!v.label) v.el.style.visibility = 'hidden';
   $('views').appendChild(v.el);
+  v.size = [0, 0];
+}
+// Hər görünüşün ekrandakı düzbucaqlısı: sürücü görünüşündə güzgülər real yerlərinə proyeksiya olunur
+// (başı çevirəndə onlar da yer dəyişir), digər kameralarda yuxarıda sabit düzülür.
+const _v3 = new THREE.Vector3();
+function viewRect(v) {
+  const W = innerWidth, H = innerHeight;
+  if (v.key === 'B') {
+    const rw = Math.min(W * (TOUCH ? 0.3 : 0.32), 480), rh = rw * 0.6;
+    return { x: (W - rw) / 2, y: TOUCH ? 112 : 96, w: rw, h: rh };
+  }
+  if (game.camMode === 'driver' && game.mode === 'play') {
+    driverCam.updateMatrixWorld();
+    model.root.localToWorld(_v3.set(...v.pos));
+    const dist = _v3.distanceTo(driverCam.getWorldPosition(new THREE.Vector3()));
+    _v3.project(driverCam);
+    if (_v3.z > 1 || Math.abs(_v3.x) > 1.25 || Math.abs(_v3.y) > 1.25) return null;
+    const pxPerRad = H / (2 * Math.tan((driverCam.fov * Math.PI) / 360));
+    let w = (v.glass[0] / dist) * pxPerRad * v.boost, h = (v.glass[1] / dist) * pxPerRad * v.boost;
+    const minW = Math.min(W * (v.key === 'C' ? 0.26 : 0.17), 400);
+    if (w < minW) { h *= minW / w; w = minW; }
+    let x = ((_v3.x + 1) / 2) * W - w / 2, y = ((_v3.y + 1) / 2) * H - h / 2;
+    x = Math.max(4, Math.min(W - w - 4, x));
+    y = Math.max(4, Math.min(H - h - 4, y));
+    return { x, y, w, h };
+  }
+  const sw = Math.min(W * 0.2, 300), sh = sw * 0.6;
+  const cw = Math.min(W * 0.28, 420), ch = cw * 0.28;
+  return { L: { x: 10, y: H - 10 - sh, w: sw, h: sh }, R: { x: W - 10 - sw, y: H - 10 - sh, w: sw, h: sh }, C: { x: (W - cw) / 2, y: H - 8 - ch, w: cw, h: ch } }[v.key];
 }
 function layoutViews() {
-  const W = innerWidth, H = innerHeight;
-  const sw = Math.min(W * 0.22, 330), sh = sw * 0.62;
-  const cw = Math.min(W * 0.3, 440), ch = cw * 0.3;
-  const rw = Math.min(W * (TOUCH ? 0.3 : 0.34), 500), rh = rw * 0.6;
-  const rect = {
-    L: { x: 12, y: H - 12 - sh, w: sw, h: sh },
-    R: { x: W - 12 - sw, y: H - 12 - sh, w: sw, h: sh },
-    C: { x: (W - cw) / 2, y: H - 10 - ch, w: cw, h: ch },
-    B: { x: (W - rw) / 2, y: TOUCH ? 112 : 70, w: rw, h: rh },
-  };
-  const pr = renderer.getPixelRatio();
+  const H = innerHeight;
+  const pr = renderer.getPixelRatio() * QUALITY[quality].mirrorScale;
   for (const v of views) {
-    const r = rect[v.key];
+    const r = viewRect(v);
     v.rect = r;
-    v.cam.aspect = r.w / r.h;
-    v.cam.updateProjectionMatrix();
-    v.rt.setSize(Math.round(r.w * pr), Math.round(r.h * pr));
+    if (!r) continue;
+    // render hədəfinin ölçüsü 32 px-ə yuvarlaqlaşdırılır — hər kadr yenidən yaradılmasın
+    const tw = Math.max(64, Math.round((r.w * pr) / 32) * 32), th = Math.max(32, Math.round((r.h * pr) / 32) * 32);
+    if (tw !== v.size[0] || th !== v.size[1]) {
+      v.size = [tw, th];
+      v.rt.setSize(tw, th);
+      v.cam.aspect = r.w / r.h;
+      v.cam.updateProjectionMatrix();
+    }
+    v.cam.far = v.key === 'B' ? 40 : QUALITY[quality].mirrorFar;
     v.quad.position.set(r.x + r.w / 2, r.y + r.h / 2, 1);
     v.quad.scale.set(v.mirror ? -r.w : r.w, r.h, 1);
     v.frame.position.set(r.x + r.w / 2, r.y + r.h / 2, 0);
-    v.frame.scale.set(r.w + 8, r.h + 8, 1);
-    v.el.style.left = r.x + 'px';
-    v.el.style.top = H - r.y - 4 + 'px';
+    v.frame.scale.set(r.w * 1.06 + 6, r.h * 1.1 + 6, 1);
+    v.el.style.left = r.x + r.w / 2 + 'px';
+    v.el.style.top = H - r.y - 16 + 'px';
   }
 }
 
@@ -268,16 +390,19 @@ const game = {
   time: 0,
   finished: false,
 };
+const stepper = new FixedStepper(1 / 120); // fizika addımı 120 Hz
 const CAM_NAMES = { driver: 'Sürücü', top: 'Yuxarıdan', chase: 'Arxadan' };
 
 function startLevel(base, drive = game.drive) {
-  leaveCity();
   game.drive = drive;
   const lv = drive === 'practice' ? makeLevel(base.id, randomVariant(base.id)) : makeLevel(base.id);
   if (game.world) scene.remove(game.world.group);
   game.level = lv;
   game.world = buildWorld(lv);
   scene.add(game.world.group);
+  curWorld = game.world;
+  curWorld.setAtmosphere(TIMES[timeKey] || TIMES.day);
+  lampT = 0;
   game.obstacles = game.world.obstacles;
   car.reset(lv.start);
   input.kbSteer = 0;
@@ -288,6 +413,9 @@ function startLevel(base, drive = game.drive) {
   game.stats = { time: 0, collisions: 0, curbHits: 0, moves: 0, signaled: false, signalTime: 0, maxSpeed: 0, reversed: false, lookedBack: false, gearAbuse: 0 };
   game.lastDir = 0;
   game.lastHit = -10;
+  stepper.reset();
+  game.curbContact = new ContactTracker(0.6);
+  game.bodyContact = new ContactTracker(0.6);
   game.parkTimer = 0;
   game.blinker = null;
   game.rearCamManual = false;
@@ -311,6 +439,8 @@ function show(name) {
 }
 function setMode(m) {
   game.mode = m;
+  if (m !== 'play' && game.camMode === 'photo') togglePhoto();
+  document.body.classList.toggle('playing', m === 'play');
   touchUI.show(TOUCH && m === 'play');
   $('hud').classList.toggle('hidden', m !== 'play' && m !== 'pause');
   $('views').classList.toggle('hidden', !(m === 'play' || m === 'pause'));
@@ -322,7 +452,6 @@ function go(name) {
   if (name === 'levels') renderLevels();
   if (name === 'lessons') renderLessons(0);
   if (name === 'settings') renderSettings();
-  if (name === 'city') renderCities();
   if (name === 'calib') { calib.reset(); setMode('calib'); } else setMode('menu');
   show(name);
 }
@@ -344,21 +473,6 @@ function renderLevels() {
     el.innerHTML = `<div class="n">Səviyyə ${lv.id}</div><h4>${lv.name}</h4><p>${lv.short}</p>${['learn', 'practice', 'exam'].map(row).join('')}`;
     el.onclick = () => openBrief(lv);
     list.appendChild(el);
-  }
-}
-function renderCities() {
-  const box = $('cityList');
-  if (!CITIES.length) {
-    box.innerHTML = `<p class="note">Real Bakı xəritəsi hələ əlavə olunmayıb. OpenStreetMap faylı <code>tools/osm-to-city.mjs</code> ilə <code>data/</code> qovluğuna çevrilməlidir.</p>`;
-    return;
-  }
-  box.innerHTML = '';
-  for (const c of CITIES) {
-    const el = document.createElement('div');
-    el.className = 'lv';
-    el.innerHTML = `<h4>${c.title}</h4><p>${c.roads.length} yol · ${c.signals.length} svetofor · ${c.buildings.length} bina</p><p class="note">${c.source}</p>`;
-    el.onclick = () => { sound.unlock(); startCity(c); };
-    box.appendChild(el);
   }
 }
 let briefLevel = null;
@@ -418,14 +532,24 @@ function renderSettings() {
     if (k.startsWith('touch') && !TOUCH) continue;
     const l = document.createElement('label');
     let inp;
-    if (k === 'touchMode') {
+    if (k === 'quality') {
+      inp = document.createElement('select');
+      inp.innerHTML = '<option value="auto">Avtomatik</option>' + QUALITY_ORDER.map((q) => `<option value="${q}">${QUALITY[q].name}</option>`).join('');
+      inp.value = settings[k];
+      inp.onchange = () => { settings[k] = inp.value; save(); };
+    } else if (k === 'timeOfDay') {
+      inp = document.createElement('select');
+      inp.innerHTML = Object.keys(TIMES).map((t) => `<option value="${t}">${TIMES[t].name}</option>`).join('');
+      inp.value = settings[k];
+      inp.onchange = () => { settings[k] = inp.value; save(); };
+    } else if (k === 'touchMode') {
       inp = document.createElement('select');
       inp.innerHTML = '<option value="wheel">Fırlanan sükan</option><option value="slider">Sağa-sola sürüşdürmə</option>';
       inp.value = settings[k];
       inp.onchange = () => { settings[k] = inp.value; save(); };
     } else if (typeof DEFAULTS[k] === 'number') {
       inp = document.createElement('input');
-      const [min, max, step] = { volume: [0, 1, 0.05], touchSens: [1, 4, 0.5], touchSize: [0.8, 1.4, 0.1], steerDeadzone: [0, 0.1, 0.01], steerCurve: [1, 2.5, 0.1], pedalCurve: [1, 2.5, 0.1], kbSteerSpeed: [0.5, 2, 0.1], traffic: [0, 2, 0.25] }[k];
+      const [min, max, step] = { volume: [0, 1, 0.05], touchSens: [1, 4, 0.5], touchSize: [0.8, 1.4, 0.1], steerDeadzone: [0, 0.1, 0.01], steerCurve: [1, 2.5, 0.1], pedalCurve: [1, 2.5, 0.1], kbSteerSpeed: [0.5, 2, 0.1] }[k];
       Object.assign(inp, { type: 'range', min, max, step, value: settings[k] });
       inp.oninput = () => { settings[k] = +inp.value; sound.setVolume(settings.volume); save(); };
     } else {
@@ -455,8 +579,40 @@ function renderSettings() {
   </table>`;
   box.appendChild(info);
 }
+// Keyfiyyət pilləsini tətbiq et (piksel sıxlığı, kölgələr, bloom, boya laki, güzgü ölçüsü)
+let gfxComposer = null;
+function applyQuality(q) {
+  quality = q;
+  const Q = QUALITY[q];
+  renderer.setPixelRatio(Math.min(devicePixelRatio, Q.pixelRatio));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.shadowMap.enabled = Q.shadows;
+  if (Q.shadows && sun.shadow.mapSize.x !== Q.shadowSize) {
+    sun.shadow.mapSize.set(Q.shadowSize, Q.shadowSize);
+    sun.shadow.map?.dispose();
+    sun.shadow.map = null;
+  }
+  scene.traverse((o) => {
+    const m = o.material;
+    if (!m) return;
+    if (m.isMeshPhysicalMaterial && m.clearcoat !== undefined && m.userData.cc === undefined) m.userData.cc = m.clearcoat;
+    if (m.isMeshPhysicalMaterial && m.userData.cc) m.clearcoat = Q.clearcoat ? m.userData.cc : 0;
+    if (m.isMeshStandardMaterial) m.envMapIntensity = (m.userData.env ?? (m.userData.env = m.envMapIntensity)) * Q.envIntensity;
+    m.needsUpdate = true;
+  });
+  if (gfxComposer && gfxComposer.withAO !== !!Q.ao) { gfxComposer.composer.dispose(); gfxComposer = null; }
+  if (Q.bloom && !gfxComposer) gfxComposer = makeComposer(renderer, scene, driverCam, !!Q.ao);
+  if (gfxComposer) gfxComposer.composer.setSize(innerWidth, innerHeight);
+  if (gfxComposer) gfxComposer.composer.setPixelRatio(renderer.getPixelRatio());
+  for (const v of views) v.size = [0, 0];
+  layoutViews();
+}
+
 function applySettings() {
-  renderer.shadowMap.enabled = settings.shadows;
+  const want = settings.quality === 'auto' ? quality : settings.quality;
+  if (want !== quality || settings.quality !== appliedQualitySetting) { appliedQualitySetting = settings.quality; applyQuality(settings.quality === 'auto' ? (TOUCH ? 'medium' : 'high') : settings.quality); }
+  $('fps').classList.toggle('hidden', !settings.showFps);
+  if (settings.timeOfDay !== timeKey) applyTime(settings.timeOfDay);
   touchUI.applyLayout();
   if (game.level && game.drive !== 'exam') {
     game.help.sensors = settings.sensors;
@@ -464,14 +620,15 @@ function applySettings() {
   }
   scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; });
 }
+let appliedQualitySetting = null;
 applySettings();
 
 // Pauza / nəticə düymələri
 $('resume').onclick = () => setMode('play');
-$('restart').onclick = () => (game.city ? startCity(game.city.data) : startLevel(game.level));
+$('restart').onclick = () => startLevel(game.level);
 $('pauseTheory').onclick = () => { if (game.level) openBrief(LEVELS[game.level.id - 1]); };
-$('resRetry').onclick = () => (game.city ? startCity(game.city.data) : startLevel(game.level));
-$('resNext').onclick = () => (game.city ? startCity(game.city.data) : openBrief(LEVELS[game.level.id % LEVELS.length]));
+$('resRetry').onclick = () => startLevel(game.level);
+$('resNext').onclick = () => openBrief(LEVELS[game.level.id % LEVELS.length]);
 
 let toastTimer = 0;
 function toast(msg, bad = false) {
@@ -524,10 +681,25 @@ addEventListener('pointermove', (e) => {
 });
 renderer.domElement.addEventListener('dblclick', () => { game.yawTarget = 0; game.pitch = -0.1; });
 renderer.domElement.addEventListener('wheel', (e) => {
-  game.topZoom = Math.max(8, Math.min(game.city ? 250 : 50, game.topZoom * (e.deltaY > 0 ? 1.1 : 0.9)));
+  game.topZoom = Math.max(8, Math.min(50, game.topZoom * (e.deltaY > 0 ? 1.1 : 0.9)));
 }, { passive: true });
 
 // ---------- Ötürmə və siqnal ----------
+// Gövdənin hansı hissəsi dəydi (ön/arxa bamper, künc, yan)
+function partName(hit) {
+  const b = carBox(car.x, car.z, car.h);
+  const q = closestOnObb(b.cx, b.cz, hit.hit);
+  const loc = toLocalPose(q.x, q.z);
+  const fz = loc.lz > CAR.wheelbase ? 'ön' : loc.lz < 0 ? 'arxa' : '';
+  const side = Math.abs(loc.lx) > CAR.width * 0.25 ? (loc.lx > 0 ? 'sol' : 'sağ') : '';
+  if (fz && side) return `${fz} ${side} künc`;
+  if (fz) return `${fz} bamper`;
+  return `${side || ''} yan`.trim();
+}
+function toLocalPose(px, pz) {
+  const s = Math.sin(car.h), c = Math.cos(car.h), dx = px - car.x, dz = pz - car.z;
+  return { lx: dx * c - dz * s, lz: dx * s + dz * c };
+}
 function shiftTo(g, inp) {
   if (g === car.gear) return;
   const moving = Math.abs(car.v) > 0.3;
@@ -565,7 +737,36 @@ function toggleBlinker(side) {
   game.blinkOn = !!game.blinker;
   sound.tick(true);
 }
+// Foto rejimi: sərbəst kamera (fırlat/yaxınlaşdır), interfeys gizlənir, fizika dayanır
+const orbit = new OrbitControls(freeCam, renderer.domElement);
+orbit.enabled = false;
+orbit.enableDamping = true;
+orbit.maxPolarAngle = Math.PI * 0.495;
+orbit.minDistance = 1.5;
+orbit.maxDistance = 40;
+function togglePhoto() {
+  if (game.camMode === 'photo') {
+    game.camMode = game.prevCam || 'driver';
+    orbit.enabled = false;
+    document.body.classList.remove('photo');
+    toast(CAM_NAMES[game.camMode]);
+    return;
+  }
+  if (!game.help.freeCam) { toast('İmtahanda foto rejimi yoxdur'); return; }
+  game.prevCam = game.camMode;
+  game.camMode = 'photo';
+  const c = carBox(car.x, car.z, car.h);
+  freeCam.up.set(0, 1, 0);
+  freeCam.position.set(c.cx - Math.sin(car.h + 0.7) * 6.5, 1.6, c.cz - Math.cos(car.h + 0.7) * 6.5);
+  orbit.target.set(c.cx, 0.7, c.cz);
+  orbit.enabled = true;
+  orbit.update();
+  document.body.classList.add('photo');
+  toast('Foto rejimi — sürüşdür: fırlat, təkər/çimdik: yaxınlaşdır, F: çıx');
+}
+$('photoBtn').onclick = () => togglePhoto();
 function cycleCam() {
+  if (game.camMode === 'photo') togglePhoto();
   if (!game.help.freeCam) { toast('İmtahanda yalnız sürücü görünüşü'); return; }
   const order = ['driver', 'top', 'chase'];
   game.camMode = order[(order.indexOf(game.camMode) + 1) % order.length];
@@ -618,16 +819,17 @@ function updatePlay(dt, inp) {
   if (input.consume('KeyZ')) toggleBlinker('L');
   if (input.consume('KeyX')) toggleBlinker('R');
   if (input.consume('KeyC')) cycleCam();
+  if (input.consume('KeyF')) togglePhoto();
   if (input.consume('KeyV')) game.rearCamManual = !game.rearCamManual;
   if (input.consume('KeyM')) { settings.mirrors = !settings.mirrors; saveJSON(SETTINGS_KEY, settings); }
-  if (input.consume('KeyH') && game.drive !== 'exam' && !game.city) {
+  if (input.consume('KeyH') && game.drive !== 'exam') {
     if (game.coach) game.coach = null;
     else { game.coach = new Coach(game.level.coach); fastForwardCoach(); }
     $('coach').classList.toggle('hidden', !game.coach);
   }
   if (input.consume('KeyG') && game.drive !== 'exam') game.help.ghost = !game.help.ghost;
-  if (input.consume('KeyT')) { if (game.city) startCity(game.city.data); else startLevel(game.level); return; }
-  if (input.consume('Enter')) { if (game.city) finishCity(); else finish(); return; }
+  if (input.consume('KeyT')) { startLevel(game.level); return; }
+  if (input.consume('Enter')) { finish(); return; }
   for (const ev of input.padEvents) {
     if (['D', 'R', 'N', 'P'].includes(ev)) shiftTo(ev, inp);
     if (ev === 'up') shiftStep(1, inp);
@@ -637,29 +839,28 @@ function updatePlay(dt, inp) {
     if (ev === 'cam') cycleCam();
   }
 
-  if (game.city) { updateCity(dt, inp); return; }
-
-  // fizika
-  const sub = 4;
-  const pin = { ...inp, clutchMode: settings.clutchMode && !!input.map?.clutch };
-  for (let i = 0; i < sub; i++) {
-    const hit = car.step(dt / sub, pin, game.obstacles);
-    if (hit) {
-      const now = game.time;
-      if (now - game.lastHit > 0.8) {
-        if (hit.hit.type === 'curb') {
-          game.stats.curbHits++;
-          toast('Bordürə toxundunuz!', true);
-        } else {
-          game.stats.collisions++;
-          toast(`Toqquşma! (${hit.hit.name})`, true);
-        }
-        sound.crash(hit.impact);
-        input.rumble(Math.min(1, 0.4 + hit.impact), 0.6, 250);
-      }
-      game.lastHit = now;
+  // fizika: sabit 120 Hz addım — nəticə kadr sürətindən asılı deyil
+  const pin = { ...inp, clutchMode: settings.clutchMode && !!input.map?.clutch, steerRate: inp.source === 'wheel' ? STEER_RATE.wheel : STEER_RATE.hands };
+  if (game.camMode !== 'photo') stepper.advance(dt, (h) => {
+    const hit = car.step(h, pin, game.obstacles);
+    // davamlı təmas bir dəfə sayılır; təkərin bordürə dəyməsi və gövdənin/güzgünün maneəyə dəyməsi ayrıdır
+    const curb = hit && hit.hit.type === 'curb';
+    const newCurb = game.curbContact.step(h, curb ? hit : null);
+    const newHit = game.bodyContact.step(h, hit && !curb ? hit : null);
+    if (newCurb) {
+      game.stats.curbHits++;
+      toast(hit.part.startsWith('tire_front') ? 'Ön təkər bordürə dirəndi' : 'Arxa təkər bordürə dirəndi', true);
+      sound.bump(hit.impact);
+      input.rumble(0.3, 0.3, 150);
     }
-  }
+    if (newHit) {
+      game.stats.collisions++;
+      const where = hit.part === 'mirrorL' ? 'sol güzgü' : hit.part === 'mirrorR' ? 'sağ güzgü' : partName(hit);
+      toast(`Toqquşma: ${where} → ${hit.hit.name}`, true);
+      sound.crash(hit.impact);
+      input.rumble(Math.min(1, 0.4 + hit.impact), 0.6, 250);
+    }
+  });
 
   // statistika
   const st = game.stats;
@@ -761,274 +962,6 @@ function finish() {
   show('result');
 }
 
-// ---------- Şəhər sürüşü (Bakı) ----------
-function leaveCity() {
-  if (!game.city) return;
-  game.city = null;
-  input.selfCenter = 0;
-  input.steerRate = 1;
-  scene.fog.near = 70;
-  scene.fog.far = 190;
-  document.body.classList.remove('city');
-}
-
-function startCity(data) {
-  if (game.world) scene.remove(game.world.group);
-  const net = new RoadNetwork(data);
-  const world = buildCity(data, net);
-  scene.add(world.group);
-  // başlanğıc: mərkəzə yaxın, ən azı 60 m uzunluğunda seqmentin sağ zolağı
-  const segs = net.segs.filter((s) => s.len > 40 && s.road.type !== 'service');
-  segs.sort((a, b) => Math.hypot((a.ax + a.bx) / 2, (a.az + a.bz) / 2) - Math.hypot((b.ax + b.bx) / 2, (b.az + b.bz) / 2));
-  const pick = segs[Math.floor(Math.random() * Math.min(12, segs.length))];
-  const lane = pick.road.oneway ? pick.halfW - data.defaults.laneWidth / 2 : pick.halfW / 2;
-  const t = Math.min(pick.len * 0.3, 15);
-  // sağ zolaq: sağ vektor = (−dz, dx)
-  const px = pick.ax + pick.dx * t - pick.dz * lane;
-  const pz = pick.az + pick.dz * t + pick.dx * lane;
-  const h = Math.atan2(pick.dx, pick.dz);
-  // təyinat: 500–1500 m uzunluğunda marşrut
-  const startNode = pick.b;
-  let route = null, dest = null;
-  const ids = [...net.pos.keys()];
-  for (let k = 0; k < 60 && !route; k++) {
-    const cand = ids[Math.floor(Math.random() * ids.length)];
-    const r = net.route(startNode, cand);
-    if (r && r.length > 500 && r.length < 1500) { route = r; dest = cand; }
-  }
-  if (!route) {
-    for (const cand of ids) { const r = net.route(startNode, cand); if (r && (!route || r.length > route.length)) { route = r; dest = cand; } }
-  }
-  // trafik: şəbəkənin uzunluğuna görə (hər ~110 m zolağa bir maşın), ayarla dəyişir
-  const totalLen = net.segs.reduce((a, s2) => a + s2.len * (s2.road.oneway ? 1 : 2), 0);
-  const count = Math.round(Math.min(40, totalLen / 110) * settings.traffic);
-  const traffic = new Traffic(net, count, Math.floor(Math.random() * 1e9));
-  // oyunçunun yanında doğulan maşınları uzaqlaşdır
-  traffic.cars = traffic.cars.filter((c) => Math.hypot(c.x - px, c.z - pz) > 25);
-  const TRAFFIC_COLORS = [0xf2f2f2, 0x1b1d22, 0x9aa0a8, 0x2f4f7f, 0x8a1c1c, 0xd9d4c5, 0x4b5320, 0xc9a227];
-  traffic.makeMesh = (c) => {
-    const m = buildParkedCar(TRAFFIC_COLORS[c.color % TRAFFIC_COLORS.length]);
-    m.root.userData.traffic = true;
-    world.group.add(m.root);
-    c.mesh = m;
-  };
-  game.world = { group: world.group, obstacles: [] };
-  game.obstacles = [];
-  game.level = null;
-  game.coach = null;
-  game.city = { data, net, world, traffic, rules: new RuleMonitor(net), route, dest, time: 0, odo: 0, maxSpeed: 0, collisions: 0, lastHit: -9, startNode };
-  car.reset({ x: px - Math.sin(h) * CAR.centerOffset, z: pz - Math.cos(h) * CAR.centerOffset, h }, 'city');
-  input.kbSteer = 0;
-  if (input.touch) input.touch.steer = 0;
-  game.help = { coach: false, ghost: false, sensors: false, freeCam: true };
-  game.stats = { time: 0, collisions: 0, curbHits: 0, moves: 0, signaled: false, signalTime: 0, maxSpeed: 0 };
-  game.blinker = null;
-  game.finished = false;
-  game.camMode = 'driver';
-  game.yaw = game.yawTarget = 0;
-  game.topZoom = 60;
-  $('lvName').textContent = data.title;
-  $('modeTag').textContent = 'Şəhər';
-  $('colLbl').textContent = 'Pozuntu';
-  $('mvLbl').textContent = 'Məsafə';
-  $('coach').classList.remove('hidden');
-  document.querySelector('.sensor').classList.add('hidden');
-  document.body.classList.add('city');
-  scene.fog.near = 150;
-  scene.fog.far = 700;
-  setMode('play');
-  drawMinimapBase();
-}
-
-function updateCity(dt, inp) {
-  const C = game.city;
-  C.time += dt;
-  // klaviatura: sürət artdıqca sükan yavaş fırlanır və özü mərkəzə qayıdır
-  const sp = Math.abs(car.v);
-  input.steerRate = Math.max(0.22, 1 - sp / 22);
-  input.selfCenter = sp > 1 ? 0.4 + sp * 0.06 : 0;
-  const cb = carBox(car.x, car.z, car.h);
-  C.traffic.update(dt, C.time, { cx: cb.cx, cz: cb.cz, h: car.h, v: car.v, len: CAR.length });
-  const near = C.world.nearObstacles(car.x, car.z).concat(C.traffic.obstacles().filter((o) => Math.abs(o.cx - car.x) < 15 && Math.abs(o.cz - car.z) < 15));
-  const pin = { ...inp, clutchMode: settings.clutchMode && !!input.map?.clutch };
-  for (let i = 0; i < 4; i++) {
-    const hit = car.step(dt / 4, pin, near);
-    if (hit && C.time - C.lastHit > 1) {
-      C.collisions++;
-      let v;
-      if (hit.hit.ai) { hit.hit.ai.stunned = 6; v = C.rules.carCrash(C.time); } else v = C.rules.collision(C.time);
-      if (v) violationToast(v);
-      sound.crash(hit.impact);
-      input.rumble(Math.min(1, 0.4 + hit.impact), 0.6, 250);
-    }
-    if (hit) C.lastHit = C.time;
-  }
-  C.odo += Math.abs(car.v) * dt;
-  C.maxSpeed = Math.max(C.maxSpeed, car.speedKmh);
-  if (game.blinker) {
-    game.blinkT += dt;
-    if (game.blinkT > 0.38) { game.blinkT = 0; game.blinkOn = !game.blinkOn; sound.tick(game.blinkOn); }
-  } else game.blinkOn = false;
-  sound.engine(inp.throttle, sp, true);
-  C.world.update(C.time);
-  const f = toWorld(0, CAR.wheelbase + CAR.frontOverhang, car.pose);
-  for (const v of C.rules.update(dt, { x: car.x, z: car.z, h: car.h, v: car.v, frontX: f.x, frontZ: f.z }, game.blinker, C.time, C.traffic)) violationToast(v);
-  updateTrafficMeshes(C.traffic);
-  if (car.slip > 0.14 && sp > 6) sound.skid?.(car.slip);
-  // naviqasiya
-  const man = nextManeuver(C.net, C.route?.nodes, car.x, car.z);
-  const [dx, dz] = C.net.pos.get(C.dest) || [0, 0];
-  const toDest = Math.hypot(dx - car.x, dz - car.z);
-  renderNav(man, toDest);
-  if (toDest < 12 && sp < 0.5) finishCity();
-  updateCityHUD(inp);
-}
-
-function updateTrafficMeshes(T) {
-  for (const c of T.cars) {
-    if (!c.mesh) T.makeMesh(c);
-    // modelin mənşəyi arxa oxdadır (4.8 m maşında mərkəzdən 1.35 m geri)
-    c.mesh.root.position.set(c.x - Math.sin(c.h) * 1.35, 0, c.z - Math.cos(c.h) * 1.35);
-    c.mesh.root.rotation.y = c.h;
-    c.mesh.lights.brake.emissiveIntensity = c.braking ? 1.6 : 0.1;
-    const spin = (c.v / 60) / 0.316;
-    for (const k of ['fl', 'fr', 'rl', 'rr']) c.mesh.wheels[k].wheel.rotation.x += spin;
-  }
-  // yenidən doğulanda köhnə model qalmasın
-  for (const ch of [...game.city.world.group.children]) {
-    if (ch.userData.traffic && !T.cars.some((c) => c.mesh && c.mesh.root === ch)) game.city.world.group.remove(ch);
-  }
-}
-
-function violationToast(v) {
-  toast(`${v.critical ? '⛔' : '⚠️'} ${v.name}${v.extra ? ' (' + v.extra + ')' : ''} −${v.points}`, true);
-  sound.warn();
-}
-
-const TURN_TXT = { left: '↰ Sola dönün', right: '↱ Sağa dönün', straight: '↑ Düz', arrive: '🏁 Təyinat' };
-let navShown = '';
-function renderNav(man, toDest) {
-  const C = game.city;
-  const warn = C.rules.warning;
-  let text, remain = '', hint = '';
-  if (toDest < 30) { text = '🏁 Təyinat — sağda dayanın'; remain = `${Math.round(toDest)} m`; }
-  else if (man) {
-    text = TURN_TXT[man.turn];
-    remain = man.dist > 1000 ? `${(man.dist / 1000).toFixed(1)} km` : `${Math.round(man.dist / 10) * 10} m`;
-    hint = man.name ? man.name : '';
-  } else text = '↑ Düz davam edin';
-  const key = text + remain + hint + warn;
-  if (key === navShown) return;
-  navShown = key;
-  $('coachStep').textContent = '';
-  $('coachText').textContent = text;
-  $('coachRemain').textContent = remain;
-  $('coachHint').textContent = warn || hint;
-  $('coach').className = 'coach' + (warn ? ' back' : '');
-}
-
-function updateCityHUD(inp) {
-  const C = game.city;
-  $('spd').textContent = car.speedKmh.toFixed(0);
-  $('mph').textContent = (car.speedKmh / 1.609).toFixed(0) + ' mph';
-  $('limitSign').textContent = C.rules.limit;
-  $('limitSign').classList.toggle('over', car.speedKmh > C.rules.limit);
-  document.querySelectorAll('#gears b').forEach((b) => b.classList.toggle('on', b.dataset.g === car.gear));
-  $('bl').classList.toggle('on', game.blinker === 'L' && game.blinkOn);
-  $('br').classList.toggle('on', game.blinker === 'R' && game.blinkOn);
-  $('wheelIcon').style.transform = `rotate(${car.wheelDeg}deg)`;
-  $('wdeg').textContent = `${Math.round(car.wheelDeg)}°`;
-  $('pq').style.setProperty('--v', inp.throttle * 100 + '%');
-  $('pb').style.setProperty('--v', inp.brake * 100 + '%');
-  $('pc').style.setProperty('--v', inp.clutch * 100 + '%');
-  $('tm').textContent = `${Math.floor(C.time / 60)}:${Math.floor(C.time % 60).toString().padStart(2, '0')}`;
-  $('col').textContent = C.rules.violations.length;
-  $('mv').textContent = (C.odo / 1000).toFixed(2) + ' km';
-  $('roadName').textContent = C.rules.road?.name || '';
-  drawMinimap();
-}
-
-// Mini-xəritə: yollar bir dəfə çəkilir, maşın və marşrut hər kadrda
-let mmBase = null;
-const MM = { size: 200, scale: 0.35 };
-function drawMinimapBase() {
-  const C = game.city;
-  mmBase = document.createElement('canvas');
-  const half = Math.max(C.data.half[0], C.data.half[1]) + 50;
-  mmBase.width = mmBase.height = 1024;
-  MM.k = 1024 / (half * 2);
-  const g = mmBase.getContext('2d');
-  g.fillStyle = '#20252b';
-  g.fillRect(0, 0, 1024, 1024);
-  g.lineCap = 'round';
-  g.strokeStyle = '#6b7480';
-  for (const r of C.data.roads) {
-    g.lineWidth = Math.max(1.5, r.width * MM.k);
-    g.beginPath();
-    r.pts.forEach(([x, z], i) => { const X = 512 + x * MM.k, Z = 512 + z * MM.k; if (i) g.lineTo(X, Z); else g.moveTo(X, Z); });
-    g.stroke();
-  }
-  if (C.route) {
-    g.strokeStyle = '#2ee66b';
-    g.lineWidth = 4;
-    g.beginPath();
-    C.route.nodes.forEach((id, i) => { const [x, z] = C.net.pos.get(id); const X = 512 + x * MM.k, Z = 512 + z * MM.k; if (i) g.lineTo(X, Z); else g.moveTo(X, Z); });
-    g.stroke();
-    const [dx, dz] = C.net.pos.get(C.dest);
-    g.fillStyle = '#ff4d4d';
-    g.beginPath(); g.arc(512 + dx * MM.k, 512 + dz * MM.k, 8, 0, Math.PI * 2); g.fill();
-  }
-}
-function drawMinimap() {
-  const cv = $('minimap');
-  if (!cv || !mmBase) return;
-  const g = cv.getContext('2d');
-  const S = cv.width;
-  const view = 260; // m — görünən sahə
-  const px = 512 + car.x * MM.k, pz = 512 + car.z * MM.k;
-  const span = view * MM.k;
-  g.save();
-  g.clearRect(0, 0, S, S);
-  g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2); g.clip();
-  // maşın yuxarı baxsın
-  g.translate(S / 2, S / 2);
-  g.rotate(Math.PI + car.h);
-  g.drawImage(mmBase, px - span / 2, pz - span / 2, span, span, -S / 2, -S / 2, S, S);
-  g.restore();
-  g.fillStyle = '#fff';
-  g.beginPath(); g.moveTo(S / 2, S / 2 - 9); g.lineTo(S / 2 + 6, S / 2 + 7); g.lineTo(S / 2 - 6, S / 2 + 7); g.closePath(); g.fill();
-}
-
-function finishCity() {
-  if (game.finished) return;
-  game.finished = true;
-  const C = game.city;
-  const sum = C.rules.summary();
-  const [dx, dz] = C.net.pos.get(C.dest) || [0, 0];
-  const arrived = Math.hypot(dx - car.x, dz - car.z) < 15;
-  const passed = sum.passed && arrived;
-  const score = Math.max(0, 100 - sum.points);
-  if (passed) sound.success(); else sound.warn();
-  $('resTitle').textContent = passed ? 'Marşrut qaydalara uyğun keçildi ✓' : arrived ? 'Təyinata çatdınız, amma pozuntular var' : 'Təyinata çatılmadı';
-  const stars = !passed ? 0 : score >= 95 ? 3 : score >= 85 ? 2 : 1;
-  $('resStars').innerHTML = [0, 1, 2].map((i) => `<span class="${i < stars ? '' : 'off'}">★</span>`).join('');
-  $('resScore').textContent = score;
-  $('resGrid').innerHTML = [
-    ['Vaxt', `${Math.floor(C.time / 60)}:${Math.floor(C.time % 60).toString().padStart(2, '0')}`],
-    ['Məsafə', `${(C.odo / 1000).toFixed(2)} km`],
-    ['Pozuntu', C.rules.violations.length],
-    ['Cərimə xalı', sum.points],
-    ['Maks. sürət', `${Math.round(C.maxSpeed)} km/saat`],
-    ['Marşrut', C.route ? `${(C.route.length / 1000).toFixed(2)} km` : '—'],
-  ].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
-  const list = C.rules.violations.map((v) => `<li class="${v.critical ? 'fail' : ''}">${v.critical ? '✗' : '−' + v.points} ${v.name}${v.extra ? ' (' + v.extra + ')' : ''} — ${Math.floor(v.time / 60)}:${Math.floor(v.time % 60).toString().padStart(2, '0')}</li>`);
-  if (!list.length) list.push('<li>Heç bir pozuntu yoxdur.</li>');
-  list.push(`<li class="src">Xəritə: ${C.data.source}</li>`);
-  $('resNotes').innerHTML = list.join('');
-  setMode('result');
-  show('result');
-}
-
 // ---------- HUD ----------
 function updateHUD(inp) {
   $('spd').textContent = car.speedKmh.toFixed(1);
@@ -1071,6 +1004,8 @@ function updateVisuals(dt, inp) {
     freeCam.up.set(0, 0, -1);
     freeCam.position.set(c.cx, game.topZoom, c.cz + 0.01);
     freeCam.lookAt(c.cx, 0, c.cz);
+  } else if (game.camMode === 'photo') {
+    orbit.update();
   } else if (game.camMode === 'chase') {
     freeCam.up.set(0, 1, 0);
     const back = car.gear === 'R' ? -1 : 1;
@@ -1099,31 +1034,43 @@ function mainCamera() {
   const cam = game.camMode === 'driver' ? driverCam : freeCam;
   cam.layers.disableAll();
   cam.layers.enable(LAYER.WORLD);
-  cam.layers.enable(game.camMode === 'driver' ? LAYER.INTERIOR : LAYER.BODY);
-  if (game.help.ghost) cam.layers.enable(LAYER.HELPERS);
+  cam.layers.enable(LAYER.INTERIOR); // salon həm içəridən, həm şüşədən görünür
+  if (game.camMode !== 'driver') cam.layers.enable(LAYER.BODY);
+  if (model.driverSeat) model.driverSeat.visible = game.camMode !== 'driver';
+  if (game.help.ghost && game.camMode !== 'photo') cam.layers.enable(LAYER.HELPERS);
   return cam;
 }
 
+let frameNo = 0;
 function render() {
-  renderer.shadowMap.needsUpdate = settings.shadows;
+  frameNo++;
+  renderer.info.reset();
+  renderer.shadowMap.needsUpdate = QUALITY[quality].shadows;
   const playing = game.mode === 'play' || game.mode === 'pause' || game.mode === 'result';
+  const cam = playing && game.world ? mainCamera() : freeCam;
   if (!playing || !game.world) {
-    // menyu fonu: dayanacaq ətrafında fırlanan kamera
-    renderer.setRenderTarget(null);
-    renderer.render(scene, freeCam);
+    if (!cam.layers.isEnabled(LAYER.BODY)) cam.layers.enable(LAYER.BODY);
+    cam.layers.enable(LAYER.INTERIOR);
+    if (model.driverSeat) model.driverSeat.visible = true;
+    drawMain(cam);
     return;
   }
   const rearOn = (car.gear === 'R' && settings.autoRearCam) || game.rearCamManual;
-  const active = views.filter((v) => (v.key === 'B' ? rearOn : settings.mirrors));
+  layoutViews();
+  const active = game.camMode === 'photo' ? [] : views.filter((v) => v.rect && (v.key === 'B' ? rearOn : settings.mirrors));
   for (const v of views) v.quad.visible = v.frame.visible = active.includes(v);
-  for (const v of views) v.el.style.display = active.includes(v) && game.mode === 'play' ? '' : 'none';
+  for (const v of views) v.el.style.display = active.includes(v) && game.mode === 'play' && v.label ? '' : 'none';
+  // yan güzgülər növbə ilə yenilənir (aşağı/orta keyfiyyətdə), salon güzgüsü və arxa kamera hər kadr
+  const every = QUALITY[quality].mirrorEvery;
   for (const v of active) {
+    if (every > 1 && (v.key === 'L' || v.key === 'R') && v.rendered && (frameNo + (v.key === 'R' ? 1 : 0)) % every) continue;
     renderer.setRenderTarget(v.rt);
     renderer.render(scene, v.cam);
+    v.rendered = true;
     renderer.shadowMap.needsUpdate = false;
   }
   renderer.setRenderTarget(null);
-  renderer.render(scene, mainCamera());
+  drawMain(cam);
   if (active.length) {
     renderer.autoClear = false;
     renderer.clearDepth();
@@ -1131,9 +1078,21 @@ function render() {
     renderer.autoClear = true;
   }
 }
+function drawMain(cam) {
+  if (QUALITY[quality].bloom && gfxComposer) {
+    gfxComposer.pass.camera = cam;
+    if (gfxComposer.ao) gfxComposer.ao.camera = cam;
+    gfxComposer.composer.render();
+  } else {
+    renderer.setRenderTarget(null);
+    renderer.render(scene, cam);
+  }
+}
 
 function onResize() {
   renderer.setSize(innerWidth, innerHeight);
+  if (gfxComposer) gfxComposer.composer.setSize(innerWidth, innerHeight);
+  for (const v of views) v.size = [0, 0];
   for (const c of [driverCam, freeCam]) { c.aspect = innerWidth / innerHeight; c.updateProjectionMatrix(); }
   orthoCam.right = innerWidth;
   orthoCam.top = innerHeight;
@@ -1146,6 +1105,8 @@ onResize();
 // Menyu fonu üçün ilk səviyyənin səhnəsi
 {
   const bg = buildWorld(LEVELS[0]);
+  curWorld = bg;
+  bg.setAtmosphere(TIMES[timeKey] || TIMES.day);
   game.world = null;
   game.menuWorld = bg.group;
   scene.add(bg.group);
@@ -1155,9 +1116,29 @@ onResize();
 // ---------- Əsas dövr ----------
 let last = performance.now();
 let menuT = 0;
+const fpsMeter = new FpsMeter();
+let clusterT = 0;
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const real = (now - last) / 1000;
+  const dt = Math.min(0.05, real);
   last = now;
+  fpsMeter.tick(real);
+  if (settings.showFps && frameNo % 10 === 0) {
+    const i = renderer.info, mem = performance.memory;
+    $('fps').textContent = `${fpsMeter.fps.toFixed(0)} FPS · ${(1000 / Math.max(1, fpsMeter.fps)).toFixed(1)} ms · ${QUALITY[quality].name}\n` +
+      `draw call ${i.render.calls} · üçbucaq ${(i.render.triangles / 1000).toFixed(0)}k\n` +
+      `həndəsə ${i.memory.geometries} · tekstur ${i.memory.textures}` + (mem ? ` · JS ${(mem.usedJSHeapSize / 1048576).toFixed(0)} MB` : '');
+  }
+  if (settings.quality === 'auto' && game.mode === 'play' && fpsMeter.shouldDowngrade(real)) {
+    const i = QUALITY_ORDER.indexOf(quality);
+    if (i > 0) { applyQuality(QUALITY_ORDER[i - 1]); toast(`Qrafika: ${QUALITY[quality].name} (FPS aşağı idi)`); }
+  }
+  clusterT -= dt;
+  if (clusterT <= 0 && model.clusterTex && game.camMode === 'driver') {
+    clusterT = 0.15;
+    drawCluster(car.speedKmh, car.gear);
+    model.clusterTex.needsUpdate = true;
+  }
   game.time += dt;
   const inp = input.poll(dt);
 
@@ -1176,6 +1157,7 @@ function frame(now) {
     sound.sensors(9, 9, dt, false);
   }
 
+  updateLampLights(dt);
   if (game.world) updateVisuals(dt, game.mode === 'play' ? inp : { brake: 0, throttle: 0, clutch: 0 });
   if (!game.world || (game.mode !== 'play' && game.mode !== 'pause' && game.mode !== 'result')) {
     menuT += dt * 0.08;
@@ -1207,4 +1189,4 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) autoP
 addEventListener('blur', autoPause);
 addEventListener('pagehide', autoPause);
 
-window.__park = { game, car, startLevel, LEVELS, finish, startCity, CITIES };
+window.__park = { game, car, startLevel, LEVELS, finish, setMode, applyTime, togglePhoto, renderer };

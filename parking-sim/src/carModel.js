@@ -1,28 +1,61 @@
-// Maşının 3D modeli. Mənşə: arxa oxun mərkəzi, yer səviyyəsi; irəli = lokal +Z, sol = lokal +X.
-// Laylar: 0 dünya, 1 maşının xarici gövdəsi, 2 salon (yalnız sürücü kamerası), 3 arxa kamera xətləri, 4 köməkçilər.
-// Oyunçunun maşını 2023 Elantra-nın ölçülərindədir (physics.js → CAR); siluet və salon təxminidir.
+// Maşının 3D modeli (prosedur — lisenziyalı Elantra GLB modeli tapılmadı).
+// Mənşə: arxa oxun mərkəzi, yer səviyyəsi; irəli = lokal +Z, sol = lokal +X.
+// Laylar: 0 dünya, 1 oyunçunun gövdəsi, 2 salon (yalnız sürücü kamerası), 3 arxa kamera xətləri, 4 köməkçilər.
+// Ölçülər physics.js → CAR ilə eynidir, ona görə görünən gövdə toqquşma qutusuna uyğun gəlir.
+// Siluet, barmaqlıq, işıqlar və salon fotolara əsasən TƏXMİNİDİR (zavod CAD məlumatı deyil).
 import * as THREE from 'three';
 import { CAR, PARKED } from './physics.js';
 
 export const LAYER = { WORLD: 0, BODY: 1, INTERIOR: 2, REARCAM: 3, HELPERS: 4 };
 
-// Sürücünün gözü, güzgülər və arxa kamera (lokal koordinatlar, təxmini — salon fotolarına görə)
+// Sürücünün gözü, güzgülər və arxa kamera (lokal koordinatlar, təxmini)
 export const VIEW = {
-  eye: [0.37, 1.17, 1.1],
-  mirrorL: [CAR.width / 2 + 0.11, 0.98, 1.98],
-  mirrorR: [-CAR.width / 2 - 0.11, 0.98, 1.98],
-  mirrorC: [0, 1.27, 1.55],
-  rearCam: [0, 0.98, -CAR.rearOverhang + 0.04],
+  eye: [0.37, 1.15, 0.86],
+  mirrorL: [CAR.width / 2 + 0.13, 0.99, 1.92],
+  mirrorR: [-CAR.width / 2 - 0.13, 0.99, 1.92],
+  mirrorC: [0, 1.25, 1.08],
+  rearCam: [0, 0.93, -CAR.rearOverhang + 0.06],
 };
 
-function box(w, h, l, mat, x, y, z) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, l), mat);
-  m.position.set(x, y, z);
-  m.castShadow = true;
+// ---------- Materiallar ----------
+export const MAT = {
+  physical: true, // aşağı keyfiyyətdə MeshStandardMaterial
+};
+
+function paintMat(color) {
+  if (!MAT.physical) return new THREE.MeshStandardMaterial({ color, metalness: 0.55, roughness: 0.35 });
+  return new THREE.MeshPhysicalMaterial({ color, metalness: 0.62, roughness: 0.34, clearcoat: 1, clearcoatRoughness: 0.06 });
+}
+const M = {};
+function mats() {
+  if (M.ready === MAT.physical) return M;
+  M.ready = MAT.physical;
+  M.glass = MAT.physical
+    ? new THREE.MeshPhysicalMaterial({ color: 0x0d1418, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.55, envMapIntensity: 1.6, depthWrite: false })
+    : new THREE.MeshStandardMaterial({ color: 0x0d1418, metalness: 0.2, roughness: 0.08, transparent: true, opacity: 0.6, depthWrite: false });
+  M.trim = new THREE.MeshStandardMaterial({ color: 0x0c0d0f, roughness: 0.55, metalness: 0.1 }); // qara plastik
+  M.gloss = new THREE.MeshStandardMaterial({ color: 0x08090a, roughness: 0.18, metalness: 0.2 }); // parlaq qara
+  M.chrome = new THREE.MeshStandardMaterial({ color: 0xd5d8dc, roughness: 0.12, metalness: 1 });
+  M.tire = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.92, metalness: 0 });
+  M.rim = new THREE.MeshStandardMaterial({ color: 0x3a3d42, roughness: 0.32, metalness: 0.85 }); // SEL 16" tünd disk (təxmini rəng)
+  M.disc = new THREE.MeshStandardMaterial({ color: 0x6b6e72, roughness: 0.5, metalness: 0.8 });
+  M.well = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 1 });
+  M.lens = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.35, depthWrite: false });
+  M.plate = new THREE.MeshStandardMaterial({ color: 0xe9ecef, roughness: 0.6 });
+  return M;
+}
+
+function mesh(geo, mat, cast = true) {
+  const m = new THREE.Mesh(geo, mat);
+  m.castShadow = cast;
   m.receiveShadow = true;
   return m;
 }
-
+function box(w, h, l, mat, x, y, z) {
+  const m = mesh(new THREE.BoxGeometry(w, h, l), mat);
+  m.position.set(x, y, z);
+  return m;
+}
 function setLayer(obj, layer, extra = []) {
   obj.traverse((o) => {
     o.layers.set(layer);
@@ -30,186 +63,502 @@ function setLayer(obj, layer, extra = []) {
   });
 }
 
-// Yan profildən (z, y nöqtələri) eninə uzanan gövdə
-function profileMesh(points, width, mat, bevel = 0.06) {
-  const shape = new THREE.Shape(points.map(([z, y]) => new THREE.Vector2(z, y)));
-  const g = new THREE.ExtrudeGeometry(shape, { depth: width - 2 * bevel, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 4 });
-  g.rotateY(-Math.PI / 2);
-  g.translate(width / 2 - bevel, 0, 0);
-  const m = new THREE.Mesh(g, mat);
-  m.castShadow = true;
-  m.receiveShadow = true;
-  return m;
+// Yan profildən (Shape: x = maşının z-i, y = hündürlük) eninə uzanan gövdə, sonra plan və en kəsiyinə görə əyilir.
+// widthAt(y, z) → həmin nöqtədə yarım en (m)
+function sculpt(shape, width, widthAt, steps = 10, curveSegments = 10) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth: width, steps, bevelEnabled: false, curveSegments });
+  g.translate(0, 0, -width / 2);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const z = p.getX(i), y = p.getY(i), x = p.getZ(i); // extrude oxu → maşının eni
+    const hw = widthAt(y, z);
+    p.setXYZ(i, (x / (width / 2)) * hw, y, z);
+  }
+  g.computeVertexNormals();
+  return g;
 }
 
-const tireMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.9 });
-const rimMat = new THREE.MeshStandardMaterial({ color: 0x2b2e33, metalness: 0.6, roughness: 0.4 }); // SEL: tünd 16" disk
-const glassMat = new THREE.MeshStandardMaterial({ color: 0x1a232c, metalness: 0.5, roughness: 0.12, transparent: true, opacity: 0.88 });
-const blackMat = new THREE.MeshStandardMaterial({ color: 0x111214, roughness: 0.8 });
+// Gövdə stilləri: oyunçunun maşını (Elantra) və ətraf maşınlar üçün
+function styleFor(D, kind) {
+  const L = D.length, R0 = -D.rearOverhang, F0 = L - D.rearOverhang, wb = D.wheelbase;
+  const base = { L, R0, F0, wb, W: D.width, H: D.height || 1.42, belt: 0.95, hood: 0.78, nose: 0.62, cowl: wb * 0.74, roofF: wb * 0.37, roofR: -0.2, glassR: R0 + 0.62, deck: 0.99, arch: 0.45 };
+  if (kind === 'suv') Object.assign(base, { H: D.height || 1.68, belt: 1.08, hood: 0.98, nose: 0.82, cowl: wb * 0.8, roofF: wb * 0.55, roofR: R0 + 0.35, glassR: R0 + 0.12, deck: 1.15, arch: 0.47 });
+  if (kind === 'hatch') Object.assign(base, { H: D.height || 1.48, roofR: R0 + 0.35, glassR: R0 + 0.15, deck: 1.0 });
+  return base;
+}
 
-function makeWheel(radius) {
+function lowerShape(S) {
+  const { R0, F0, wb, belt, hood, nose, cowl, deck, arch } = S;
+  const s = new THREE.Shape();
+  const yb = 0.22; // altlıq
+  s.moveTo(F0 - 0.14, yb + 0.02);
+  s.lineTo(wb + arch, yb);
+  s.absarc(wb, yb, arch, 0, Math.PI, false); // ön təkər yuvası
+  s.lineTo(arch, yb);
+  s.absarc(0, yb, arch, 0, Math.PI, false); // arxa təkər yuvası
+  s.lineTo(R0 + 0.16, yb + 0.03);
+  s.quadraticCurveTo(R0 - 0.01, yb + 0.06, R0, 0.48); // arxa bamper
+  s.lineTo(R0 + 0.01, deck - 0.12);
+  s.quadraticCurveTo(R0 + 0.02, deck, R0 + 0.16, deck + 0.01); // baqaj qapağının dodağı
+  s.lineTo(S.glassR + 0.05, deck);
+  s.lineTo(cowl * 0.35, belt + 0.02);
+  s.lineTo(cowl, belt - 0.01); // kapotun arxası
+  s.quadraticCurveTo((cowl + F0) / 2, hood + 0.08, F0 - 0.2, hood); // kapot
+  s.quadraticCurveTo(F0 - 0.04, nose + 0.08, F0, nose - 0.04); // burun
+  s.quadraticCurveTo(F0 + 0.02, 0.32, F0 - 0.14, yb + 0.02); // ön bamper
+  return s;
+}
+
+function greenhouseShape(S) {
+  const { cowl, roofF, roofR, glassR, belt, deck, H } = S;
+  const s = new THREE.Shape();
+  s.moveTo(cowl - 0.02, belt - 0.03);
+  s.quadraticCurveTo(roofF + 0.25, H - 0.08, roofF, H - 0.015); // ön şüşə
+  s.quadraticCurveTo((roofF + roofR) / 2, H + 0.01, roofR, H - 0.03); // dam
+  s.quadraticCurveTo(glassR + 0.25, deck + 0.18, glassR, deck); // arxa şüşə (fastback)
+  s.lineTo(cowl - 0.02, belt - 0.03);
+  return s;
+}
+
+// Plan görünüşündə künclərin yumrulanması və en kəsiyində "tumblehome"
+function lowerWidth(S) {
+  const { W, F0, R0 } = S;
+  return (y, z) => {
+    let k = 1;
+    const fr = (z - (F0 - 0.75)) / 0.75; if (fr > 0) k -= 0.14 * fr * fr;
+    const rr = ((R0 + 0.6) - z) / 0.6; if (rr > 0) k -= 0.09 * rr * rr;
+    if (y > 0.8) k -= 0.05 * Math.min(1, (y - 0.8) / 0.25);
+    if (y < 0.34) k -= 0.03 * (0.34 - y) / 0.12;
+    return (W / 2) * k;
+  };
+}
+function greenWidth(S) {
+  const { W, belt, H } = S;
+  return (y) => (W / 2) * (0.9 - 0.18 * Math.max(0, (y - belt) / (H - belt)));
+}
+
+// Disk: 5 cüt qol (SEL 16" — forma təxmini)
+function makeWheel(radius = 0.316, detail = 1) {
+  const m = mats();
   const g = new THREE.Group();
-  const tg = new THREE.CylinderGeometry(radius, radius, 0.21, 22);
+  const seg = detail > 0 ? 28 : 16;
+  const tg = new THREE.CylinderGeometry(radius, radius, 0.205, seg, 1, true);
   tg.rotateZ(Math.PI / 2);
-  const tire = new THREE.Mesh(tg, tireMat);
-  tire.castShadow = true;
-  const rg = new THREE.CylinderGeometry(radius * 0.66, radius * 0.66, 0.22, 16);
-  rg.rotateZ(Math.PI / 2);
-  const rim = new THREE.Mesh(rg, rimMat);
-  g.add(tire, rim);
-  for (let i = 0; i < 5; i++) {
-    const s = new THREE.Mesh(new THREE.BoxGeometry(0.225, 0.045, radius * 1.2), rimMat);
-    s.rotation.x = (i * Math.PI * 2) / 5;
-    g.add(s);
+  g.add(mesh(tg, m.tire));
+  for (const s of [1, -1]) {
+    const side = new THREE.RingGeometry(radius * 0.68, radius, seg);
+    side.rotateY((s * Math.PI) / 2);
+    side.translate(s * 0.1025, 0, 0);
+    g.add(mesh(side, m.tire, false));
   }
+  const rimFace = new THREE.CylinderGeometry(radius * 0.68, radius * 0.68, 0.02, seg);
+  rimFace.rotateZ(Math.PI / 2);
+  const inner = mesh(rimFace, m.disc, false);
+  inner.position.x = 0.02;
+  g.add(inner);
+  const lip = new THREE.TorusGeometry(radius * 0.66, 0.012, 6, seg);
+  lip.rotateY(Math.PI / 2);
+  const lipM = mesh(lip, m.rim, false); lipM.position.x = 0.1; g.add(lipM);
+  for (let i = 0; i < 5; i++) for (const off of [-0.09, 0.09]) {
+    const sp = mesh(new THREE.BoxGeometry(0.03, radius * 0.6, 0.032), m.rim, false);
+    sp.position.set(0.095, radius * 0.33, 0);
+    const piv = new THREE.Group();
+    piv.rotation.x = (i * Math.PI * 2) / 5 + off;
+    piv.add(sp);
+    g.add(piv);
+  }
+  const hub = new THREE.CylinderGeometry(0.055, 0.06, 0.04, 14);
+  hub.rotateZ(Math.PI / 2);
+  const hubM = mesh(hub, m.rim, false); hubM.position.x = 0.1; g.add(hubM);
   g.position.y = radius;
   return g;
 }
 
-// dims: { length, width, wheelbase, rearOverhang, track } — verilməsə oyunçunun maşını (Elantra)
-export function buildCar(color = 0x8d9095, player = false, dims = null) {
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+let grilleTex = null;
+function grille() {
+  // "parametrik" barmaqlıq: üçbucaqlı fasetlər (sadələşdirilmiş)
+  if (!grilleTex) grilleTex = canvasTex(256, 64, (g, w, h) => {
+    g.fillStyle = '#0a0b0c'; g.fillRect(0, 0, w, h);
+    for (let x = -16; x < w + 16; x += 16) for (let y = 0; y < h; y += 16) {
+      const o = (y / 16) % 2 ? 8 : 0;
+      const l = 30 + ((x * 7 + y * 13) % 30);
+      g.fillStyle = `rgb(${l},${l + 2},${l + 4})`;
+      g.beginPath(); g.moveTo(x + o, y); g.lineTo(x + o + 8, y + 8); g.lineTo(x + o, y + 16); g.lineTo(x + o - 8, y + 8); g.closePath(); g.fill();
+    }
+  });
+  return grilleTex;
+}
+
+// dims: { length, width, height, wheelbase, rearOverhang, track }; kind: 'elantra' | 'sedan' | 'suv' | 'hatch'
+export function buildCar(color = 0x8f9396, player = false, dims = null, kind = 'elantra') {
+  const m = mats();
   const D = dims || CAR;
-  const W = D.width, HW = W / 2;
-  const R0 = -D.rearOverhang, F0 = D.length - D.rearOverhang;
+  const S = styleFor(D, kind === 'elantra' ? 'sedan' : kind);
+  const { W, R0, F0, wb } = S;
+  const HW = W / 2;
   const root = new THREE.Group();
   const body = new THREE.Group();
   root.add(body);
-  const paint = new THREE.MeshStandardMaterial({ color, metalness: 0.55, roughness: 0.38 });
+  const paint = paintMat(color);
 
-  // Sedan siluet: alçaq kapot, maili şüşə, arxaya enən "kupe" damı, qısa baqaj (Elantra kimi)
-  const wb = D.wheelbase;
-  const lower = [
-    [F0, 0.32], [F0 + 0.02, 0.62], [F0 - 0.15, 0.74], [wb * 0.66, 0.92], [wb * 0.2, 0.96],
-    [R0 + 0.35, 0.99], [R0 + 0.02, 0.92], [R0, 0.62], [R0 + 0.05, 0.32],
-  ];
-  body.add(profileMesh(lower, W, paint));
-  const gh = [[wb * 0.68, 0.9], [wb * 0.32, 1.38], [-0.15, 1.37], [R0 + 0.55, 0.98], [wb * 0.6, 0.94]];
-  body.add(profileMesh(gh, W - 0.16, glassMat, 0.04));
-  body.add(profileMesh([[wb * 0.36, 1.375], [wb * 0.33, 1.4], [-0.1, 1.39], [-0.2, 1.36]], W - 0.3, paint, 0.03));
-  body.add(box(W - 0.06, 0.16, 0.1, blackMat, 0, 0.36, F0 - 0.02));
-  body.add(box(W - 0.06, 0.16, 0.1, blackMat, 0, 0.38, R0 + 0.03));
-  // radiator barmaqlığı (sadələşdirilmiş)
-  body.add(box(W * 0.62, 0.22, 0.04, blackMat, 0, 0.5, F0 + 0.005));
-  for (const s of [1, -1]) body.add(box(0.2, 0.12, 0.09, paint, s * (HW + 0.08), 0.98, 1.98));
+  const lw = lowerWidth(S);
+  body.add(mesh(sculpt(lowerShape(S), W, lw, player ? 12 : 6, player ? 12 : 6), paint));
+  body.add(mesh(sculpt(greenhouseShape(S), W, greenWidth(S), player ? 8 : 4, player ? 10 : 5), m.glass, false));
+  // dam paneli (rəngli) — şüşənin üstündə
+  const rs = new THREE.Shape();
+  rs.moveTo(S.roofF - 0.08, S.H - 0.03);
+  rs.quadraticCurveTo((S.roofF + S.roofR) / 2, S.H + 0.02, S.roofR + 0.12, S.H - 0.04);
+  rs.lineTo(S.roofR + 0.12, S.H - 0.09);
+  rs.quadraticCurveTo((S.roofF + S.roofR) / 2, S.H - 0.04, S.roofF - 0.08, S.H - 0.08);
+  const gw = greenWidth(S);
+  body.add(mesh(sculpt(rs, W, (y) => gw(y) + 0.005, 4, 8), paint));
+  // dirəklər: B (qara), C (rəngli üçbucaq) — yan şüşələrin arasında
+  const midB = (S.roofF + S.roofR) / 2 - 0.05;
+  for (const s of [1, -1]) {
+    const yB = (S.belt + S.H) / 2;
+    const b = box(0.02, S.H - S.belt - 0.05, 0.09, m.gloss, s * (gw(yB) + 0.006), yB, midB);
+    b.rotation.z = s * 0.2;
+    body.add(b);
+    const cs = new THREE.Shape();
+    cs.moveTo(S.roofR + 0.25, S.H - 0.06); cs.lineTo(S.glassR + 0.3, S.deck + 0.05); cs.lineTo(S.roofR - 0.05, S.belt + 0.02); cs.closePath();
+    const cg = new THREE.ShapeGeometry(cs);
+    cg.rotateY((s * Math.PI) / 2);
+    // C dirəyində qara üçbucaqlı örtük (fotolardakı kimi)
+    const cm = mesh(cg, m.gloss, false);
+    cm.position.x = s * (gw(S.belt + 0.2) + 0.008);
+    body.add(cm);
+    // pəncərə ətrafı xrom zolaq
+    const ch = box(0.012, 0.012, (S.cowl - S.glassR) * 0.86, m.chrome, s * (lw(S.belt, 0.5) - 0.012), S.belt + 0.005, (S.cowl + S.glassR) / 2 - 0.05);
+    body.add(ch);
+  }
 
-  // təkərlər (205/55R16 → radius ≈ 0.32 m)
+  // təkər yuvaları (qara layner — gövdənin içindən görünməsin)
+  for (const z of [0, wb]) {
+    const lg = new THREE.CylinderGeometry(S.arch - 0.01, S.arch - 0.01, W - 0.12, 20, 1, true, -Math.PI / 2, Math.PI);
+    lg.rotateZ(Math.PI / 2);
+    const lm = mesh(lg, m.well, false);
+    lm.position.set(0, 0.22, z);
+    lm.material.side = THREE.DoubleSide;
+    body.add(lm);
+  }
+
+  // ön: barmaqlıq, faralar, loqo, alt hissə
+  const gm = new THREE.MeshStandardMaterial({ map: grille(), roughness: 0.3, metalness: 0.4 });
+  const gr = mesh(new THREE.PlaneGeometry(W * 0.74, 0.27), gm, false);
+  gr.position.set(0, 0.47, F0 - 0.005);
+  body.add(gr);
+  body.add(box(W * 0.6, 0.06, 0.05, m.trim, 0, 0.28, F0 - 0.1));
+  const lights = {};
+  const em = (c, e, i = 0) => new THREE.MeshStandardMaterial({ color: c, emissive: e, emissiveIntensity: i, roughness: 0.3 });
+  lights.drl = em(0xf4f4f0, 0xffffff, 1.2);
+  lights.brake = em(0x5a0808, 0xff1a1a, 0.15);
+  lights.tail = em(0x6a0b0b, 0xff2a2a, 0.35);
+  lights.reverse = em(0xdddddd, 0xffffff);
+  lights.blinkL = em(0x6a3d00, 0xffa000);
+  lights.blinkR = em(0x6a3d00, 0xffa000);
+  for (const s of [1, -1]) {
+    // faralar: dar, künclərə doğru uzanan (Elantra kimi — sadələşdirilmiş)
+    const hl = new THREE.Group();
+    hl.add(box(0.46, 0.075, 0.12, m.gloss, 0, 0, 0));
+    hl.add(box(0.44, 0.012, 0.01, lights.drl, 0, 0.026, 0.062));
+    const lens = box(0.47, 0.08, 0.125, m.lens, 0, 0, 0.005);
+    lens.castShadow = false;
+    hl.add(lens);
+    hl.position.set(s * (HW - 0.3), 0.665, F0 - 0.17);
+    hl.rotation.y = s * 0.32;
+    hl.rotation.z = -s * 0.06;
+    body.add(hl);
+    body.add(box(0.12, 0.035, 0.03, lights[s > 0 ? 'blinkL' : 'blinkR'], s * (HW - 0.12), 0.64, F0 - 0.3));
+  }
+  const logo = mesh(new THREE.TorusGeometry(0.055, 0.008, 8, 28), m.chrome, false);
+  logo.scale.set(1.45, 1, 1);
+  logo.rotation.z = 0.12;
+  logo.position.set(0, 0.63, F0 - 0.02);
+  body.add(logo);
+
+  // arxa: bütün eni boyu işıq zolağı ("H" forması — sadələşdirilmiş), bamper, nömrə, kamera
+  body.add(box(W - 0.22, 0.035, 0.02, lights.tail, 0, S.deck - 0.07, R0 + 0.02));
+  for (const s of [1, -1]) {
+    const v = box(0.03, 0.16, 0.02, lights.tail, s * (HW - 0.2), S.deck - 0.12, R0 + 0.03);
+    body.add(v);
+    body.add(box(0.24, 0.05, 0.02, lights.brake, s * (HW - 0.3), S.deck - 0.16, R0 + 0.025));
+    body.add(box(0.08, 0.04, 0.02, lights.reverse, s * 0.42, 0.5, R0 + 0.01));
+    body.add(box(0.1, 0.035, 0.02, s > 0 ? lights.blinkL : lights.blinkR, s * (HW - 0.12), S.deck - 0.2, R0 + 0.03));
+  }
+  body.add(box(W * 0.7, 0.1, 0.06, m.trim, 0, 0.3, R0 + 0.06));
+  body.add(box(0.31, 0.16, 0.01, m.plate, 0, 0.7, R0 - 0.004));
+  body.add(box(0.03, 0.02, 0.02, m.gloss, ...VIEW.rearCam.map((v, i) => (i === 2 ? R0 + 0.005 : i === 1 ? 0.8 : v))));
+
+  // yan güzgülər: gövdə rəngli korpus, qara əsas, dönmə işığı
+  for (const s of [1, -1]) {
+    const mg = new THREE.Group();
+    const hs = mesh(new THREE.SphereGeometry(0.1, 14, 10), paint);
+    hs.scale.set(1.0, 0.62, 0.55);
+    mg.add(hs);
+    const glass = mesh(new THREE.PlaneGeometry(0.15, 0.09), new THREE.MeshStandardMaterial({ color: 0x9fb0bd, metalness: 1, roughness: 0.05 }), false);
+    glass.position.set(0, 0, -0.056);
+    glass.rotation.y = Math.PI;
+    mg.add(glass);
+    mg.add(box(0.06, 0.03, 0.08, m.trim, -s * 0.07, -0.03, 0.02));
+    mg.add(box(0.08, 0.008, 0.03, s > 0 ? lights.blinkL : lights.blinkR, s * 0.02, -0.055, 0.03));
+    mg.position.set(s * (HW + 0.07), 0.99, 1.92);
+    body.add(mg);
+    // qapı tutacaqları və qapı aralıqları
+    for (const z of [1.25, 0.15]) body.add(box(0.015, 0.025, 0.14, paint, s * (lw(0.82, z) + 0.004), 0.82, z));
+    for (const z of [1.98, 0.92, -0.08]) body.add(box(0.004, 0.55, 0.006, m.trim, s * (lw(0.6, z) + 0.002), 0.6, z));
+  }
+  if (kind === 'elantra') {
+    // akula üzgəci antena
+    const fin = new THREE.Shape();
+    fin.moveTo(0.08, 0); fin.lineTo(-0.1, 0); fin.quadraticCurveTo(-0.08, 0.06, 0.02, 0.065); fin.closePath();
+    const fg = new THREE.ExtrudeGeometry(fin, { depth: 0.05, bevelEnabled: true, bevelSize: 0.01, bevelThickness: 0.01, bevelSegments: 2 });
+    fg.rotateY(-Math.PI / 2); fg.translate(0.025, 0, 0);
+    const fm = mesh(fg, m.gloss); fm.position.set(0, S.H - 0.03, S.roofR + 0.1); body.add(fm);
+    // kapotda loqoya doğru yaxınlaşan iki xətt (V) — fotolardakı kimi
+    const hoodY = (z) => { const t = (S.cowl - z) / (S.cowl - (S.F0 - 0.2)); const a = S.belt, b = S.hood + 0.085, c = S.hood; return (1 - t) * (1 - t) * a + 2 * (1 - t) * t * b + t * t * c; };
+    const creaseMat = new THREE.MeshStandardMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false });
+    for (const sd of [1, -1]) {
+      const pts = [];
+      for (let i = 0; i <= 10; i++) {
+        const t = i / 10, z = S.cowl - 0.05 + t * (S.F0 - 0.25 - S.cowl + 0.05);
+        pts.push(new THREE.Vector3(sd * (0.42 - 0.3 * t), hoodY(z) + 0.004, z));
+      }
+      const cr = mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 20, 0.003, 4), creaseMat, false);
+      body.add(cr);
+    }
+    // altlıq: qara plastik örtük (fotolardakı kimi)
+    body.add(box(W - 0.3, 0.01, S.wb - 0.75, new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.95 }), 0, 0.17, S.wb / 2));
+    // arxa şüşənin altında qara zolaq
+    body.add(box(W * 0.78, 0.012, 0.13, m.gloss, 0, S.deck + 0.004, S.glassR + 0.08));
+    // "Z" formalı yan xətt: qapılar boyunca enən üçbucaqlı faset (fərqli normal — işıq onu ayırır)
+    for (const sd of [1, -1]) {
+      const fs = new THREE.Shape();
+      fs.moveTo(1.9, 0.84); fs.lineTo(-0.55, 0.58); fs.lineTo(-0.2, 0.42); fs.lineTo(1.55, 0.5); fs.closePath();
+      const fgeo = new THREE.ShapeGeometry(fs);
+      fgeo.rotateY((sd * Math.PI) / 2);
+      const facet = mesh(fgeo, paint, false);
+      facet.position.x = sd * (lw(0.62, 0.7) + 0.006);
+      facet.rotation.z = sd * 0.14; // aşağıya baxan faset
+      body.add(facet);
+      // ön bamperin küncündə qara üçbucaqlı hava girişi
+      const tri = new THREE.Shape();
+      tri.moveTo(0, 0); tri.lineTo(0.16, 0.0); tri.lineTo(0.02, 0.13); tri.closePath();
+      const tg = new THREE.ShapeGeometry(tri);
+      const tm = mesh(tg, m.gloss, false);
+      tm.position.set(sd * (HW - 0.12), 0.36, F0 - 0.1);
+      tm.rotation.y = sd * 0.7;
+      tm.scale.x = -sd;
+      body.add(tm);
+      // arxa künclərdə üçbucaqlı fənərlər (zolağın uclarında, yana keçir)
+      const tl = new THREE.Shape();
+      tl.moveTo(0, 0); tl.lineTo(-0.42, 0.03); tl.lineTo(0, -0.17); tl.closePath();
+      const tlg = new THREE.ShapeGeometry(tl);
+      const tlm = mesh(tlg, lights.tail, false);
+      tlm.position.set(sd * (HW - 0.06), S.deck - 0.055, R0 + 0.04);
+      tlm.rotation.y = Math.PI;
+      tlm.scale.x = sd;
+      body.add(tlm);
+      const side = box(0.012, 0.06, 0.38, lights.tail, sd * (lw(S.deck - 0.1, R0 + 0.25) + 0.002), S.deck - 0.11, R0 + 0.22);
+      side.rotation.x = -0.25;
+      body.add(side);
+    }
+    // baqajda "ELANTRA" yazısı
+    const name = mesh(new THREE.PlaneGeometry(0.62, 0.05), new THREE.MeshStandardMaterial({ map: canvasTex(512, 48, (g2) => {
+      g2.clearRect(0, 0, 512, 48); g2.fillStyle = '#d0d4d8'; g2.font = '600 34px Arial'; g2.textAlign = 'center'; g2.textBaseline = 'middle';
+      g2.fillText('E  L  A  N  T  R  A', 256, 26);
+    }), transparent: true, metalness: 0.9, roughness: 0.25 }), false);
+    name.position.set(0, S.deck - 0.27, R0 + 0.006);
+    name.rotation.y = Math.PI;
+    body.add(name);
+  }
+
+  // təkərlər (205/55R16 → radius ≈ 0.316 m — təxmini)
   const wheels = {};
   const track = D.track || W - 0.25;
   for (const [k, x, z] of [['fl', 1, wb], ['fr', -1, wb], ['rl', 1, 0], ['rr', -1, 0]]) {
     const pivot = new THREE.Group();
     pivot.position.set(x * track / 2, 0, z);
-    const w = makeWheel(0.316);
+    const w = makeWheel(0.316, player ? 1 : 0);
+    if (x < 0) w.rotation.y = Math.PI; // disk üzü bayıra
     pivot.add(w);
     root.add(pivot);
     wheels[k] = { pivot, wheel: w };
   }
 
-  // işıqlar
-  const lights = {};
-  const mk = (c, e) => new THREE.MeshStandardMaterial({ color: c, emissive: e, emissiveIntensity: 0 });
-  const headMat = mk(0xfff6d8, 0xfff2c0);
-  headMat.emissiveIntensity = 0.4;
-  for (const s of [1, -1]) {
-    const hl = box(0.42, 0.07, 0.05, headMat, s * (HW - 0.3), 0.72, F0 - 0.08);
-    hl.rotation.y = s * 0.25;
-    body.add(hl);
-  }
-  lights.brake = mk(0x5a0b0b, 0xff2020);
-  lights.reverse = mk(0xdddddd, 0xffffff);
-  lights.blinkL = mk(0x6a3d00, 0xffa000);
-  lights.blinkR = mk(0x6a3d00, 0xffa000);
-  // arxa işıqlar — bütün eni boyu zolaq (Elantra kimi, sadələşdirilmiş)
-  body.add(box(W - 0.2, 0.05, 0.03, lights.brake, 0, 0.88, R0 + 0.04));
-  for (const s of [1, -1]) {
-    body.add(box(0.1, 0.06, 0.03, lights.reverse, s * 0.25, 0.74, R0 + 0.02));
-    const bm = s > 0 ? lights.blinkL : lights.blinkR;
-    body.add(box(0.12, 0.06, 0.03, bm, s * (HW - 0.12), 0.8, R0 + 0.03));
-    body.add(box(0.14, 0.04, 0.03, bm, s * (HW - 0.18), 0.66, F0 - 0.02));
-    body.add(box(0.03, 0.04, 0.1, bm, s * (HW + 0.13), 0.96, 1.98));
-  }
-
   setLayer(root, player ? LAYER.BODY : LAYER.WORLD);
   const out = { root, wheels, lights, paint };
-  if (player) addInterior(root, out, paint, HW);
+  if (player) addInterior(root, out, paint, S);
   return out;
 }
 
-export function buildParkedCar(color) {
-  return buildCar(color, false, { length: PARKED.length, width: PARKED.width, wheelbase: 2.8, rearOverhang: 1.05, track: 1.6 });
+const PARKED_KINDS = [
+  { kind: 'sedan', d: { length: 4.85, width: 1.84, height: 1.45, wheelbase: 2.82, rearOverhang: 1.05, track: 1.6 } },
+  { kind: 'suv', d: { length: 4.75, width: 1.88, height: 1.7, wheelbase: 2.75, rearOverhang: 1.0, track: 1.62 } },
+  { kind: 'hatch', d: { length: 4.35, width: 1.8, height: 1.48, wheelbase: 2.65, rearOverhang: 0.85, track: 1.56 } },
+];
+// Ətraf maşınlar toqquşma üçün PARKED ölçüsündədir (4.8 × 1.86) — görünən model ona yaxın seçilir
+export function buildParkedCar(color, variant = 0) {
+  const k = PARKED_KINDS[variant % PARKED_KINDS.length];
+  const d = { ...k.d, length: Math.min(k.d.length, PARKED.length), width: Math.min(k.d.width, PARKED.width) };
+  const out = buildCar(color, false, d, k.kind);
+  // modelin mənşəyi arxa oxdadır; mərkəzə qədər məsafə
+  out.centerOffset = d.length / 2 - d.rearOverhang;
+  return out;
 }
 
-// Salon: 2023 Elantra fotolarına əsasən (təxmini). Yalnız sürücü kamerası görür.
-function addInterior(root, out, paint, HW) {
-  const hood = box(CAR.width - 0.3, 0.02, 1.1, paint, 0, 0.9, 3.0);
-  hood.rotation.x = 0.1;
-  hood.castShadow = false;
+// ---------- Salon (yalnız sürücü kamerası) ----------
+let clusterCtx = null;
+function addInterior(root, out, paint, S) {
+  const HW = S.W / 2;
+  // kapot: sürücü də görsün (gövdənin özü layer 1-dədir)
+  const hoodShape = new THREE.Shape();
+  hoodShape.moveTo(S.cowl, S.belt - 0.005);
+  hoodShape.quadraticCurveTo((S.cowl + S.F0) / 2, S.hood + 0.085, S.F0 - 0.2, S.hood + 0.005);
+  hoodShape.lineTo(S.F0 - 0.2, S.hood - 0.02);
+  hoodShape.lineTo(S.cowl, S.belt - 0.04);
+  const lw = lowerWidth(S);
+  const hood = mesh(sculpt(hoodShape, S.W, (y, z) => lw(y, z) - 0.02, 6, 10), paint, false);
   root.add(hood);
   setLayer(hood, LAYER.BODY, [LAYER.INTERIOR]);
 
   const g = new THREE.Group();
-  const dash = new THREE.MeshStandardMaterial({ color: 0x1c1e21, roughness: 0.85 });
-  const trim = new THREE.MeshStandardMaterial({ color: 0x2a2d31, roughness: 0.8 });
-  const chrome = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, metalness: 0.8, roughness: 0.3 });
-  const headliner = new THREE.MeshStandardMaterial({ color: 0x8e8c88, roughness: 0.95, side: THREE.DoubleSide });
-  const screen = new THREE.MeshBasicMaterial({ color: 0x0b1620 });
+  const soft = new THREE.MeshStandardMaterial({ color: 0x17181a, roughness: 0.9 });
+  const trim = new THREE.MeshStandardMaterial({ color: 0x25272b, roughness: 0.7 });
+  const silver = new THREE.MeshStandardMaterial({ color: 0x9da2a8, roughness: 0.35, metalness: 0.8 });
+  const cloth = new THREE.MeshStandardMaterial({ color: 0x1a1b1d, roughness: 1 });
+  const headliner = new THREE.MeshStandardMaterial({ color: 0xb8b5af, roughness: 0.95, side: THREE.DoubleSide });
 
-  g.add(box(CAR.width - 0.12, 0.16, 0.5, dash, 0, 0.8, 2.22)); // alçaq panel
-  g.add(box(CAR.width - 0.2, 0.012, 0.02, chrome, 0, 0.83, 1.97)); // havalandırma xətti
-  // cihazlar + ekran bir çərçivədə, sürücüyə tərəf əyilmiş
+  // panel: alçaq, üfüqi; üst hissə yumşaq plastik
+  const dash = new THREE.Shape();
+  dash.moveTo(1.38, 0.6); dash.lineTo(1.5, 0.83); dash.quadraticCurveTo(1.7, 0.9, 2.02, 0.92); dash.lineTo(2.02, 0.6);
+  g.add(mesh(sculpt(dash, S.W - 0.1, () => HW - 0.06, 6, 6), soft, false));
+  // havalandırma xətti (xrom)
+  g.add(box(S.W - 0.2, 0.01, 0.015, silver, 0, 0.78, 1.47));
+  // cihazlar + multimedia: bir çərçivədə, sürücüyə tərəf əyilmiş (SEL: analog cihazlar + 8" ekran — təxmini)
+  const tex = canvasTex(512, 128, (c) => { clusterCtx = c; drawCluster(0, 'P'); });
+  out.clusterTex = tex;
   const bezel = new THREE.Group();
-  bezel.add(box(0.95, 0.15, 0.05, dash, 0, 0, 0));
-  bezel.add(box(0.36, 0.11, 0.01, screen, 0.25, 0, -0.03), box(0.36, 0.11, 0.01, screen, -0.22, 0, -0.03));
-  bezel.position.set(0.12, 0.95, 2.02);
-  bezel.rotation.set(-0.15, -0.18, 0);
+  bezel.add(box(0.92, 0.16, 0.05, soft, 0, 0, 0));
+  const scr = mesh(new THREE.PlaneGeometry(0.86, 0.13), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }), false);
+  scr.position.z = -0.026;
+  scr.rotation.y = Math.PI;
+  bezel.add(scr);
+  bezel.position.set(0.13, 0.95, 1.55);
+  bezel.rotation.set(-0.12, -0.16, 0);
   g.add(bezel);
   // sərnişin tərəfdə diaqonal konsol "qanadı"
-  const wing = box(0.06, 0.06, 0.95, trim, -0.12, 0.62, 1.55);
-  wing.rotation.set(0.35, -0.15, 0);
+  const wing = box(0.05, 0.05, 0.85, trim, -0.13, 0.62, 1.08);
+  wing.rotation.set(0.42, -0.12, 0);
   g.add(wing);
-  g.add(box(0.2, 0.22, 0.7, trim, 0.0, 0.48, 1.25)); // orta konsol
-  g.add(box(0.05, 0.1, 0.05, chrome, 0.02, 0.63, 1.38)); // ötürmə qolu
-  for (const s of [1, -1]) g.add(box(0.07, 0.34, 2.5, trim, s * (HW - 0.07), 0.78, 0.9)); // qapı panelləri
+  g.add(box(0.2, 0.2, 0.7, trim, 0, 0.46, 0.85)); // orta konsol
+  g.add(box(0.05, 0.1, 0.05, silver, 0.02, 0.6, 0.95)); // ötürmə qolu
+  // qapı panelləri
   for (const s of [1, -1]) {
-    const a = box(0.07, 0.7, 0.08, dash, s * (HW - 0.13), 1.13, 2.08);
-    a.rotation.x = -0.9;
-    g.add(a);
-    g.add(box(0.1, 0.48, 0.12, trim, s * (HW - 0.1), 1.16, 0.75));
-    const c = box(0.12, 0.6, 0.4, trim, s * (HW - 0.14), 1.12, -0.35);
-    c.rotation.x = 0.75;
-    g.add(c);
+    g.add(box(0.06, 0.32, 2.3, trim, s * (HW - 0.06), 0.78, 0.55));
+    g.add(box(0.02, 0.012, 1.2, silver, s * (HW - 0.09), 0.9, 0.85));
   }
-  const roof = new THREE.Mesh(new THREE.PlaneGeometry(CAR.width - 0.24, 2.0), headliner);
+  // A dirəkləri ön şüşənin kənarı boyunca (şüşənin həndəsəsinə görə)
+  const a0 = new THREE.Vector3(0, S.belt - 0.02, S.cowl - 0.03), a1 = new THREE.Vector3(0, S.H - 0.03, S.roofF + 0.02);
+  const dir = a1.clone().sub(a0);
+  for (const s of [1, -1]) {
+    const len = dir.length();
+    const pl = box(0.055, len, 0.07, soft, 0, 0, 0);
+    pl.position.copy(a0.clone().add(a1).multiplyScalar(0.5));
+    pl.position.x = s * (HW - 0.17);
+    pl.lookAt(pl.position.clone().add(dir));
+    pl.rotateX(Math.PI / 2);
+    g.add(pl);
+    g.add(box(0.08, 0.5, 0.1, trim, s * (HW - 0.14), 1.1, (S.roofF + S.roofR) / 2 - 0.05)); // B
+  }
+  // tavan
+  const roof = mesh(new THREE.PlaneGeometry(S.W - 0.36, S.roofF - S.roofR - 0.05), headliner, false);
   roof.rotation.x = Math.PI / 2;
-  roof.position.set(0, 1.36, 0.75);
+  roof.position.set(0, S.H - 0.07, (S.roofF + S.roofR) / 2);
   g.add(roof);
-  g.add(box(CAR.width - 0.26, 0.04, 0.5, dash, 0, 0.98, -0.42)); // arxa rəf
-  g.add(box(0.24, 0.07, 0.02, dash, 0, 1.3, 1.58)); // salon güzgüsü
+  // salon güzgüsü (ön şüşəyə bərkidilib)
+  g.add(box(0.25, 0.065, 0.025, soft, VIEW.mirrorC[0], VIEW.mirrorC[1] + 0.01, VIEW.mirrorC[2] + 0.02));
+  // oturacaqlar (qara parça, ağ zolaqlar — fotolardakı kimi)
+  const stripe = new THREE.MeshStandardMaterial({ color: 0xcfd2d6, roughness: 0.8 });
+  for (const x of [0.37, -0.37]) {
+    const seat = new THREE.Group();
+    seat.add(box(0.5, 0.12, 0.5, cloth, 0, 0.45, 0));
+    const back = box(0.5, 0.7, 0.12, cloth, 0, 0.82, -0.27);
+    back.rotation.x = -0.18;
+    seat.add(back);
+    seat.add(box(0.28, 0.2, 0.1, cloth, 0, 1.25, -0.34));
+    // çiyin hissəsində üç nazik ağ zolaq (fotolardakı kimi, kənar tərəfdə)
+    for (let k = 0; k < 3; k++) {
+      const st = box(0.008, 0.45, 0.005, stripe, Math.sign(x) * (0.17 + k * 0.016), 0.8, -0.2);
+      st.rotation.x = -0.18;
+      seat.add(st);
+    }
+    seat.position.set(x, 0, 0.62);
+    if (x > 0) { seat.visible = false; out.driverSeat = seat; } // sürücünün öz oturacağı içəridən görünmür, çöldən görünür
+    g.add(seat);
+  }
+  g.add(box(0.2, 0.08, 0.3, soft, 0, 0.6, 0.45)); // qoltuqaltı
+  g.add(box(S.W - 0.3, 0.12, 0.5, cloth, 0, 0.47, -0.32)); // arxa oturacaq
+  g.add(box(S.W - 0.3, 0.55, 0.12, cloth, 0, 0.8, -0.55));
+  g.add(box(S.W - 0.3, 0.04, 0.5, soft, 0, 0.98, -0.85)); // arxa rəf
 
-  // sükan: üç qollu, ortada loqo
+  // sükan: üç qollu (2023 Elantra kimi — sadələşdirilmiş), ortada loqo
   const steer = new THREE.Group();
-  steer.position.set(0.37, 0.84, 1.8);
-  steer.rotation.x = -0.38;
-  const ringMat = new THREE.MeshStandardMaterial({ color: 0x18191b, roughness: 0.6 });
+  steer.position.set(VIEW.eye[0], 0.86, 1.36);
+  steer.rotation.x = -0.42;
+  const ringMat = new THREE.MeshStandardMaterial({ color: 0x141517, roughness: 0.65 });
   const spin = new THREE.Group();
-  spin.add(new THREE.Mesh(new THREE.TorusGeometry(0.185, 0.02, 10, 40), ringMat));
-  for (const [w, h, x, y] of [[0.17, 0.035, -0.09, -0.01], [0.17, 0.035, 0.09, -0.01], [0.04, 0.12, 0, -0.11]]) {
-    const sp = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.02), ringMat);
+  spin.add(mesh(new THREE.TorusGeometry(0.18, 0.019, 12, 48), ringMat, false));
+  for (const [w, h, x, y, rz] of [[0.15, 0.04, -0.085, -0.015, 0.08], [0.15, 0.04, 0.085, -0.015, -0.08], [0.035, 0.11, -0.03, -0.11, 0.1], [0.035, 0.11, 0.03, -0.11, -0.1]]) {
+    const sp = mesh(new THREE.BoxGeometry(w, h, 0.02), ringMat, false);
     sp.position.set(x, y, 0);
+    sp.rotation.z = rz;
     spin.add(sp);
   }
-  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 20), ringMat);
+  const hub = mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.05, 24), ringMat, false);
   hub.rotation.x = Math.PI / 2;
-  const logo = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.006, 6, 20), chrome);
-  logo.scale.set(1.4, 1, 1);
+  const logo = mesh(new THREE.TorusGeometry(0.026, 0.005, 6, 20), silver, false);
+  logo.scale.set(1.45, 1, 1);
   logo.position.z = -0.03;
-  const mark = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.02, 0.025), new THREE.MeshBasicMaterial({ color: 0xff9a2e }));
-  mark.position.y = 0.185;
+  const mark = mesh(new THREE.BoxGeometry(0.025, 0.02, 0.022), new THREE.MeshBasicMaterial({ color: 0xff9a2e }), false);
+  mark.position.y = 0.18;
   spin.add(hub, logo, mark);
   steer.add(spin);
   g.add(steer);
   root.add(g);
   setLayer(g, LAYER.INTERIOR);
   out.steeringWheel = spin;
+}
+
+// Cihazlar paneli: iki analog cihaz + ekran (canvas). Sürət dəyişəndə yenilənir.
+export function drawCluster(kmh, gear) {
+  const g = clusterCtx;
+  if (!g) return;
+  g.fillStyle = '#05080b'; g.fillRect(0, 0, 512, 128);
+  const dial = (cx, val, max, label) => {
+    g.strokeStyle = '#3c4650'; g.lineWidth = 3; g.beginPath(); g.arc(cx, 70, 46, Math.PI * 0.75, Math.PI * 2.25); g.stroke();
+    g.strokeStyle = '#cfd6dc'; g.lineWidth = 2;
+    for (let i = 0; i <= 10; i++) { const a = Math.PI * 0.75 + (i / 10) * Math.PI * 1.5; g.beginPath(); g.moveTo(cx + Math.cos(a) * 40, 70 + Math.sin(a) * 40); g.lineTo(cx + Math.cos(a) * 46, 70 + Math.sin(a) * 46); g.stroke(); }
+    const a = Math.PI * 0.75 + Math.min(1, val / max) * Math.PI * 1.5;
+    g.strokeStyle = '#ff5a2a'; g.lineWidth = 3; g.beginPath(); g.moveTo(cx, 70); g.lineTo(cx + Math.cos(a) * 42, 70 + Math.sin(a) * 42); g.stroke();
+    g.fillStyle = '#9aa6b0'; g.font = '11px sans-serif'; g.textAlign = 'center'; g.fillText(label, cx, 112);
+  };
+  dial(60, 800 + kmh * 60, 7000, 'RPM');
+  dial(196, kmh / 1.609, 160, 'MPH');
+  g.fillStyle = '#e8eef2'; g.font = 'bold 26px sans-serif'; g.textAlign = 'center'; g.fillText(gear, 128, 78);
+  // multimedia ekranı
+  g.fillStyle = '#0b1622'; g.fillRect(272, 8, 232, 112);
+  g.fillStyle = '#20384f'; g.fillRect(280, 16, 216, 70);
+  g.fillStyle = '#7fb2d9'; g.font = '13px sans-serif'; g.textAlign = 'left';
+  g.fillText(gear === 'R' ? 'Arxa kamera' : `${kmh.toFixed(0)} km/saat`, 290, 106);
 }
 
 // Ackermann bucaqları ilə təkərləri və sükanı yenilə
@@ -225,7 +574,7 @@ export function updateCarVisual(model, car, dt) {
 // Şəffaf "ideal maşın" (təlimatçının göstərdiyi poza)
 export function buildGhost() {
   const g = new THREE.Group();
-  const mat = new THREE.MeshBasicMaterial({ color: 0x2ee66b, transparent: true, opacity: 0.2, depthWrite: false });
+  const mat = new THREE.MeshBasicMaterial({ color: 0x2ee66b, transparent: true, opacity: 0.18, depthWrite: false });
   const m = new THREE.Mesh(new THREE.BoxGeometry(CAR.width, 1.2, CAR.length), mat);
   m.position.set(0, 0.6, CAR.centerOffset);
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0x2ee66b }));

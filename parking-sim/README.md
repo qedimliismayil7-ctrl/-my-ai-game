@@ -9,7 +9,7 @@ cd parking-sim
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # dist/ — istənilən statik hostinqə yükləmək olar
-npm test         # park: 5 səviyyə + 30 məşq variantı; şəhər: qayda testləri (süni xəritədə)
+npm test         # 5 səviyyə + 30 təsadüfi məşq variantı (təlimatçı ilə avtomatik sürücü)
 npm run build:single  # dist/park-ustasi.html — hər şey daxildə olan tək fayl (telefon üçün link)
 ```
 
@@ -56,28 +56,6 @@ Qiymətləndirmə ABŞ yol imtahanının məntiqinə yaxındır: toqquşma, xət
 | Qiymətləndirmə (`src/scoring.js`) | Toqquşma, bordürə toxunma, vaxt, manevr sayı, xəttin içində olmaq, bucaq xətası, mərkəzdən sürüşmə, bordürə məsafə, siqnal, sürət → 100 bal və 3 ulduz |
 | Park sensorları | Ön/arxa 8 sensor, yaxınlaşdıqca siqnal sürətlənir, 30 sm-dən az — fasiləsiz səs |
 | Dərslər | "Real həyatda park": hazırlıq, sürət nəzarəti, müşahidə, istinad nöqtələri, qaydalar və hər manevrin nəzəriyyəsi |
-
-## Bakıda sürüş (şəhər rejimi)
-
-Real küçələr OpenStreetMap-dən götürülür və `data/` qovluğuna çevrilir:
-
-```bash
-# 1) OSM faylını yükləyin (məs. Nərimanov):
-#    https://overpass-api.de/api/map?bbox=49.848,40.392,49.878,40.408
-# 2) Oyunun formatına çevirin:
-npm run city -- map.osm data/narimanov.json "Bakı — Nərimanov"
-```
-
-- Yollar, zolaq sayı, birtərəfli yollar, dairəvi yollar, svetoforlar, piyada keçidləri, STOP/yol ver nişanları, binalar (hündürlüyü ilə) — OSM-də necə yazılıbsa. Zolaq sayı yazılmayıbsa yolun növünə görə, bina hündürlüyü yazılmayıbsa 12–21 m **təxmini** götürülür.
-- Sürət həddi: OSM-dəki `maxspeed`; yazılmayıbsa Azərbaycanda yaşayış məntəqələri üçün ümumi hədd 60 km/saat (yaşayış zonası 20).
-- Svetofor fazaları real deyil (OSM-də yoxdur): 22 san yaşıl, 3 san sarı, 2 san hamısı qırmızı.
-- Yoxlanan qaydalar: sürət həddi, qırmızı işıq, birtərəfli yolda əks hərəkət, qarşı zolağa çıxma, yoldan çıxma, dönmə siqnalı, təhlükəsiz məsafə (öndəki maşına < 1 san), kəsişmədə yol vermə (əsas yol — OSM yol növünə görə; bərabərhüquqlu kəsişmədə sağdan gələn), binaya/maşına toqquşma. Cərimə xalları oyun üçündür, rəsmi deyil.
-- Digər maşınlar (`src/city/traffic.js`): sağ zolaqla gedir, svetofora əməl edir, öndəki maşına və oyunçuya Intelligent Driver Model ilə məsafə saxlayır, döngədən əvvəl yavaşlayır, kəsişmədə təsadüfi istiqamət seçir. Vurulan maşın dayanır. Məhdudiyyət: svetoforsuz kəsişmələrdə bir-birinə yol vermirlər (bir-birinin içindən keçə bilərlər).
-- Real idarə: şəhər sürətlərində dinamik velosiped modeli — təkərlərin yan sürüşməsi, sürtünmə həddi (μ≈0.9), ön ağırlıq ~61%; həddi aşanda maşın döngədən çıxır (parametrlər təxmini). 5 m/s-dən aşağı kinematik model.
-- Həssaslıq ayarları: sükanın ölü zonası və əyrisi, pedalların əyrisi, klaviaturada sükan sürəti, trafikin sıxlığı.
-- Şəhər fizikası: 0–100 km/saat ≈ 8.8 san, 100 km/saatdan əyləc yolu ≈ 44 m (güc, kütlə, hava müqaviməti **təxmini**).
-- Xəritə: © OpenStreetMap töhfəçiləri, ODbL.
-- `tests/fixtures/grid.osm` — testlər üçün **süni** xəritədir, real Bakı deyil.
 
 ## Telefon
 
