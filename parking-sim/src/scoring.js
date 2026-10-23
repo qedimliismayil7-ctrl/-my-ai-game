@@ -1,12 +1,16 @@
-// Qiymətləndirmə: maşın xəttin içindədirmi, bucaq xətası, toqquşmalar, vaxt, manevr sayı.
+// Qiymətləndirmə — ABŞ sürücülük imtahanının (DMV) məntiqinə yaxın:
+// "kritik səhv" (toqquşma, xəttdən çox çıxma, səhv istiqamət) dərhal "keçmədi" deməkdir,
+// digər səhvlər bal azaldır. İmtahan rejimində tələblər daha ciddidir.
 import { CAR, DEG, carBox, obbCorners, toLocal, wrapAngle } from './physics.js';
 
-export function evaluate(level, car, stats) {
+const CORNERS = ['sol ön', 'sağ ön', 'sağ arxa', 'sol arxa'];
+
+export function evaluate(level, car, stats, mode = 'learn') {
+  const exam = mode === 'exam';
   const t = level.target;
-  const corners = obbCorners(carBox(car.x, car.z, car.h));
   const tc = { x: t.x, z: t.z, h: t.h };
-  let maxOut = 0;
-  let worst = -1;
+  const corners = obbCorners(carBox(car.x, car.z, car.h));
+  let maxOut = 0, worst = 0;
   corners.forEach(([x, z], i) => {
     const { lx, lz } = toLocal(x, z, tc);
     const out = Math.max(Math.abs(lx) - t.w / 2, 0, Math.abs(lz) - t.l / 2);
@@ -19,87 +23,59 @@ export function evaluate(level, car, stats) {
   if (!t.strict) angleErr = Math.min(angleErr, 180 - angleErr);
   else if (angleErr > 90) wrongWay = true;
 
-  const cx = car.x + Math.sin(car.h) * CAR.centerOffset;
-  const cz = car.z + Math.cos(car.h) * CAR.centerOffset;
-  const c = toLocal(cx, cz, tc);
+  const c = toLocal(car.x + Math.sin(car.h) * CAR.centerOffset, car.z + Math.cos(car.h) * CAR.centerOffset, tc);
+  const fails = [];
   const notes = [];
   let score = 100;
-  const angleTol = t.angleTol || 10;
+  const minus = (p, text) => { if (p >= 0.5) { score -= p; notes.push(`−${Math.round(p)} ${text}`); } };
 
-  // Uğur şərtləri
-  let passed = inside && !wrongWay && angleErr <= angleTol;
-  if (!inside) {
-    const names = ['sol ön', 'sağ ön', 'sağ arxa', 'sol arxa'];
-    notes.push(`✗ Maşın xəttdən kənara çıxıb: ${names[worst]} künc ${(maxOut * 100).toFixed(0)} sm kənarda.`);
-  }
-  if (wrongWay) notes.push(level.id === 2 ? '✗ Maşın arxa ilə yox, irəli ilə park olunub.' : '✗ Maşın səhv istiqamətdə dayanıb.');
-  else if (angleErr > angleTol) notes.push(`✗ Bucaq xətası çox böyükdür: ${angleErr.toFixed(1)}°.`);
+  // Kritik səhvlər
+  if (stats.collisions > 0) fails.push(`Toqquşma (${stats.collisions}). İmtahanda bu, dərhal “keçmədi”dir.`);
+  if (wrongWay) fails.push(level.id === 2 ? 'Arxa ilə yox, irəli ilə park edilib.' : 'Maşın səhv istiqamətdə dayanıb.');
+  const outFail = t.zone ? 0.02 : 0.3;
+  if (maxOut > outFail) fails.push(`${t.zone ? 'Öz zolağınızda deyil' : 'Xəttdən çox kənar'}: ${CORNERS[worst]} künc ${(maxOut * 100).toFixed(0)} sm.`);
+  const angleFail = t.angleTol || (exam ? 7 : 10);
+  if (!wrongWay && angleErr > angleFail) fails.push(`Bucaq xətası ${angleErr.toFixed(1)}° (hədd ${angleFail}°).`);
+  if (exam && stats.time > level.par.time * 2) fails.push(`Vaxt həddi keçildi (${Math.round(stats.time)} san > ${level.par.time * 2}).`);
+  if (exam && stats.moves > level.par.moves + 2) fails.push(`Çox manevr: ${stats.moves} (hədd ${level.par.moves + 2}).`);
+  if (exam && stats.maxSpeed > 11) fails.push(`Park üçün təhlükəli sürət: ${stats.maxSpeed.toFixed(0)} km/saat.`);
 
-  // Xallar
-  if (stats.collisions > 0) {
-    score -= stats.collisions * 15;
-    notes.push(`− Toqquşma: ${stats.collisions} dəfə (hər biri −15). Real həyatda bu, sığorta hadisəsidir!`);
-  }
-  if (stats.curbHits > 0) {
-    score -= stats.curbHits * 8;
-    notes.push(`− Bordürə toxunma: ${stats.curbHits} dəfə (−8).`);
-  }
-  const extraMoves = Math.max(0, stats.moves - level.par.moves);
-  if (extraMoves) {
-    score -= extraMoves * 5;
-    notes.push(`− Manevr sayı ${stats.moves} (norma ${level.par.moves}): −${extraMoves * 5}.`);
-  }
-  if (!wrongWay) {
-    const aPen = Math.max(0, angleErr - 1.5) * 2.5;
-    if (aPen > 0.5) { score -= aPen; notes.push(`− Bucaq xətası ${angleErr.toFixed(1)}°: −${aPen.toFixed(0)}.`); }
-  }
+  // Bal itirən səhvlər
+  if (!inside && maxOut <= outFail) minus(10, `Xəttə toxunub: ${CORNERS[worst]} künc ${(maxOut * 100).toFixed(0)} sm.`);
+  if (stats.curbHits) minus(stats.curbHits * (exam ? 15 : 10), `Bordürə toxunma: ${stats.curbHits}.`);
+  if (!wrongWay) minus(Math.max(0, angleErr - 3) * 1.5, `Bucaq xətası ${angleErr.toFixed(1)}°.`);
   if (!t.zone) {
     const lat = Math.abs(c.lx);
-    if (lat > 0.15) {
-      const p = (lat - 0.15) * 40;
-      score -= p;
-      notes.push(`− Mərkəzdən yana sürüşmə ${(lat * 100).toFixed(0)} sm: −${p.toFixed(0)}.`);
-    }
+    minus(Math.max(0, lat - 0.25) * 30, `Mərkəzdən yana ${(lat * 100).toFixed(0)} sm.`);
   }
+  let curbDist = null;
   if (t.curbZ !== undefined) {
-    const side = Math.max(...corners.map(([, z]) => z));
-    const curbDist = t.curbZ - side;
-    if (curbDist > 0.3) {
-      const p = Math.min(25, (curbDist - 0.3) * 60);
-      score -= p;
-      notes.push(`− Bordürə məsafə ${(curbDist * 100).toFixed(0)} sm (ideal 20–30 sm): −${p.toFixed(0)}.`);
-    } else {
-      notes.push(`✓ Bordürə məsafə ${(Math.max(0, curbDist) * 100).toFixed(0)} sm — əla.`);
-    }
+    curbDist = Math.max(0, t.curbZ - Math.max(...corners.map(([, z]) => z)));
+    if (curbDist > 0.45) fails.push(`Bordürdən çox uzaq: ${(curbDist * 100).toFixed(0)} sm (hədd ≈ 45 sm / 18 düym).`);
+    else if (curbDist > 0.3) minus(10, `Bordürə ${(curbDist * 100).toFixed(0)} sm (12 düymdən — 30 sm-dən çox).`);
   }
-  const overTime = Math.max(0, stats.time - level.par.time);
-  if (overTime > 0) {
-    const p = Math.min(15, overTime * 0.25);
-    score -= p;
-    notes.push(`− Vaxt ${stats.time.toFixed(0)} san (norma ${level.par.time}): −${p.toFixed(0)}.`);
-  }
-  if (!stats.signaled) {
-    score -= 5;
-    notes.push(`− Dönmə siqnalı verilmədi (−5). Real yolda bu, cərimədir.`);
-  }
-  if (stats.maxSpeed > 11) {
-    score -= 5;
-    notes.push(`− Park üçün çox sürətli: ${stats.maxSpeed.toFixed(0)} km/saat (−5).`);
-  }
-  if (passed && notes.length === 0) notes.push('✓ Mükəmməl park! Heç bir səhv yoxdur.');
+  const extra = Math.max(0, stats.moves - level.par.moves);
+  minus(extra * (exam ? 10 : 5), `Əlavə manevr: ${extra}.`);
+  if (!stats.signaled) minus(5, 'Siqnal verilmədi.');
+  if (stats.reversed && !stats.lookedBack) minus(exam ? 10 : 5, 'Geri gedərkən çiyin üstündən baxılmadı (B / 👀).');
+  if (stats.gearAbuse) minus(stats.gearAbuse * 5, `Hərəkətdə ötürmə dəyişmək cəhdi: ${stats.gearAbuse}.`);
+  const over = Math.max(0, stats.time - level.par.time);
+  minus(Math.min(10, over * 0.2), `Vaxt ${Math.round(stats.time)} san (norma ${level.par.time}).`);
+  if (!exam && stats.maxSpeed > 11) minus(5, `Sürət ${stats.maxSpeed.toFixed(0)} km/saat.`);
 
-  score = Math.max(0, Math.min(100, score));
+  const passed = fails.length === 0;
+  score = Math.max(0, Math.min(100, Math.round(score)));
   if (!passed) score = Math.min(score, 40);
-  const stars = !passed ? 0 : score >= 90 ? 3 : score >= 70 ? 2 : 1;
-  return { passed, inside, maxOut, angleErr, wrongWay, lateral: c.lx, score: Math.round(score), stars, notes };
+  const stars = !passed ? 0 : score >= 90 ? 3 : score >= 75 ? 2 : 1;
+  if (passed && notes.length === 0) notes.push('Səhv yoxdur — mükəmməl park.');
+  return { passed, inside, maxOut, angleErr, wrongWay, lateral: c.lx, curbDist, score, stars, fails, notes };
 }
 
 // Hədəfə qismən də olsa daxil olubmu (P-də avtomatik yoxlama üçün)
 export function overlapsTarget(level, car) {
   const t = level.target;
-  const corners = obbCorners(carBox(car.x, car.z, car.h));
   let n = 0;
-  for (const [x, z] of corners) {
+  for (const [x, z] of obbCorners(carBox(car.x, car.z, car.h))) {
     const { lx, lz } = toLocal(x, z, t);
     if (Math.abs(lx) < t.w / 2 + 0.3 && Math.abs(lz) < t.l / 2 + 0.3) n++;
   }

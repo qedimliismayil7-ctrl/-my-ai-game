@@ -31,6 +31,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 .panel.right { right: 14px; display: grid; grid-template-columns: auto 90px; gap: 2px 14px; align-items: center; }
 .speed { font-size: 40px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .speed small { font-size: 12px; color: var(--muted); margin-left: 4px; font-weight: 400; }
+.speed em { display: block; font-size: 11px; color: var(--muted); font-style: normal; font-weight: 400; }
 .gears { display: flex; gap: 4px; }
 .gears b { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 7px; background: rgba(255,255,255,.07); color: var(--muted); }
 .gears b.on { background: var(--accent); color: #062; }
@@ -53,18 +54,19 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 .sdist { display: flex; justify-content: space-between; width: 100%; font-size: 11px; color: var(--muted); }
 
 .coach {
-  position: absolute; left: 14px; bottom: 190px; width: min(420px, calc(100vw - 28px));
-  background: rgba(10, 14, 18, 0.82); border: 1px solid var(--line); border-left: 4px solid var(--accent);
-  border-radius: 12px; padding: 10px 14px;
+  position: absolute; left: 50%; transform: translateX(-50%); top: calc(min(30vw, 440px) * .3 + 22px);
+  max-width: min(560px, calc(100vw - 28px)); display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+  background: rgba(10, 14, 18, 0.72); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+  border-radius: 10px; padding: 6px 12px;
 }
 .coach.stop { border-left-color: var(--bad); }
 .coach.back { border-left-color: var(--warn); }
-.coach-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-.coach-text { font-size: 17px; font-weight: 600; }
-.coach.stop .coach-text { color: var(--bad); font-size: 22px; }
-.coach-hint { font-size: 13px; color: #c9d4dc; margin-top: 4px; }
-.keys-hint { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 11px; color: rgba(255,255,255,.55); white-space: nowrap; }
-
+.coach-step { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.coach-text { font-size: 16px; font-weight: 600; }
+.coach.stop .coach-text { color: var(--bad); font-size: 19px; }
+.coach-remain { font-size: 15px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.coach-hint { flex-basis: 100%; font-size: 12px; color: #c9d4dc; }
+.coach-hint:empty { display: none; }
 .toast {
   position: fixed; top: 22%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.78);
   border: 1px solid var(--line); padding: 10px 18px; border-radius: 10px; font-size: 16px; opacity: 0;
@@ -153,38 +155,59 @@ table.ctl td:first-child { white-space: nowrap; color: var(--accent); font-famil
 @media (max-width: 720px) {
   .panel.left, .panel.right { transform: scale(.8); transform-origin: bottom left; }
   .panel.right { transform-origin: bottom right; }
-  .coach { bottom: 160px; }
-  .keys-hint { display: none; }
 }
 
+/* Rejim seçimi və nəticə */
+.modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.modes .mode { display: flex; flex-direction: column; gap: 3px; }
+.modes .mode span { font-size: 12px; color: var(--muted); }
+.modes .mode.on { border-color: var(--accent); background: rgba(46,230,107,.12); }
+.theory-box summary { cursor: pointer; color: var(--accent); margin: 14px 0 6px; font-weight: 600; }
+.lv .best { display: flex; gap: 6px; align-items: center; }
+.lv .best span:first-child { min-width: 64px; }
+.notes li.fail { color: #ffb4b4; }
+.spec table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.spec td { border-top: 1px solid var(--line); padding: 4px 6px; vertical-align: top; }
+.spec td:first-child { white-space: nowrap; color: var(--text); }
+.spec i { color: var(--warn); font-style: normal; }
+.settings select { font: inherit; background: rgba(255,255,255,.07); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
+
 /* ---------- Telefon / toxunma idarəsi ---------- */
-#touch { position: fixed; inset: 0; pointer-events: none; z-index: 5; touch-action: none; user-select: none; -webkit-user-select: none; }
+#touch { --ts: 1; position: fixed; inset: 0; pointer-events: none; z-index: 5; touch-action: none; user-select: none; -webkit-user-select: none; }
 #touch > * { pointer-events: auto; }
-#touch button { padding: 0; text-align: center; touch-action: none; }
-.t-wheel { position: absolute; left: 14px; bottom: 14px; width: min(40vh, 170px); aspect-ratio: 1; touch-action: none; }
+#touch button { padding: 0; text-align: center; touch-action: none; background: rgba(20,24,28,.72); }
+.t-steer { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: 12px; }
+.t-wheel { width: calc(min(40vh, 170px) * var(--ts)); aspect-ratio: 1; touch-action: none; }
 .t-wheel svg { width: 100%; height: 100%; display: block; }
-.t-wheel span { position: absolute; left: 50%; top: -18px; transform: translateX(-50%); font-size: 12px; color: #fff; text-shadow: 0 1px 2px #000; }
-.t-pedals { position: absolute; right: 14px; bottom: 14px; display: flex; gap: 10px; align-items: flex-end; }
-.t-pedal { position: relative; width: 62px; height: min(34vh, 160px); border-radius: 12px; background: rgba(20,24,28,.6); border: 2px solid rgba(255,255,255,.35); overflow: hidden; touch-action: none; }
-.t-pedal.brake { width: 78px; }
+.t-slider { display: none; position: relative; width: calc(min(34vw, 300px) * var(--ts)); height: calc(54px * var(--ts)); border-radius: 27px; background: rgba(20,24,28,.6); border: 2px solid rgba(255,255,255,.35); touch-action: none; }
+.t-slider i { position: absolute; left: 50%; top: 8px; bottom: 8px; width: 2px; background: rgba(255,255,255,.3); }
+.t-slider b { position: absolute; top: 50%; left: 50%; width: calc(42px * var(--ts)); aspect-ratio: 1; border-radius: 50%; background: #d8dee4; transform: translate(-50%, -50%); }
+#touch.slider .t-wheel { display: none; }
+#touch.slider .t-slider { display: block; }
+.t-deg { position: absolute; left: 50%; top: -18px; transform: translateX(-50%); font-size: 12px; color: #fff; text-shadow: 0 1px 2px #000; }
+.t-pedals { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); bottom: 12px; display: flex; gap: 10px; align-items: flex-end; }
+.t-pedal { position: relative; width: calc(62px * var(--ts)); height: calc(min(34vh, 160px) * var(--ts)); border-radius: 12px; background: rgba(20,24,28,.6); border: 2px solid rgba(255,255,255,.35); overflow: hidden; touch-action: none; }
+.t-pedal.brake { width: calc(78px * var(--ts)); }
 .t-pedal i { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: rgba(255,77,77,.65); }
 .t-pedal.gas i { background: rgba(46,230,107,.65); }
 .t-pedal span { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font-size: 13px; font-weight: 700; color: #fff; }
-.t-gears { position: absolute; right: 172px; bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
-.t-gears button { width: 46px; height: 38px; font-weight: 800; font-size: 16px; background: rgba(20,24,28,.7); }
-.t-gears button.on { background: var(--accent); color: #042; }
-.t-top { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; gap: 6px; }
-.t-top button { width: 40px; height: 36px; font-size: 16px; background: rgba(20,24,28,.7); }
+/* Ötürmə və digər düymələr ortada — pedallardan uzaqda, səhvən basılmasın */
+.t-center { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.t-misc { display: flex; gap: 6px; }
+.t-misc button { min-width: calc(38px * var(--ts)); height: calc(34px * var(--ts)); font-size: 14px; padding: 0 6px; }
+.t-gears { display: flex; gap: 8px; }
+.t-gears button { width: calc(50px * var(--ts)); height: calc(42px * var(--ts)); font-weight: 800; font-size: 17px; }
+#touch .t-gears button.on { background: var(--accent); color: #042; }
+#touch.swap .t-steer { left: auto; right: max(12px, env(safe-area-inset-right, 0px)); }
+#touch.swap .t-pedals { right: auto; left: max(12px, env(safe-area-inset-left, 0px)); flex-direction: row-reverse; }
 
 body.touch-ui .panel.left { top: calc(min(22vw, 330px) * .62 + 20px); bottom: auto; left: 10px; transform: scale(.55); transform-origin: top left; grid-template-columns: auto; padding: 6px 10px; }
 body.touch-ui .panel.left .wheel, body.touch-ui .panel.left .pedals, body.touch-ui .panel.left .gears { display: none; }
 body.touch-ui .panel.right { top: calc(min(22vw, 330px) * .62 + 20px); bottom: auto; right: 10px; transform: scale(.5); transform-origin: top right; padding: 6px 10px; }
-body.touch-ui .panel.right .stat:nth-of-type(1), body.touch-ui .panel.right .stat:nth-of-type(5) { display: none; }
-body.touch-ui .coach { left: 50%; transform: translateX(-50%); top: calc(min(30vw, 440px) * .3 + 18px); bottom: auto; width: min(44vw, 420px); padding: 6px 10px; }
-body.touch-ui .coach-text { font-size: 14px; }
-body.touch-ui .coach.stop .coach-text { font-size: 18px; }
-body.touch-ui .coach-hint { font-size: 12px; }
-body.touch-ui .keys-hint { display: none; }
+body.touch-ui .coach { max-width: 46vw; padding: 4px 10px; }
+body.touch-ui .coach-text { font-size: 13px; }
+body.touch-ui .coach.stop .coach-text { font-size: 16px; }
+body.touch-ui .coach-remain { font-size: 13px; }
 body.touch-ui .toast { top: 45%; font-size: 14px; }
 @media (orientation: portrait) {
   body.touch-ui::after {

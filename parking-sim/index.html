@@ -14,7 +14,7 @@
   <!-- HUD -->
   <div id="hud" class="hidden">
     <div class="panel left">
-      <div class="speed"><span id="spd">0</span><small>km/saat</small></div>
+      <div class="speed"><span id="spd">0</span><small>km/saat</small><em id="mph">0 mph</em></div>
       <div class="gears" id="gears"><b data-g="P">P</b><b data-g="R">R</b><b data-g="N">N</b><b data-g="D">D</b></div>
       <div class="blink"><span id="bl">◀</span><span id="br">▶</span></div>
       <div class="wheel"><svg id="wheelIcon" viewBox="-50 -50 100 100"><circle r="40" fill="none" stroke="currentColor" stroke-width="8"/><path d="M-40 0H40M0 0V40" stroke="currentColor" stroke-width="8"/><circle r="9" fill="currentColor"/><rect x="-4" y="-48" width="8" height="12" fill="#ff9a2e"/></svg><span id="wdeg">0°</span></div>
@@ -25,11 +25,10 @@
       </div>
     </div>
     <div class="panel right">
-      <div class="stat"><span>Səviyyə</span><b id="lvName">—</b></div>
+      <div class="stat"><span id="modeTag">Öyrənmə</span><b id="lvName">—</b></div>
       <div class="stat"><span>Vaxt</span><b id="tm">0:00</b></div>
       <div class="stat"><span>Toqquşma</span><b id="col">0</b></div>
       <div class="stat"><span>Manevr</span><b id="mv">0</b></div>
-      <div class="stat"><span>Kamera</span><b id="camName">Sürücü</b></div>
       <div class="sensor">
         <svg viewBox="0 0 80 140" id="sensorSvg">
           <g id="sFront"></g>
@@ -41,11 +40,11 @@
       </div>
     </div>
     <div id="coach" class="coach">
-      <div class="coach-head"><span>👨‍🏫 Təlimatçı</span><span id="coachStep"></span></div>
-      <div id="coachText" class="coach-text"></div>
+      <span id="coachStep" class="coach-step"></span>
+      <span id="coachText" class="coach-text"></span>
+      <span id="coachRemain" class="coach-remain"></span>
       <div id="coachHint" class="coach-hint"></div>
     </div>
-    <div class="keys-hint" id="keysHint">Esc — menyu · C — kamera · H — təlimatçı · G — köməkçi · Enter — bitir</div>
   </div>
 
   <div id="toast" class="toast"></div>
@@ -79,10 +78,11 @@
       <div class="card wide">
         <h2 id="briefTitle"></h2>
         <p id="briefShort" class="sub"></p>
-        <h3>Real həyatda bunu necə edirlər:</h3>
-        <ol id="briefTheory" class="theory"></ol>
-        <label class="check"><input type="checkbox" id="briefCoach" checked /> Təlimatçı addım-addım yol göstərsin</label>
-        <label class="check"><input type="checkbox" id="briefGhost" checked /> Yaşıl “ideal maşın” və trayektoriya göstərilsin</label>
+        <details class="theory-box"><summary>Real həyatda bunu necə edirlər</summary>
+        <ol id="briefTheory" class="theory"></ol></details>
+        <h3>Rejim</h3>
+        <div class="modes" id="briefModes"></div>
+        <label class="check" id="briefHelpRow"><input type="checkbox" id="briefHelp" /> Kömək: təlimatçı və köməkçi xətlər</label>
         <div class="btns row">
           <button data-go="levels">← Geri</button>
           <button id="briefStart" class="primary">Başla</button>
@@ -142,7 +142,7 @@
           <tr><td>B (saxla)</td><td>Çiyin üstündən arxaya baxmaq</td></tr>
           <tr><td>Siçan sürüşdürmə</td><td>Başı çevirmək (sürücü görünüşü); təkər — yuxarıdan görünüşdə yaxınlaşdırmaq</td></tr>
           <tr><td>M</td><td>Güzgüləri gizlətmək / göstərmək</td></tr>
-          <tr><td>H / G</td><td>Təlimatçı / köməkçi xətlər</td></tr>
+          <tr><td>H / G</td><td>Təlimatçı / köməkçi xətlər (İmtahanda yoxdur)</td></tr>
           <tr><td>Enter</td><td>Bitirmək və qiymətləndirmək</td></tr>
           <tr><td>T</td><td>Səviyyəni yenidən başlatmaq</td></tr>
           <tr><td>Esc</td><td>Pauza / menyu</td></tr>

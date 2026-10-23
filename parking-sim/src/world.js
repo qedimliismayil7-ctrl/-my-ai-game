@@ -1,7 +1,7 @@
 // Səviyyə məlumatından 3D səhnə və maneələr siyahısı qurur.
 import * as THREE from 'three';
-import { buildCar, LAYER } from './carModel.js';
-import { CAR } from './physics.js';
+import { buildParkedCar, LAYER } from './carModel.js';
+import { obstaclesOf } from './sim.js';
 
 function noiseTexture(base, vary, size = 256, speck = 0) {
   const c = document.createElement('canvas');
@@ -70,7 +70,6 @@ function textures() {
 export function buildWorld(level) {
   const L = level.layout;
   const group = new THREE.Group();
-  const obstacles = [];
   const tx = textures();
 
   // yer
@@ -141,18 +140,16 @@ export function buildWorld(level) {
     m.rotation.y = h;
     m.castShadow = m.receiveShadow = true;
     group.add(m);
-    obstacles.push({ cx: (x1 + x2) / 2, cz: (z1 + z2) / 2, h, hw: 0.15, hl: len / 2, type: 'curb', name: 'bordür' });
   }
 
   // park olunmuş maşınlar
   for (const c of L.cars) {
-    const m = buildCar(c.color, false);
-    // c — gövdə mərkəzi; modelin mənşəyi arxa oxdadır
-    m.root.position.set(c.x - Math.sin(c.h) * CAR.centerOffset, 0, c.z - Math.cos(c.h) * CAR.centerOffset);
+    const m = buildParkedCar(c.color);
+    // c — gövdə mərkəzi; modelin mənşəyi arxa oxdadır (4.8 m maşında arxa oxdan mərkəzə 1.35 m)
+    m.root.position.set(c.x - Math.sin(c.h) * 1.35, 0, c.z - Math.cos(c.h) * 1.35);
     m.root.rotation.y = c.h;
     m.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     group.add(m.root);
-    obstacles.push({ cx: c.x, cz: c.z, h: c.h, hw: CAR.width / 2, hl: CAR.length / 2, type: 'car', name: 'maşın' });
   }
 
   // binalar, dirəklər, maneələr
@@ -182,7 +179,6 @@ export function buildWorld(level) {
         group.add(s);
       }
     }
-    obstacles.push({ cx: b.cx, cz: b.cz, h: b.h, hw: b.hw, hl: b.hl, type: b.type, name: b.type === 'building' ? 'bina' : b.type === 'pole' ? 'dirək' : 'maneə' });
   }
 
   // ağaclar
@@ -199,7 +195,6 @@ export function buildWorld(level) {
     l.scale.set(1, 1.15, 1);
     l.castShadow = true;
     group.add(t, l);
-    obstacles.push({ cx: x, cz: z, h: 0, hw: 0.2, hl: 0.2, type: 'tree', name: 'ağac' });
   }
 
   // hədəf yerin işarəsi (köməkçi layında)
@@ -223,5 +218,5 @@ export function buildWorld(level) {
     group.add(ar);
   }
 
-  return { group, obstacles };
+  return { group, obstacles: obstaclesOf(L) };
 }

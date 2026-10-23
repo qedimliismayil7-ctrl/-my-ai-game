@@ -13,15 +13,15 @@ export class Coach {
 
   get step() { return this.steps[this.i]; }
 
-  // ctx: { x, z, h, v, delta, gear, steer, blinker, sensors: {front, rear} }
+  // ctx: { x, z, h, v, delta, gear, steer, blinker, clear: {front, rear} } — clear: bamperdən maneəyə həndəsi məsafə
   // Qaytarır: { text, hint, status ('go'|'stop'|'back'|'ok'), stepNo, total, ghost, advanced }
   update(ctx) {
     if (this.doneAll || !this.step) {
-      return { text: 'Manevr tamamlandı. Nəticəni görmək üçün P-yə keçin və ya Enter basın.', hint: '', status: 'ok', stepNo: this.steps.length, total: this.steps.length };
+      return { text: 'Hazırdır — P və ya ✓', hint: '', remain: '', status: 'ok', stepNo: this.steps.length, total: this.steps.length };
     }
     const s = this.step;
     const stopped = Math.abs(ctx.v) < STOP;
-    let text = s.text, hint = s.hint || '', status = 'go', done = false;
+    let text = s.text, hint = s.hint || '', remain = '', status = 'go', done = false;
 
     switch (s.check) {
       case 'gear':
@@ -34,11 +34,8 @@ export class Coach {
         const diff = s.to - ctx.steer;
         done = s.to === 0 ? Math.abs(diff) < 0.03 : Math.abs(diff) < 0.01;
         if (!done) {
-          const deg = Math.round(Math.abs(diff) * 450);
-          hint = s.to === 0
-            ? `Sükan hələ ${deg}° ${ctx.steer > 0 ? 'sağa' : 'sola'} çevrilib.`
-            : `Daha ${deg}° ${diff > 0 ? 'sağa' : 'sola'} çevirin.`;
-          if (!stopped) hint += ' (Dayanıb çevirsəniz daha dəqiq olar.)';
+          remain = `${Math.round(Math.abs(diff) * 446)}° ${diff > 0 ? 'sağa' : 'sola'}`;
+          if (!stopped) hint = 'Dayanıb çevirsəniz daha dəqiq olar';
         }
         break;
       }
@@ -48,11 +45,11 @@ export class Coach {
         const lead = (ctx.v * ctx.v) / 14; // əyləc yolu
         if (rem < -s.tol) {
           status = 'back';
-          text = `Bir az keçdiniz — ${(-rem).toFixed(1)} m geri qayıdın.`;
-          hint = 'Əyləci basın, istiqaməti dəyişin və yavaş geri qayıdın, sonra yenidən istiqaməti dəyişin.';
+          text = `Keçdiniz — ${(-rem).toFixed(1)} m geri`;
+          hint = 'Dayanın, istiqaməti dəyişib geri qayıdın';
         } else if (rem - lead > 0.04) {
-          hint = (s.hint ? s.hint + ' ' : '') + `Qalıb: ${rem.toFixed(1)} m`;
-          if (rem < 1.5) { status = 'slow'; text = 'Yavaşlayın — əyləci azca basın.'; }
+          remain = `${rem.toFixed(1)} m`;
+          if (rem < 1.5) { status = 'slow'; text = 'Yavaşlayın'; }
           done = stopped && rem <= s.tol;
         } else {
           status = 'stop';
@@ -66,11 +63,11 @@ export class Coach {
         const lead = ((ctx.v * ctx.v) / 14) * Math.abs(Math.tan(ctx.delta || 0.6)) / 2.7 / DEG;
         if (rem < -s.tol * 2.5) {
           status = 'back';
-          text = `Çox döndünüz (${Math.round(-rem)}°). Dayanın, istiqaməti dəyişib düzəldin.`;
-          hint = '';
+          text = `Çox döndünüz (${Math.round(-rem)}°)`;
+          hint = 'Dayanın, istiqaməti dəyişib düzəldin';
           done = stopped && rem > -s.tol * 4;
         } else if (rem - lead > 0.5) {
-          hint = (s.hint ? s.hint + ' ' : '') + `Qalıb: ${Math.round(rem)}°`;
+          remain = `${Math.round(rem)}°`;
           if (rem < 12) status = 'slow';
           done = stopped && rem <= s.tol;
         } else {
@@ -80,11 +77,12 @@ export class Coach {
         }
         break;
       }
+      case 'clear':
       case 'sensor': {
-        const d = ctx.sensors[s.which];
+        const d = ctx.clear[s.which];
         const lead = (ctx.v * ctx.v) / 14;
         if (d - lead > s.below) {
-          hint = (s.hint ? s.hint + ' ' : '') + (d < 3 ? `Məsafə: ${d.toFixed(2)} m` : '');
+          remain = d < 3 ? `${d.toFixed(2)} m` : '';
         } else {
           status = 'stop';
           text = 'DAYANIN!';
@@ -94,7 +92,7 @@ export class Coach {
       }
       case 'park':
         done = ctx.gear === 'P' && !ctx.blinker;
-        if (ctx.gear === 'P' && ctx.blinker) hint = 'Siqnalı söndürün (Z/X yenidən).';
+        if (ctx.gear === 'P' && ctx.blinker) hint = 'Siqnalı söndürün';
         break;
       default:
         done = true;
@@ -106,6 +104,6 @@ export class Coach {
       advanced = true;
       if (this.i >= this.steps.length) this.doneAll = true;
     }
-    return { text, hint, status, stepNo: this.i + 1, total: this.steps.length, ghost: s.ghost || null, advanced };
+    return { text, hint, remain, status, stepNo: this.i + 1, total: this.steps.length, ghost: s.ghost || null, advanced };
   }
 }

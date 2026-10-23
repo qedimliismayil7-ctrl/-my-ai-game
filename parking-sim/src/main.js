@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import './style.css';
-import { CarPhysics, CAR, GEARS, closestOnObb, obbAxes, toWorld, carBox } from './physics.js';
-import { buildCar, updateCarVisual, buildGhost, LAYER } from './carModel.js';
+import { CarPhysics, CAR, SPEC, GEARS, toWorld, carBox } from './physics.js';
+import { buildCar, updateCarVisual, buildGhost, LAYER, VIEW } from './carModel.js';
 import { buildWorld } from './world.js';
-import { LEVELS, GENERAL_LESSONS } from './levels.js';
+import { LEVELS, GENERAL_LESSONS, makeLevel, randomVariant } from './levels.js';
+import { bumperClearance } from './sim.js';
 import { Input, Calibrator } from './input.js';
 import { Sound, speak } from './audio.js';
 import { Coach } from './coach.js';
@@ -18,20 +19,29 @@ const $ = (id) => document.getElementById(id);
 const SETTINGS_KEY = 'park-sim-settings';
 const RESULTS_KEY = 'park-sim-results';
 const DEFAULTS = {
-  coach: true, helpers: true, voice: false, realGear: true, clutchMode: false,
-  mirrors: true, autoRearCam: true, sensors: true, shadows: !TOUCH, volume: 0.7,
+  sensors: true, details: false, voice: false, realGear: true, clutchMode: false,
+  mirrors: true, autoRearCam: true, shadows: !TOUCH, volume: 0.7,
+  touchMode: 'wheel', touchSens: 2, touchSize: 1, touchSwap: false,
 };
 const SETTING_LABELS = {
-  coach: 'Təlimatçı (addım-addım yol göstərmə)',
-  helpers: 'Köməkçi: ideal maşın, trayektoriya, hədəf',
+  sensors: 'Park sensoru köməkçisi (2023 SEL-də standart deyil — İmtahanda sönülüdür)',
+  details: 'Təlimatçının ətraflı izahları (istinad nöqtələri)',
   voice: 'Səsli təlimatçı (brauzer səsi)',
   realGear: 'Real ötürmə qaydaları (dayanmadan və əyləcsiz dəyişmək olmaz)',
-  clutchMode: 'Debriyaj rejimi (ötürmə üçün debriyaj, yarım debriyajla sürünmə)',
+  clutchMode: 'Debriyaj rejimi (ötürmə üçün debriyaj)',
   mirrors: 'Güzgüləri göstər',
   autoRearCam: 'R-də arxa kamera avtomatik açılsın',
-  sensors: 'Park sensorlarının səsi',
   shadows: 'Kölgələr',
   volume: 'Səs səviyyəsi',
+  touchMode: 'Telefon: sükan növü',
+  touchSens: 'Telefon: sükan həssaslığı',
+  touchSize: 'Telefon: düymələrin ölçüsü',
+  touchSwap: 'Telefon: pedallar solda, sükan sağda',
+};
+const DRIVE_MODES = {
+  learn: { name: 'Öyrənmə', desc: 'Təlimatçı, köməkçi xətlər, səhvdən geri qayıtma' },
+  practice: { name: 'Məşq', desc: 'Dəyişən park yerləri, istəyə görə kömək' },
+  exam: { name: 'İmtahan', desc: 'Köməksiz manevr, daha ciddi qiymətləndirmə' },
 };
 function loadJSON(k, d) { try { return { ...d, ...JSON.parse(localStorage.getItem(k) || '{}') }; } catch { return { ...d }; } }
 function saveJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* boş */ } }
@@ -65,7 +75,7 @@ for (const l of [hemi, sun]) for (let i = 0; i < 5; i++) l.layers.enable(i);
 
 // ---------- Maşın ----------
 const car = new CarPhysics();
-const model = buildCar(0xc0392b, true);
+const model = buildCar(0x8d9095, true); // Elantra — boz metallik (fotolardakı kimi)
 scene.add(model.root);
 const ghost = buildGhost();
 ghost.visible = false;
@@ -74,7 +84,7 @@ scene.add(ghost);
 // ---------- Kameralar ----------
 const driverCam = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.05, 400);
 driverCam.rotation.order = 'YXZ';
-driverCam.position.set(0.37, 1.22, 1.15);
+driverCam.position.set(...VIEW.eye);
 model.root.add(driverCam);
 
 const freeCam = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 400);
@@ -90,10 +100,11 @@ function mirrorCam(fov, aspect, pos, yaw, pitch, layers) {
   model.root.add(c);
   return c;
 }
-const camL = mirrorCam(24, 1.6, [1.03, 1.02, 1.95], -0.2, -0.08, [LAYER.WORLD, LAYER.BODY]);
-const camR = mirrorCam(24, 1.6, [-1.03, 1.02, 1.95], 0.26, -0.12, [LAYER.WORLD, LAYER.BODY]);
-const camC = mirrorCam(20, 3.4, [0, 1.3, 1.6], 0, -0.13, [LAYER.WORLD]);
-const camRear = mirrorCam(105, 1.6, [0, 0.95, -0.84], 0, -0.5, [LAYER.WORLD, LAYER.REARCAM]);
+const camL = mirrorCam(24, 1.6, VIEW.mirrorL, -0.2, -0.08, [LAYER.WORLD, LAYER.BODY]);
+const camR = mirrorCam(24, 1.6, VIEW.mirrorR, 0.26, -0.12, [LAYER.WORLD, LAYER.BODY]);
+const camC = mirrorCam(20, 3.4, VIEW.mirrorC, 0, -0.1, [LAYER.WORLD]);
+// Arxa kamera baqaj qapağında (standart). Dinamik xətlər rəsmi təsdiqlənmədiyi üçün köməkçi kimi göstərilir.
+const camRear = mirrorCam(110, 1.6, VIEW.rearCam, 0, -0.55, [LAYER.WORLD, LAYER.REARCAM]);
 
 // ---------- Arxa kamera xətləri və trayektoriya ----------
 function ribbon(color, opacity = 0.9) {
@@ -194,7 +205,7 @@ function layoutViews() {
     L: { x: 12, y: H - 12 - sh, w: sw, h: sh },
     R: { x: W - 12 - sw, y: H - 12 - sh, w: sw, h: sh },
     C: { x: (W - cw) / 2, y: H - 10 - ch, w: cw, h: ch },
-    B: { x: (W - rw) / 2, y: TOUCH ? 64 : 70, w: rw, h: rh },
+    B: { x: (W - rw) / 2, y: TOUCH ? 112 : 70, w: rw, h: rh },
   };
   const pr = renderer.getPixelRatio();
   for (const v of views) {
@@ -214,7 +225,7 @@ function layoutViews() {
 
 // ---------- Vəziyyət ----------
 const input = new Input();
-const touchUI = setupTouch(input);
+const touchUI = setupTouch(input, settings);
 const calib = new Calibrator(input);
 const sound = new Sound();
 sound.setVolume(settings.volume);
@@ -234,7 +245,10 @@ const game = {
   lastDir: 0,
   lastHit: -10,
   parkTimer: 0,
-  sensors: { front: 9, rear: 9 },
+  clear: { front: 9, rear: 9 },
+  drive: 'learn',
+  help: { coach: true, ghost: true, sensors: true, freeCam: true },
+  practiceHelp: false,
   coachRes: null,
   lastSpoken: '',
   time: 0,
@@ -242,7 +256,9 @@ const game = {
 };
 const CAM_NAMES = { driver: 'Sürücü', top: 'Yuxarıdan', chase: 'Arxadan' };
 
-function startLevel(lv) {
+function startLevel(base, drive = game.drive) {
+  game.drive = drive;
+  const lv = drive === 'practice' ? makeLevel(base.id, randomVariant(base.id)) : makeLevel(base.id);
   if (game.world) scene.remove(game.world.group);
   game.level = lv;
   game.world = buildWorld(lv);
@@ -250,20 +266,26 @@ function startLevel(lv) {
   game.obstacles = game.world.obstacles;
   car.reset(lv.start);
   input.kbSteer = 0;
-  game.coach = settings.coach ? new Coach(lv.coach) : null;
-  game.stats = { time: 0, collisions: 0, curbHits: 0, moves: 0, signaled: false, signalTime: 0, maxSpeed: 0 };
+  if (input.touch) input.touch.steer = 0;
+  const help = drive === 'learn' || (drive === 'practice' && game.practiceHelp);
+  game.help = { coach: help, ghost: help, sensors: drive !== 'exam' && settings.sensors, freeCam: drive !== 'exam' };
+  game.coach = game.help.coach ? new Coach(lv.coach) : null;
+  game.stats = { time: 0, collisions: 0, curbHits: 0, moves: 0, signaled: false, signalTime: 0, maxSpeed: 0, reversed: false, lookedBack: false, gearAbuse: 0 };
   game.lastDir = 0;
   game.lastHit = -10;
   game.parkTimer = 0;
   game.blinker = null;
   game.rearCamManual = false;
   game.finished = false;
+  game.camMode = 'driver';
   game.yaw = game.yawTarget = 0;
   game.lastSpoken = '';
+  coachShown = '';
   $('lvName').textContent = `${lv.id}. ${lv.name}`;
+  $('modeTag').textContent = DRIVE_MODES[drive].name;
   $('coach').classList.toggle('hidden', !game.coach);
+  document.querySelector('.sensor').classList.toggle('hidden', !game.help.sensors);
   setMode('play');
-  toast(`${lv.id}. ${lv.name}` + (game.coach ? ' — təlimatçını izləyin' : ''));
 }
 
 // ---------- Ekranlar ----------
@@ -295,11 +317,13 @@ function renderLevels() {
   const list = $('levelList');
   list.innerHTML = '';
   for (const lv of LEVELS) {
-    const r = results[lv.id];
     const el = document.createElement('div');
     el.className = 'lv';
-    const stars = r ? '★'.repeat(r.stars) + '☆'.repeat(3 - r.stars) : '☆☆☆';
-    el.innerHTML = `<div class="n">Səviyyə ${lv.id}</div><h4>${lv.name}</h4><p>${lv.short}</p><div class="st">${stars}</div><div class="best">${r ? 'Ən yaxşı: ' + r.score + '/100' : 'Hələ keçilməyib'}</div>`;
+    const row = (m) => {
+      const r = results[`${lv.id}-${m}`];
+      return `<div class="best"><span>${DRIVE_MODES[m].name}</span> <span class="st">${r ? '★'.repeat(r.stars) + '☆'.repeat(3 - r.stars) : '☆☆☆'}</span> ${r ? r.score : '—'}</div>`;
+    };
+    el.innerHTML = `<div class="n">Səviyyə ${lv.id}</div><h4>${lv.name}</h4><p>${lv.short}</p>${['learn', 'practice', 'exam'].map(row).join('')}`;
     el.onclick = () => openBrief(lv);
     list.appendChild(el);
   }
@@ -310,14 +334,18 @@ function openBrief(lv) {
   $('briefTitle').textContent = `${lv.id}. ${lv.name}`;
   $('briefShort').textContent = lv.short + ` · Norma: ${lv.par.moves} manevr, ${lv.par.time} saniyə`;
   $('briefTheory').innerHTML = lv.theory.map((t) => `<li>${t}</li>`).join('');
-  $('briefCoach').checked = settings.coach;
-  $('briefGhost').checked = settings.helpers;
+  $('briefHelp').checked = game.practiceHelp;
+  renderModes();
   show('brief');
 }
+function renderModes() {
+  $('briefModes').innerHTML = Object.entries(DRIVE_MODES).map(([k, m]) =>
+    `<button class="mode ${k === game.drive ? 'on' : ''}" data-mode="${k}"><b>${m.name}</b><span>${m.desc}</span></button>`).join('');
+  $('briefModes').querySelectorAll('button').forEach((b) => { b.onclick = () => { game.drive = b.dataset.mode; renderModes(); }; });
+  $('briefHelpRow').classList.toggle('hidden', game.drive !== 'practice');
+}
 $('briefStart').onclick = () => {
-  settings.coach = $('briefCoach').checked;
-  settings.helpers = $('briefGhost').checked;
-  saveJSON(SETTINGS_KEY, settings);
+  game.practiceHelp = $('briefHelp').checked;
   sound.unlock();
   if (TOUCH) {
     // tam ekran və üfüqi rejim (dəstəklənirsə)
@@ -352,26 +380,55 @@ function renderLessons(tab) {
 function renderSettings() {
   const box = $('settingsList');
   box.innerHTML = '';
+  const save = () => { saveJSON(SETTINGS_KEY, settings); applySettings(); };
   for (const k of Object.keys(DEFAULTS)) {
+    if (k.startsWith('touch') && !TOUCH) continue;
     const l = document.createElement('label');
-    const inp = document.createElement('input');
-    if (k === 'volume') {
-      inp.type = 'range'; inp.min = 0; inp.max = 1; inp.step = 0.05; inp.value = settings[k];
-      inp.oninput = () => { settings.volume = +inp.value; sound.setVolume(settings.volume); saveJSON(SETTINGS_KEY, settings); };
+    let inp;
+    if (k === 'touchMode') {
+      inp = document.createElement('select');
+      inp.innerHTML = '<option value="wheel">Fırlanan sükan</option><option value="slider">Sağa-sola sürüşdürmə</option>';
+      inp.value = settings[k];
+      inp.onchange = () => { settings[k] = inp.value; save(); };
+    } else if (typeof DEFAULTS[k] === 'number') {
+      inp = document.createElement('input');
+      const [min, max, step] = { volume: [0, 1, 0.05], touchSens: [1, 4, 0.5], touchSize: [0.8, 1.4, 0.1] }[k];
+      Object.assign(inp, { type: 'range', min, max, step, value: settings[k] });
+      inp.oninput = () => { settings[k] = +inp.value; sound.setVolume(settings.volume); save(); };
     } else {
-      inp.type = 'checkbox'; inp.checked = settings[k];
-      inp.onchange = () => { settings[k] = inp.checked; saveJSON(SETTINGS_KEY, settings); applySettings(); };
+      inp = document.createElement('input');
+      inp.type = 'checkbox';
+      inp.checked = settings[k];
+      inp.onchange = () => { settings[k] = inp.checked; save(); };
     }
+    inp.id = 'set-' + k;
     l.append(SETTING_LABELS[k], inp);
     box.appendChild(l);
   }
-  const info = document.createElement('p');
-  info.className = 'note';
-  info.textContent = `Sükan nisbəti ${CAR.steerRatio.toFixed(1)}:1 — sükanın 450° dönməsi (900° tam) ön təkərləri ${(CAR.maxSteer * 180 / Math.PI).toFixed(0)}° çevirir. Minimum dönmə radiusu (arxa ox): ${CAR.minRadius.toFixed(2)} m.`;
+  const info = document.createElement('div');
+  info.className = 'note spec';
+  const row = (name, f, fmt) => `<tr><td>${name}</td><td>${fmt}${f.est ? ' <i>təxmini</i>' : ''}</td><td>${f.src}</td></tr>`;
+  info.innerHTML = `<b>${SPEC.model}</b><table>
+    ${row('Uzunluq', SPEC.length, SPEC.length.v.toFixed(3) + ' m')}
+    ${row('En', SPEC.width, SPEC.width.v.toFixed(3) + ' m')}
+    ${row('Təkər bazası', SPEC.wheelbase, SPEC.wheelbase.v.toFixed(2) + ' m')}
+    ${row('İz eni', SPEC.track, SPEC.track.v + ' m')}
+    ${row('Ön / arxa çıxıntı', SPEC.frontOverhang, SPEC.frontOverhang.v + ' / ' + SPEC.rearOverhang.v + ' m')}
+    ${row('Dönmə radiusu', SPEC.turnRadius, SPEC.turnRadius.v + ' m')}
+    ${row('Sükan nisbəti', SPEC.steerRatio, SPEC.steerRatio.v + ':1 (modeldə effektiv ' + CAR.steerRatio.toFixed(1) + ':1, təkər bucağı ' + (CAR.maxSteer * 180 / Math.PI).toFixed(1) + '° — dönmə radiusundan)')}
+    ${row('Sükan dövrəsi', SPEC.lockToLock, SPEC.lockToLock.v + ' dövrə (±' + Math.round(CAR.wheelLock) + '°)')}
+    ${row('Park sensoru', SPEC.parkSensors, 'standart deyil')}
+    ${row('Arxa kamera', SPEC.rearCamera, 'standart')}
+  </table>`;
   box.appendChild(info);
 }
 function applySettings() {
   renderer.shadowMap.enabled = settings.shadows;
+  touchUI.applyLayout();
+  if (game.level && game.drive !== 'exam') {
+    game.help.sensors = settings.sensors;
+    document.querySelector('.sensor').classList.toggle('hidden', !game.help.sensors);
+  }
   scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; });
 }
 applySettings();
@@ -379,12 +436,9 @@ applySettings();
 // Pauza / nəticə düymələri
 $('resume').onclick = () => setMode('play');
 $('restart').onclick = () => startLevel(game.level);
-$('pauseTheory').onclick = () => openBrief(game.level);
+$('pauseTheory').onclick = () => openBrief(LEVELS[game.level.id - 1]);
 $('resRetry').onclick = () => startLevel(game.level);
-$('resNext').onclick = () => {
-  const i = LEVELS.indexOf(game.level);
-  openBrief(LEVELS[(i + 1) % LEVELS.length]);
-};
+$('resNext').onclick = () => openBrief(LEVELS[game.level.id % LEVELS.length]);
 
 let toastTimer = 0;
 function toast(msg, bad = false) {
@@ -446,15 +500,16 @@ function shiftTo(g, inp) {
   const moving = Math.abs(car.v) > 0.3;
   if (settings.realGear) {
     if (g !== 'N' && inp.brake < 0.25 && !inp.handbrake) {
-      toast(TOUCH ? 'Ötürməni dəyişmək üçün əvvəlcə Əyləc pedalını basıb saxlayın' : 'Ötürməni dəyişmək üçün əyləci basıb saxlayın (S)', true);
+      toast(TOUCH ? 'Əvvəlcə Əyləci basıb saxlayın' : 'Əyləci basıb saxlayın (S)', true);
       sound.warn();
       return;
     }
     const dirNow = car.gear === 'D' ? 1 : car.gear === 'R' ? -1 : 0;
     const dirNew = g === 'D' ? 1 : g === 'R' ? -1 : 0;
     if (moving && (g === 'P' || (dirNew && dirNew !== dirNow && Math.sign(car.v) !== dirNew))) {
-      toast('Əvvəlcə maşını TAM dayandırın!', true);
+      toast('Əvvəlcə TAM dayanın', true);
       sound.warn();
+      game.stats.gearAbuse++;
       return;
     }
   }
@@ -465,7 +520,6 @@ function shiftTo(g, inp) {
   }
   car.gear = g;
   sound.shift();
-  if (g === 'R' && settings.autoRearCam) toast('R — arxa kamera açıldı. Güzgülərə və çiyin üstündən də baxın!');
 }
 function shiftStep(d, inp) {
   const i = GEARS.indexOf(car.gear);
@@ -479,39 +533,14 @@ function toggleBlinker(side) {
   sound.tick(true);
 }
 function cycleCam() {
+  if (!game.help.freeCam) { toast('İmtahanda yalnız sürücü görünüşü'); return; }
   const order = ['driver', 'top', 'chase'];
   game.camMode = order[(order.indexOf(game.camMode) + 1) % order.length];
-  $('camName').textContent = CAM_NAMES[game.camMode];
-  toast('Kamera: ' + CAM_NAMES[game.camMode]);
+  toast(CAM_NAMES[game.camMode]);
 }
 
-// ---------- Park sensorları ----------
-const SENSORS = [
-  ...[-0.75, -0.28, 0.28, 0.75].map((x) => ({ lx: x, lz: CAR.wheelbase + CAR.frontOverhang, nx: x * 0.6, nz: 1, f: true })),
-  ...[-0.75, -0.28, 0.28, 0.75].map((x) => ({ lx: x, lz: -CAR.rearOverhang, nx: x * 0.6, nz: -1, f: false })),
-];
+// ---------- Park sensorları (köməkçi) ----------
 const sensorDetail = new Array(8).fill(9);
-function computeSensors() {
-  let front = 9, rear = 9;
-  const pose = car.pose;
-  const [ax, az] = obbAxes(car.h);
-  SENSORS.forEach((s, i) => {
-    const p = toWorld(s.lx, s.lz, pose);
-    const nl = Math.hypot(s.nx, s.nz);
-    const nwx = (ax[0] * s.nx + az[0] * s.nz) / nl, nwz = (ax[1] * s.nx + az[1] * s.nz) / nl;
-    let best = 9;
-    for (const o of game.obstacles) {
-      if (Math.abs(o.cx - p.x) > o.hl + o.hw + 3 || Math.abs(o.cz - p.z) > o.hl + o.hw + 3) continue;
-      const q = closestOnObb(p.x, p.z, o);
-      if (q.d > 2.5) continue;
-      const dot = (q.x - p.x) * nwx + (q.z - p.z) * nwz;
-      if (dot >= 0.6 * q.d || q.d < 0.05) best = Math.min(best, q.d);
-    }
-    sensorDetail[i] = best;
-    if (s.f) front = Math.min(front, best); else rear = Math.min(rear, best);
-  });
-  game.sensors = { front, rear };
-}
 function sensorColor(d) {
   return d < 0.3 ? '#ff3b3b' : d < 0.6 ? '#ff8c1a' : d < 1.0 ? '#ffd400' : d < 1.6 ? '#3ddc84' : 'rgba(255,255,255,.08)';
 }
@@ -540,8 +569,8 @@ function drawSensorIcon() {
   $('sFront').innerHTML = f;
   $('sRear').innerHTML = r;
   const fmt = (d) => (d < 2.5 ? (d * 100).toFixed(0) + ' sm' : '—');
-  $('sdF').textContent = 'Ön ' + fmt(game.sensors.front);
-  $('sdR').textContent = 'Arxa ' + fmt(game.sensors.rear);
+  $('sdF').textContent = 'Ön ' + fmt(game.clear.front);
+  $('sdR').textContent = 'Arxa ' + fmt(game.clear.rear);
 }
 
 // ---------- Oyun yeniləməsi ----------
@@ -558,12 +587,12 @@ function updatePlay(dt, inp) {
   if (input.consume('KeyC')) cycleCam();
   if (input.consume('KeyV')) game.rearCamManual = !game.rearCamManual;
   if (input.consume('KeyM')) { settings.mirrors = !settings.mirrors; saveJSON(SETTINGS_KEY, settings); }
-  if (input.consume('KeyH')) {
+  if (input.consume('KeyH') && game.drive !== 'exam') {
     if (game.coach) game.coach = null;
     else { game.coach = new Coach(game.level.coach); fastForwardCoach(); }
     $('coach').classList.toggle('hidden', !game.coach);
   }
-  if (input.consume('KeyG')) { settings.helpers = !settings.helpers; saveJSON(SETTINGS_KEY, settings); }
+  if (input.consume('KeyG') && game.drive !== 'exam') game.help.ghost = !game.help.ghost;
   if (input.consume('KeyT')) { startLevel(game.level); return; }
   if (input.consume('Enter')) { finish(); return; }
   for (const ev of input.padEvents) {
@@ -606,6 +635,10 @@ function updatePlay(dt, inp) {
   if (st.moves > 0 && !game.finished) st.time += dt;
   st.maxSpeed = Math.max(st.maxSpeed, car.speedKmh);
   if (game.blinker === game.level.signal) { st.signalTime += dt; if (st.signalTime > 1) st.signaled = true; }
+  if (car.gear === 'R') {
+    if (Math.abs(car.v) > 0.12) st.reversed = true;
+    if (input.keys.has('KeyB') || game.yaw < -1.6) st.lookedBack = true;
+  }
 
   // siqnal relesi
   if (game.blinker) {
@@ -613,14 +646,14 @@ function updatePlay(dt, inp) {
     if (game.blinkT > 0.38) { game.blinkT = 0; game.blinkOn = !game.blinkOn; sound.tick(game.blinkOn); }
   } else game.blinkOn = false;
 
-  computeSensors();
-  sound.sensors(game.sensors.front, game.sensors.rear, dt, settings.sensors && car.gear !== 'P');
+  game.clear = bumperClearance(car.pose, game.obstacles, sensorDetail);
+  sound.sensors(game.clear.front, game.clear.rear, dt, game.help.sensors && car.gear !== 'P');
   sound.engine(inp.throttle, Math.abs(car.v), true);
 
   // təlimatçı
   if (game.coach) {
     const prev = game.coach.i;
-    const r = game.coach.update({ ...car.pose, v: car.v, delta: car.delta, gear: car.gear, steer: car.steer, blinker: game.blinker, sensors: game.sensors });
+    const r = game.coach.update({ ...car.pose, v: car.v, delta: car.delta, gear: car.gear, steer: car.steer, blinker: game.blinker, clear: game.clear });
     game.coachRes = r;
     if (game.coach.i !== prev) sound.step();
     renderCoach(r);
@@ -637,20 +670,22 @@ function updatePlay(dt, inp) {
 function fastForwardCoach() {
   const c = game.coach;
   for (let k = 0; k < c.steps.length; k++) {
-    const r = c.update({ ...car.pose, v: car.v, delta: car.delta, gear: car.gear, steer: car.steer, blinker: game.blinker, sensors: game.sensors });
+    const r = c.update({ ...car.pose, v: car.v, delta: car.delta, gear: car.gear, steer: car.steer, blinker: game.blinker, clear: game.clear });
     if (!r.advanced) break;
   }
 }
 
 let coachShown = '';
 function renderCoach(r) {
-  const key = r.text + '|' + r.hint + '|' + r.status;
+  const showHint = settings.details || r.status === 'back' || r.status === 'stop';
+  const key = r.text + '|' + r.remain + '|' + (showHint ? r.hint : '') + '|' + r.status;
   if (key === coachShown) return;
   coachShown = key;
-  const keys = (t) => (TOUCH ? t.replace(/\(X\)/g, '(▶)').replace(/\(Z\)/g, '(◀)').replace(/\(B\)/g, '(👀)').replace(/Z\/X/g, '◀/▶').replace(/ \(S\)/g, '') : t);
+  const keys = (t) => (TOUCH ? t.replace(/\(X\)/g, '(▶)').replace(/\(Z\)/g, '(◀)').replace(/\(B\)/g, '(👀)') : t);
   $('coachText').textContent = keys(r.text);
-  $('coachHint').textContent = keys(r.hint);
-  $('coachStep').textContent = `Addım ${Math.min(r.stepNo, r.total)}/${r.total}`;
+  $('coachRemain').textContent = r.remain || '';
+  $('coachHint').textContent = showHint && r.status !== 'stop' ? keys(r.hint) : '';
+  $('coachStep').textContent = `${Math.min(r.stepNo, r.total)}/${r.total}`;
   $('coach').className = 'coach' + (r.status === 'stop' ? ' stop' : r.status === 'back' ? ' back' : '');
   if (settings.voice && r.text !== game.lastSpoken) {
     game.lastSpoken = r.text;
@@ -661,27 +696,32 @@ function renderCoach(r) {
 function finish() {
   if (game.finished) return;
   game.finished = true;
-  const res = evaluate(game.level, car, game.stats);
-  const id = game.level.id;
-  if (res.passed && (!results[id] || res.score > results[id].score)) {
-    results[id] = { score: res.score, stars: res.stars };
+  const res = evaluate(game.level, car, game.stats, game.drive);
+  const key = `${game.level.id}-${game.drive}`;
+  if (res.passed && (!results[key] || res.score > results[key].score)) {
+    results[key] = { score: res.score, stars: res.stars };
     saveJSON(RESULTS_KEY, results);
   }
   if (res.passed) sound.success(); else sound.warn();
-  $('resTitle').textContent = res.passed ? (res.stars === 3 ? 'Əla! Mükəmməl park 🎉' : 'Park edildi ✓') : 'Alınmadı — yenidən cəhd edin';
+  const exam = game.drive === 'exam';
+  $('resTitle').textContent = exam
+    ? (res.passed ? 'İmtahan: KEÇDİ ✓' : 'İmtahan: KEÇMƏDİ ✗')
+    : res.passed ? (res.stars === 3 ? 'Əla park' : 'Park edildi ✓') : 'Alınmadı';
   $('resStars').innerHTML = [0, 1, 2].map((i) => `<span class="${i < res.stars ? '' : 'off'}">★</span>`).join('');
   $('resScore').textContent = res.score;
   const s = game.stats;
   const mm = Math.floor(s.time / 60), ss = Math.floor(s.time % 60).toString().padStart(2, '0');
+  const t = game.level.target;
   $('resGrid').innerHTML = [
     ['Vaxt', `${mm}:${ss}`],
     ['Toqquşma', s.collisions],
     ['Bordür', s.curbHits],
     ['Manevr', `${s.moves} / ${game.level.par.moves}`],
     ['Bucaq xətası', res.angleErr.toFixed(1) + '°'],
-    [game.level.target.zone ? 'Zolaqda' : 'Xəttin içində', res.inside ? 'Bəli' : `Xeyr (${(res.maxOut * 100).toFixed(0)} sm)`],
+    [t.zone ? 'Zolaqda' : 'Xəttin içində', res.inside ? 'Bəli' : `${(res.maxOut * 100).toFixed(0)} sm kənar`],
+    ...(res.curbDist !== null ? [['Bordürə', `${(res.curbDist * 100).toFixed(0)} sm`]] : []),
   ].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
-  $('resNotes').innerHTML = res.notes.map((n) => `<li>${n}</li>`).join('');
+  $('resNotes').innerHTML = [...res.fails.map((n) => `<li class="fail">✗ ${n}</li>`), ...res.notes.map((n) => `<li>${n}</li>`)].join('');
   setMode('result');
   show('result');
 }
@@ -689,6 +729,7 @@ function finish() {
 // ---------- HUD ----------
 function updateHUD(inp) {
   $('spd').textContent = car.speedKmh.toFixed(1);
+  $('mph').textContent = (car.speedKmh / 1.609).toFixed(1) + ' mph';
   document.querySelectorAll('#gears b').forEach((b) => b.classList.toggle('on', b.dataset.g === car.gear));
   $('bl').classList.toggle('on', game.blinker === 'L' && game.blinkOn);
   $('br').classList.toggle('on', game.blinker === 'R' && game.blinkOn);
@@ -698,10 +739,10 @@ function updateHUD(inp) {
   $('pb').style.setProperty('--v', inp.brake * 100 + '%');
   $('pc').style.setProperty('--v', inp.clutch * 100 + '%');
   const s = game.stats;
+  if (game.help.sensors) drawSensorIcon();
   $('tm').textContent = `${Math.floor(s.time / 60)}:${Math.floor(s.time % 60).toString().padStart(2, '0')}`;
   $('col').textContent = s.collisions + (s.curbHits ? ` (+${s.curbHits} bordür)` : '');
   $('mv').textContent = s.moves;
-  drawSensorIcon();
 }
 
 // ---------- Vizual və render ----------
@@ -736,7 +777,7 @@ function updateVisuals(dt, inp) {
   }
 
   // köməkçilər
-  const helpers = settings.helpers;
+  const helpers = game.help.ghost;
   const ghostPose = helpers && game.coachRes && game.coachRes.ghost;
   ghost.visible = !!ghostPose;
   if (ghostPose) {
@@ -744,7 +785,8 @@ function updateVisuals(dt, inp) {
     ghost.rotation.y = ghostPose.h;
   }
   if (helpers) updateTrajectory();
-  updateRearDynamic();
+  rearDyn.forEach((r) => { r.visible = helpers; });
+  if (helpers) updateRearDynamic();
 
   sun.position.set(car.x + 20, 40, car.z + 12);
   sun.target.position.set(car.x, 0, car.z);
@@ -755,7 +797,7 @@ function mainCamera() {
   cam.layers.disableAll();
   cam.layers.enable(LAYER.WORLD);
   cam.layers.enable(game.camMode === 'driver' ? LAYER.INTERIOR : LAYER.BODY);
-  if (settings.helpers) cam.layers.enable(LAYER.HELPERS);
+  if (game.help.ghost) cam.layers.enable(LAYER.HELPERS);
   return cam;
 }
 
@@ -852,4 +894,14 @@ show('menu');
 requestAnimationFrame(frame);
 
 // test və sazlama üçün
+// Tətbiqdən çıxanda (fon, başqa pəncərə) avtomatik pauza və girişlərin sıfırlanması
+function autoPause() {
+  input.keys.clear();
+  touchUI.release();
+  if (game.mode === 'play') { setMode('pause'); show('pause'); }
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });
+addEventListener('blur', autoPause);
+addEventListener('pagehide', autoPause);
+
 window.__park = { game, car, startLevel, LEVELS, finish };

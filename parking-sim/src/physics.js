@@ -5,20 +5,51 @@
 
 export const DEG = Math.PI / 180;
 
-export const CAR = {
-  length: 4.5,
-  width: 1.8,
-  wheelbase: 2.7,
-  rearOverhang: 0.85,
-  frontOverhang: 0.95,
-  track: 1.55,
-  maxSteer: 35 * DEG,
-  wheelLock: 450, // sükanın bir tərəfə maksimum dönməsi (900° tam)
-  mass: 1400,
+// 2023 Hyundai Elantra SEL (ABŞ bazarı). Mənbələr README-dədir.
+// "est" — dəqiq rəsmi rəqəm tapılmadı, təxmini/hesablanmış dəyərdir.
+export const SPEC = {
+  model: '2023 Hyundai Elantra SEL (ABŞ)',
+  length: { v: 4.676, src: '184.1 in (Hyundai spesifikasiyası, dilerlər)' },
+  width: { v: 1.826, src: '71.9 in (KBB, dilerlər)' },
+  height: { v: 1.415, src: '55.7 in' },
+  wheelbase: { v: 2.72, src: '107.1 in (Hyundai spesifikasiyası)' },
+  track: { v: 1.585, src: '62.4 in ön (J.D. Power); 16" təkər üçün', est: true },
+  frontOverhang: { v: 0.91, src: 'rəsmi rəqəm tapılmadı; uzunluq − baza = 1.956 m bölünüb', est: true },
+  rearOverhang: { v: 1.046, src: 'rəsmi rəqəm tapılmadı; 1.956 − 0.91', est: true },
+  turnRadius: { v: 5.39, src: '17.7 ft minimum dönmə radiusu (Hyundai); 35.4 ft dairə (J.D. Power)' },
+  steerRatio: { v: 12.9, src: '12.9:1 (Hyundai 2021 Elantra spesifikasiyası; 2023 üçün eyni qəbul edilib)', est: true },
+  lockToLock: { v: 2.48, src: '2.48 dövrə (Hyundai 2021 Elantra spesifikasiyası)', est: true },
+  tire: { v: '205/55R16', src: 'SEL 16" disk', est: true },
+  mass: { v: 1301, src: '2,868 lb (dilerlər)' },
+  parkSensors: { v: false, src: 'Arxa park məsafə xəbərdarlığı 2023 SEL-də standart deyil — $1,900 Convenience Package (Hyundai qiymət cədvəli, 04.01.2023)' },
+  rearCamera: { v: true, src: 'Arxa görüntü kamerası standartdır (KBB, CarMax); xətlərin dinamik olması rəsmi təsdiqlənmədi', est: true },
 };
-CAR.steerRatio = CAR.wheelLock / (CAR.maxSteer / DEG); // ≈ 12.9 : 1
-CAR.centerOffset = CAR.length / 2 - CAR.rearOverhang; // arxa oxdan gövdə mərkəzinə (1.4 m)
+
+const WHEEL_LOCK = (SPEC.lockToLock.v * 360) / 2; // bir tərəfə ≈ 446°
+// Velosiped modelinin maksimum bucağı rəsmi dönmə radiusundan hesablanır:
+// 5.39 m xarici ön təkərin xarici kənarına qədərdir (təkər yarım eni ≈ 0.1 m).
+const R_OUTER_WHEEL = SPEC.turnRadius.v - 0.1;
+const R_REAR = Math.sqrt(R_OUTER_WHEEL ** 2 - SPEC.wheelbase.v ** 2) - SPEC.track.v / 2;
+
+export const CAR = {
+  length: SPEC.length.v,
+  width: SPEC.width.v,
+  height: SPEC.height.v,
+  wheelbase: SPEC.wheelbase.v,
+  rearOverhang: SPEC.rearOverhang.v,
+  frontOverhang: SPEC.frontOverhang.v,
+  track: SPEC.track.v,
+  maxSteer: Math.atan(SPEC.wheelbase.v / R_REAR), // ≈ 36°
+  wheelLock: WHEEL_LOCK,
+  mass: SPEC.mass.v,
+};
+// Effektiv nisbət ≈ 12.4:1 (rəsmi 12.9:1 — real sükan qeyri-xəttidir, burada xətti qəbul edilir)
+CAR.steerRatio = CAR.wheelLock / (CAR.maxSteer / DEG);
+CAR.centerOffset = CAR.length / 2 - CAR.rearOverhang; // arxa oxdan gövdə mərkəzinə
 CAR.minRadius = CAR.wheelbase / Math.tan(CAR.maxSteer); // arxa oxun minimum dönmə radiusu
+
+// Dayanacaqdakı digər maşınlar (ABŞ-da tipik orta sedan/krossover ölçüsü — təxmini)
+export const PARKED = { length: 4.8, width: 1.86 };
 
 export const LIMITS = {
   vmaxForward: 10 / 3.6, // ~10 km/saat
