@@ -5,6 +5,12 @@ import { buildCar, updateCarVisual, buildGhost, LAYER, VIEW } from './carModel.j
 import { buildWorld } from './world.js';
 import { LEVELS, GENERAL_LESSONS, makeLevel, randomVariant } from './levels.js';
 import { bumperClearance } from './sim.js';
+import { RoadNetwork, nextManeuver } from './city/network.js';
+import { buildCity } from './city/cityWorld.js';
+import { RuleMonitor } from './city/rules.js';
+
+// data/ qovluğundakı şəhər xəritələri (tools/osm-to-city.mjs ilə OSM-dən yaradılır)
+const CITIES = Object.values(import.meta.glob('../data/*.json', { eager: true, import: 'default' }));
 import { Input, Calibrator } from './input.js';
 import { Sound, speak } from './audio.js';
 import { Coach } from './coach.js';
@@ -257,6 +263,7 @@ const game = {
 const CAM_NAMES = { driver: 'Sürücü', top: 'Yuxarıdan', chase: 'Arxadan' };
 
 function startLevel(base, drive = game.drive) {
+  leaveCity();
   game.drive = drive;
   const lv = drive === 'practice' ? makeLevel(base.id, randomVariant(base.id)) : makeLevel(base.id);
   if (game.world) scene.remove(game.world.group);
@@ -283,6 +290,8 @@ function startLevel(base, drive = game.drive) {
   coachShown = '';
   $('lvName').textContent = `${lv.id}. ${lv.name}`;
   $('modeTag').textContent = DRIVE_MODES[drive].name;
+  $('colLbl').textContent = 'Toqquşma';
+  $('mvLbl').textContent = 'Manevr';
   $('coach').classList.toggle('hidden', !game.coach);
   document.querySelector('.sensor').classList.toggle('hidden', !game.help.sensors);
   setMode('play');
@@ -305,6 +314,7 @@ function go(name) {
   if (name === 'levels') renderLevels();
   if (name === 'lessons') renderLessons(0);
   if (name === 'settings') renderSettings();
+  if (name === 'city') renderCities();
   if (name === 'calib') { calib.reset(); setMode('calib'); } else setMode('menu');
   show(name);
 }
@@ -326,6 +336,21 @@ function renderLevels() {
     el.innerHTML = `<div class="n">Səviyyə ${lv.id}</div><h4>${lv.name}</h4><p>${lv.short}</p>${['learn', 'practice', 'exam'].map(row).join('')}`;
     el.onclick = () => openBrief(lv);
     list.appendChild(el);
+  }
+}
+function renderCities() {
+  const box = $('cityList');
+  if (!CITIES.length) {
+    box.innerHTML = `<p class="note">Real Bakı xəritəsi hələ əlavə olunmayıb. OpenStreetMap faylı <code>tools/osm-to-city.mjs</code> ilə <code>data/</code> qovluğuna çevrilməlidir.</p>`;
+    return;
+  }
+  box.innerHTML = '';
+  for (const c of CITIES) {
+    const el = document.createElement('div');
+    el.className = 'lv';
+    el.innerHTML = `<h4>${c.title}</h4><p>${c.roads.length} yol · ${c.signals.length} svetofor · ${c.buildings.length} bina</p><p class="note">${c.source}</p>`;
+    el.onclick = () => { sound.unlock(); startCity(c); };
+    box.appendChild(el);
   }
 }
 let briefLevel = null;
@@ -435,10 +460,10 @@ applySettings();
 
 // Pauza / nəticə düymələri
 $('resume').onclick = () => setMode('play');
-$('restart').onclick = () => startLevel(game.level);
-$('pauseTheory').onclick = () => openBrief(LEVELS[game.level.id - 1]);
-$('resRetry').onclick = () => startLevel(game.level);
-$('resNext').onclick = () => openBrief(LEVELS[game.level.id % LEVELS.length]);
+$('restart').onclick = () => (game.city ? startCity(game.city.data) : startLevel(game.level));
+$('pauseTheory').onclick = () => { if (game.level) openBrief(LEVELS[game.level.id - 1]); };
+$('resRetry').onclick = () => (game.city ? startCity(game.city.data) : startLevel(game.level));
+$('resNext').onclick = () => (game.city ? startCity(game.city.data) : openBrief(LEVELS[game.level.id % LEVELS.length]));
 
 let toastTimer = 0;
 function toast(msg, bad = false) {
@@ -587,14 +612,14 @@ function updatePlay(dt, inp) {
   if (input.consume('KeyC')) cycleCam();
   if (input.consume('KeyV')) game.rearCamManual = !game.rearCamManual;
   if (input.consume('KeyM')) { settings.mirrors = !settings.mirrors; saveJSON(SETTINGS_KEY, settings); }
-  if (input.consume('KeyH') && game.drive !== 'exam') {
+  if (input.consume('KeyH') && game.drive !== 'exam' && !game.city) {
     if (game.coach) game.coach = null;
     else { game.coach = new Coach(game.level.coach); fastForwardCoach(); }
     $('coach').classList.toggle('hidden', !game.coach);
   }
   if (input.consume('KeyG') && game.drive !== 'exam') game.help.ghost = !game.help.ghost;
-  if (input.consume('KeyT')) { startLevel(game.level); return; }
-  if (input.consume('Enter')) { finish(); return; }
+  if (input.consume('KeyT')) { if (game.city) startCity(game.city.data); else startLevel(game.level); return; }
+  if (input.consume('Enter')) { if (game.city) finishCity(); else finish(); return; }
   for (const ev of input.padEvents) {
     if (['D', 'R', 'N', 'P'].includes(ev)) shiftTo(ev, inp);
     if (ev === 'up') shiftStep(1, inp);
@@ -603,6 +628,8 @@ function updatePlay(dt, inp) {
     if (ev === 'sigR') toggleBlinker('R');
     if (ev === 'cam') cycleCam();
   }
+
+  if (game.city) { updateCity(dt, inp); return; }
 
   // fizika
   const sub = 4;
@@ -722,6 +749,236 @@ function finish() {
     ...(res.curbDist !== null ? [['Bordürə', `${(res.curbDist * 100).toFixed(0)} sm`]] : []),
   ].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
   $('resNotes').innerHTML = [...res.fails.map((n) => `<li class="fail">✗ ${n}</li>`), ...res.notes.map((n) => `<li>${n}</li>`)].join('');
+  setMode('result');
+  show('result');
+}
+
+// ---------- Şəhər sürüşü (Bakı) ----------
+function leaveCity() {
+  if (!game.city) return;
+  game.city = null;
+  input.selfCenter = 0;
+  input.steerRate = 1;
+  document.body.classList.remove('city');
+}
+
+function startCity(data) {
+  if (game.world) scene.remove(game.world.group);
+  const net = new RoadNetwork(data);
+  const world = buildCity(data, net);
+  scene.add(world.group);
+  // başlanğıc: mərkəzə yaxın, ən azı 60 m uzunluğunda seqmentin sağ zolağı
+  const segs = net.segs.filter((s) => s.len > 40 && s.road.type !== 'service');
+  segs.sort((a, b) => Math.hypot((a.ax + a.bx) / 2, (a.az + a.bz) / 2) - Math.hypot((b.ax + b.bx) / 2, (b.az + b.bz) / 2));
+  const pick = segs[Math.floor(Math.random() * Math.min(12, segs.length))];
+  const lane = pick.road.oneway ? pick.halfW - data.defaults.laneWidth / 2 : pick.halfW / 2;
+  const t = Math.min(pick.len * 0.3, 15);
+  // sağ zolaq: sağ vektor = (−dz, dx)
+  const px = pick.ax + pick.dx * t - pick.dz * lane;
+  const pz = pick.az + pick.dz * t + pick.dx * lane;
+  const h = Math.atan2(pick.dx, pick.dz);
+  // təyinat: 500–1500 m uzunluğunda marşrut
+  const startNode = pick.b;
+  let route = null, dest = null;
+  const ids = [...net.pos.keys()];
+  for (let k = 0; k < 60 && !route; k++) {
+    const cand = ids[Math.floor(Math.random() * ids.length)];
+    const r = net.route(startNode, cand);
+    if (r && r.length > 500 && r.length < 1500) { route = r; dest = cand; }
+  }
+  if (!route) {
+    for (const cand of ids) { const r = net.route(startNode, cand); if (r && (!route || r.length > route.length)) { route = r; dest = cand; } }
+  }
+  game.world = { group: world.group, obstacles: [] };
+  game.obstacles = [];
+  game.level = null;
+  game.coach = null;
+  game.city = { data, net, world, rules: new RuleMonitor(net), route, dest, time: 0, odo: 0, maxSpeed: 0, collisions: 0, lastHit: -9, startNode };
+  car.reset({ x: px - Math.sin(h) * CAR.centerOffset, z: pz - Math.cos(h) * CAR.centerOffset, h }, 'city');
+  input.kbSteer = 0;
+  if (input.touch) input.touch.steer = 0;
+  game.help = { coach: false, ghost: false, sensors: false, freeCam: true };
+  game.stats = { time: 0, collisions: 0, curbHits: 0, moves: 0, signaled: false, signalTime: 0, maxSpeed: 0 };
+  game.blinker = null;
+  game.finished = false;
+  game.camMode = 'driver';
+  game.yaw = game.yawTarget = 0;
+  game.topZoom = 60;
+  $('lvName').textContent = data.title;
+  $('modeTag').textContent = 'Şəhər';
+  $('colLbl').textContent = 'Pozuntu';
+  $('mvLbl').textContent = 'Məsafə';
+  $('coach').classList.remove('hidden');
+  document.querySelector('.sensor').classList.add('hidden');
+  document.body.classList.add('city');
+  setMode('play');
+  drawMinimapBase();
+}
+
+function updateCity(dt, inp) {
+  const C = game.city;
+  C.time += dt;
+  // klaviatura: sürət artdıqca sükan yavaş fırlanır və özü mərkəzə qayıdır
+  const sp = Math.abs(car.v);
+  input.steerRate = Math.max(0.22, 1 - sp / 22);
+  input.selfCenter = sp > 1 ? 0.4 + sp * 0.06 : 0;
+  const near = C.world.nearObstacles(car.x, car.z);
+  const pin = { ...inp, clutchMode: settings.clutchMode && !!input.map?.clutch };
+  for (let i = 0; i < 4; i++) {
+    const hit = car.step(dt / 4, pin, near);
+    if (hit && C.time - C.lastHit > 1) {
+      C.collisions++;
+      const v = C.rules.collision(C.time);
+      if (v) violationToast(v);
+      sound.crash(hit.impact);
+      input.rumble(Math.min(1, 0.4 + hit.impact), 0.6, 250);
+    }
+    if (hit) C.lastHit = C.time;
+  }
+  C.odo += Math.abs(car.v) * dt;
+  C.maxSpeed = Math.max(C.maxSpeed, car.speedKmh);
+  if (game.blinker) {
+    game.blinkT += dt;
+    if (game.blinkT > 0.38) { game.blinkT = 0; game.blinkOn = !game.blinkOn; sound.tick(game.blinkOn); }
+  } else game.blinkOn = false;
+  sound.engine(inp.throttle, sp, true);
+  C.world.update(C.time);
+  const f = toWorld(0, CAR.wheelbase + CAR.frontOverhang, car.pose);
+  for (const v of C.rules.update(dt, { x: car.x, z: car.z, h: car.h, v: car.v, frontX: f.x, frontZ: f.z }, game.blinker, C.time)) violationToast(v);
+  // naviqasiya
+  const man = nextManeuver(C.net, C.route?.nodes, car.x, car.z);
+  const [dx, dz] = C.net.pos.get(C.dest) || [0, 0];
+  const toDest = Math.hypot(dx - car.x, dz - car.z);
+  renderNav(man, toDest);
+  if (toDest < 12 && sp < 0.5) finishCity();
+  updateCityHUD(inp);
+}
+
+function violationToast(v) {
+  toast(`${v.critical ? '⛔' : '⚠️'} ${v.name}${v.extra ? ' (' + v.extra + ')' : ''} −${v.points}`, true);
+  sound.warn();
+}
+
+const TURN_TXT = { left: '↰ Sola dönün', right: '↱ Sağa dönün', straight: '↑ Düz', arrive: '🏁 Təyinat' };
+let navShown = '';
+function renderNav(man, toDest) {
+  const C = game.city;
+  const warn = C.rules.warning;
+  let text, remain = '', hint = '';
+  if (toDest < 30) { text = '🏁 Təyinat — sağda dayanın'; remain = `${Math.round(toDest)} m`; }
+  else if (man) {
+    text = TURN_TXT[man.turn];
+    remain = man.dist > 1000 ? `${(man.dist / 1000).toFixed(1)} km` : `${Math.round(man.dist / 10) * 10} m`;
+    hint = man.name ? man.name : '';
+  } else text = '↑ Düz davam edin';
+  const key = text + remain + hint + warn;
+  if (key === navShown) return;
+  navShown = key;
+  $('coachStep').textContent = '';
+  $('coachText').textContent = text;
+  $('coachRemain').textContent = remain;
+  $('coachHint').textContent = warn || hint;
+  $('coach').className = 'coach' + (warn ? ' back' : '');
+}
+
+function updateCityHUD(inp) {
+  const C = game.city;
+  $('spd').textContent = car.speedKmh.toFixed(0);
+  $('mph').textContent = (car.speedKmh / 1.609).toFixed(0) + ' mph';
+  $('limitSign').textContent = C.rules.limit;
+  $('limitSign').classList.toggle('over', car.speedKmh > C.rules.limit);
+  document.querySelectorAll('#gears b').forEach((b) => b.classList.toggle('on', b.dataset.g === car.gear));
+  $('bl').classList.toggle('on', game.blinker === 'L' && game.blinkOn);
+  $('br').classList.toggle('on', game.blinker === 'R' && game.blinkOn);
+  $('wheelIcon').style.transform = `rotate(${car.wheelDeg}deg)`;
+  $('wdeg').textContent = `${Math.round(car.wheelDeg)}°`;
+  $('pq').style.setProperty('--v', inp.throttle * 100 + '%');
+  $('pb').style.setProperty('--v', inp.brake * 100 + '%');
+  $('pc').style.setProperty('--v', inp.clutch * 100 + '%');
+  $('tm').textContent = `${Math.floor(C.time / 60)}:${Math.floor(C.time % 60).toString().padStart(2, '0')}`;
+  $('col').textContent = C.rules.violations.length;
+  $('mv').textContent = (C.odo / 1000).toFixed(2) + ' km';
+  $('roadName').textContent = C.rules.road?.name || '';
+  drawMinimap();
+}
+
+// Mini-xəritə: yollar bir dəfə çəkilir, maşın və marşrut hər kadrda
+let mmBase = null;
+const MM = { size: 200, scale: 0.35 };
+function drawMinimapBase() {
+  const C = game.city;
+  mmBase = document.createElement('canvas');
+  const half = Math.max(C.data.half[0], C.data.half[1]) + 50;
+  mmBase.width = mmBase.height = 1024;
+  MM.k = 1024 / (half * 2);
+  const g = mmBase.getContext('2d');
+  g.fillStyle = '#20252b';
+  g.fillRect(0, 0, 1024, 1024);
+  g.lineCap = 'round';
+  g.strokeStyle = '#6b7480';
+  for (const r of C.data.roads) {
+    g.lineWidth = Math.max(1.5, r.width * MM.k);
+    g.beginPath();
+    r.pts.forEach(([x, z], i) => { const X = 512 + x * MM.k, Z = 512 + z * MM.k; if (i) g.lineTo(X, Z); else g.moveTo(X, Z); });
+    g.stroke();
+  }
+  if (C.route) {
+    g.strokeStyle = '#2ee66b';
+    g.lineWidth = 4;
+    g.beginPath();
+    C.route.nodes.forEach((id, i) => { const [x, z] = C.net.pos.get(id); const X = 512 + x * MM.k, Z = 512 + z * MM.k; if (i) g.lineTo(X, Z); else g.moveTo(X, Z); });
+    g.stroke();
+    const [dx, dz] = C.net.pos.get(C.dest);
+    g.fillStyle = '#ff4d4d';
+    g.beginPath(); g.arc(512 + dx * MM.k, 512 + dz * MM.k, 8, 0, Math.PI * 2); g.fill();
+  }
+}
+function drawMinimap() {
+  const cv = $('minimap');
+  if (!cv || !mmBase) return;
+  const g = cv.getContext('2d');
+  const S = cv.width;
+  const view = 260; // m — görünən sahə
+  const px = 512 + car.x * MM.k, pz = 512 + car.z * MM.k;
+  const span = view * MM.k;
+  g.save();
+  g.clearRect(0, 0, S, S);
+  g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2); g.clip();
+  // maşın yuxarı baxsın
+  g.translate(S / 2, S / 2);
+  g.rotate(Math.PI + car.h);
+  g.drawImage(mmBase, px - span / 2, pz - span / 2, span, span, -S / 2, -S / 2, S, S);
+  g.restore();
+  g.fillStyle = '#fff';
+  g.beginPath(); g.moveTo(S / 2, S / 2 - 9); g.lineTo(S / 2 + 6, S / 2 + 7); g.lineTo(S / 2 - 6, S / 2 + 7); g.closePath(); g.fill();
+}
+
+function finishCity() {
+  if (game.finished) return;
+  game.finished = true;
+  const C = game.city;
+  const sum = C.rules.summary();
+  const [dx, dz] = C.net.pos.get(C.dest) || [0, 0];
+  const arrived = Math.hypot(dx - car.x, dz - car.z) < 15;
+  const passed = sum.passed && arrived;
+  const score = Math.max(0, 100 - sum.points);
+  if (passed) sound.success(); else sound.warn();
+  $('resTitle').textContent = passed ? 'Marşrut qaydalara uyğun keçildi ✓' : arrived ? 'Təyinata çatdınız, amma pozuntular var' : 'Təyinata çatılmadı';
+  const stars = !passed ? 0 : score >= 95 ? 3 : score >= 85 ? 2 : 1;
+  $('resStars').innerHTML = [0, 1, 2].map((i) => `<span class="${i < stars ? '' : 'off'}">★</span>`).join('');
+  $('resScore').textContent = score;
+  $('resGrid').innerHTML = [
+    ['Vaxt', `${Math.floor(C.time / 60)}:${Math.floor(C.time % 60).toString().padStart(2, '0')}`],
+    ['Məsafə', `${(C.odo / 1000).toFixed(2)} km`],
+    ['Pozuntu', C.rules.violations.length],
+    ['Cərimə xalı', sum.points],
+    ['Maks. sürət', `${Math.round(C.maxSpeed)} km/saat`],
+    ['Marşrut', C.route ? `${(C.route.length / 1000).toFixed(2)} km` : '—'],
+  ].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+  const list = C.rules.violations.map((v) => `<li class="${v.critical ? 'fail' : ''}">${v.critical ? '✗' : '−' + v.points} ${v.name}${v.extra ? ' (' + v.extra + ')' : ''} — ${Math.floor(v.time / 60)}:${Math.floor(v.time % 60).toString().padStart(2, '0')}</li>`);
+  if (!list.length) list.push('<li>Heç bir pozuntu yoxdur.</li>');
+  list.push(`<li class="src">Xəritə: ${C.data.source}</li>`);
+  $('resNotes').innerHTML = list.join('');
   setMode('result');
   show('result');
 }
@@ -904,4 +1161,4 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) autoP
 addEventListener('blur', autoPause);
 addEventListener('pagehide', autoPause);
 
-window.__park = { game, car, startLevel, LEVELS, finish };
+window.__park = { game, car, startLevel, LEVELS, finish, startCity, CITIES };

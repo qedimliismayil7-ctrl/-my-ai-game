@@ -7,8 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node tests/run.mjs",
-    "build:single": "vite build && node scripts/single.mjs"
+    "test": "node tests/run.mjs && node tests/city.mjs",
+    "build:single": "vite build && node scripts/single.mjs",
+    "city": "node tools/osm-to-city.mjs"
   },
   "dependencies": {
     "three": "^0.169.0"

@@ -59,6 +59,9 @@ export const LIMITS = {
 
 export const GEARS = ['P', 'R', 'N', 'D'];
 
+// Şəhər sürüşü üçün (təxmini): kütlə sürücü ilə, güc, hava müqaviməti əmsalı 0.5·ρ·Cd·A/m
+export const CITY = { mass: 1380, power: 110000, drag: (0.5 * 1.2 * 0.27 * 2.2) / 1380 };
+
 export function wrapAngle(a) {
   while (a > Math.PI) a -= 2 * Math.PI;
   while (a < -Math.PI) a += 2 * Math.PI;
@@ -98,6 +101,33 @@ export function obbOverlap(a, b) {
     if (amax < bmin || bmax < amin) return false;
   }
   return true;
+}
+
+// Qabarıq çoxbucaqlı (bina) ilə maşının OBB-si kəsişirmi (SAT)
+export function polyOverlap(box, poly) {
+  const ca = obbCorners(box);
+  const axes = [...obbAxes(box.h)];
+  for (let i = 0; i < poly.length; i++) {
+    const [ax, az] = poly[i], [bx, bz] = poly[(i + 1) % poly.length];
+    const l = Math.hypot(bx - ax, bz - az) || 1;
+    axes.push([-(bz - az) / l, (bx - ax) / l]);
+  }
+  for (const axis of axes) {
+    let amin = Infinity, amax = -Infinity, bmin = Infinity, bmax = -Infinity;
+    for (const p of ca) { const d = p[0] * axis[0] + p[1] * axis[1]; amin = Math.min(amin, d); amax = Math.max(amax, d); }
+    for (const p of poly) { const d = p[0] * axis[0] + p[1] * axis[1]; bmin = Math.min(bmin, d); bmax = Math.max(bmax, d); }
+    if (amax < bmin || bmax < amin) return false;
+  }
+  return true;
+}
+
+export function convexHull(points) {
+  const p = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower = [], upper = [];
+  for (const q of p) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop(); lower.push(q); }
+  for (const q of p.reverse()) { while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop(); upper.push(q); }
+  return lower.slice(0, -1).concat(upper.slice(0, -1));
 }
 
 // Nöqtənin OBB-yə ən yaxın nöqtəsi və məsafəsi
@@ -141,7 +171,8 @@ export class CarPhysics {
     this.reset({ x: 0, z: 0, h: 0 });
   }
 
-  reset(pose) {
+  reset(pose, profile = 'park') {
+    this.profile = profile;
     this.x = pose.x;
     this.z = pose.z;
     this.h = pose.h;
@@ -177,8 +208,20 @@ export class CarPhysics {
     this.delta += clamp(targetDelta - this.delta, -maxRate, maxRate);
 
     const dir = this.gear === 'D' ? 1 : this.gear === 'R' ? -1 : 0;
-    let aDrive = 0;
-    if (dir) {
+    let aDrive = 0, aDrag = 0;
+    if (this.profile === 'city') {
+      // Şəhər: 2.0 MPI (147 at ≈ 110 kVt) — gücdən asılı sürətlənmə, hava müqaviməti (Cd≈0.27, A≈2.2 m² — təxmini)
+      if (dir) {
+        const vd = this.v * dir;
+        const vmax = dir > 0 ? 50 : 4.5;
+        let a = inp.throttle * Math.min(3.4, CITY.power / (CITY.mass * Math.max(vd, 1)));
+        if (vd < LIMITS.creep) a = Math.max(a, Math.min(0.8, (LIMITS.creep - vd) * 1.5));
+        if (vd > vmax) a = 0;
+        if (inp.clutchMode) a *= 1 - clamp(inp.clutch, 0, 1);
+        aDrive = a * dir;
+      }
+      aDrag = CITY.drag * this.v * this.v;
+    } else if (dir) {
       const vmax = dir > 0 ? LIMITS.vmaxForward : LIMITS.vmaxReverse;
       const target = LIMITS.creep + inp.throttle * (vmax - LIMITS.creep);
       const vd = this.v * dir;
@@ -188,7 +231,7 @@ export class CarPhysics {
       aDrive = f * dir;
     }
     let vNew = this.v + aDrive * dt;
-    let brakeA = inp.brake * 7 + (inp.handbrake ? 5 : 0) + 0.12;
+    let brakeA = inp.brake * (this.profile === 'city' ? 8.5 : 7) + (inp.handbrake ? 5 : 0) + 0.12 + aDrag;
     if (this.gear === 'P') brakeA = 20;
     const db = brakeA * dt;
     if (Math.abs(vNew) <= db) vNew = 0;
@@ -206,7 +249,7 @@ export class CarPhysics {
     if (obstacles) {
       const box = this.box;
       for (const o of obstacles) {
-        if (obbOverlap(box, o)) {
+        if (o.poly ? polyOverlap(box, o.poly) : obbOverlap(box, o)) {
           this.x = px; this.z = pz; this.h = ph;
           const impact = Math.abs(this.v);
           this.v = -this.v * 0.15;

@@ -15,6 +15,7 @@
   <div id="hud" class="hidden">
     <div class="panel left">
       <div class="speed"><span id="spd">0</span><small>km/saat</small><em id="mph">0 mph</em></div>
+      <div class="limit" id="limitSign">60</div>
       <div class="gears" id="gears"><b data-g="P">P</b><b data-g="R">R</b><b data-g="N">N</b><b data-g="D">D</b></div>
       <div class="blink"><span id="bl">◀</span><span id="br">▶</span></div>
       <div class="wheel"><svg id="wheelIcon" viewBox="-50 -50 100 100"><circle r="40" fill="none" stroke="currentColor" stroke-width="8"/><path d="M-40 0H40M0 0V40" stroke="currentColor" stroke-width="8"/><circle r="9" fill="currentColor"/><rect x="-4" y="-48" width="8" height="12" fill="#ff9a2e"/></svg><span id="wdeg">0°</span></div>
@@ -27,8 +28,8 @@
     <div class="panel right">
       <div class="stat"><span id="modeTag">Öyrənmə</span><b id="lvName">—</b></div>
       <div class="stat"><span>Vaxt</span><b id="tm">0:00</b></div>
-      <div class="stat"><span>Toqquşma</span><b id="col">0</b></div>
-      <div class="stat"><span>Manevr</span><b id="mv">0</b></div>
+      <div class="stat"><span id="colLbl">Toqquşma</span><b id="col">0</b></div>
+      <div class="stat"><span id="mvLbl">Manevr</span><b id="mv">0</b></div>
       <div class="sensor">
         <svg viewBox="0 0 80 140" id="sensorSvg">
           <g id="sFront"></g>
@@ -39,6 +40,8 @@
         <div class="sdist"><span id="sdF">—</span><span id="sdR">—</span></div>
       </div>
     </div>
+    <canvas id="minimap" class="minimap" width="200" height="200"></canvas>
+    <div id="roadName" class="road-name"></div>
     <div id="coach" class="coach">
       <span id="coachStep" class="coach-step"></span>
       <span id="coachText" class="coach-text"></span>
@@ -57,7 +60,8 @@
         <p class="sub">Real həyatda park etməyi öyrədən 3D simulyator</p>
         <div id="padStatus" class="pad-status"></div>
         <div class="btns">
-          <button data-go="levels" class="primary">▶ Səviyyələr</button>
+          <button data-go="levels" class="primary">▶ Park səviyyələri</button>
+          <button data-go="city">🏙️ Bakıda sürüş (real xəritə)</button>
           <button data-go="lessons">📘 Real həyatda park — dərslər</button>
           <button data-go="calib">🎮 Sükan kalibrasiyası</button>
           <button data-go="settings">⚙️ Ayarlar</button>
@@ -87,6 +91,16 @@
           <button data-go="levels">← Geri</button>
           <button id="briefStart" class="primary">Başla</button>
         </div>
+      </div>
+    </section>
+
+    <section id="scr-city" class="screen">
+      <div class="card wide">
+        <h2>🏙️ Bakıda sürüş</h2>
+        <p class="sub">Real küçələr (OpenStreetMap), svetoforlar və nişanlar. Mini-xəritədəki yaşıl marşrutla təyinata çatın, qaydaları pozmayın.</p>
+        <div id="cityList" class="levels"></div>
+        <p class="note">Qaydalar: sürət həddi (yazılmayıbsa şəhərdə 60 km/saat), qırmızı işıq, birtərəfli yol, qarşı zolaq, yoldan çıxma, dönmə siqnalı. Cərimə xalları oyun üçündür, rəsmi deyil.</p>
+        <div class="btns row"><button data-go="menu">← Geri</button></div>
       </div>
     </section>
 
