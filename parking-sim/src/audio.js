@@ -133,6 +133,13 @@ export class Sound {
     this.tone(70, 0.18, 'sine', 0.35);
   }
 
+  // təkərlərin sürüşmə səsi
+  skid(slip) {
+    if (!this.ctx || (this.skidT && this.ctx.currentTime < this.skidT)) return;
+    this.skidT = this.ctx.currentTime + 0.12;
+    this.tone(700 + Math.random() * 120, 0.12, 'sawtooth', Math.min(0.08, slip * 0.25));
+  }
+
   tick(on) {
     this.tone(on ? 1800 : 1400, 0.012, 'square', 0.06);
   }

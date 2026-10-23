@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import './style.css';
 import { CarPhysics, CAR, SPEC, GEARS, toWorld, carBox } from './physics.js';
-import { buildCar, updateCarVisual, buildGhost, LAYER, VIEW } from './carModel.js';
+import { buildCar, buildParkedCar, updateCarVisual, buildGhost, LAYER, VIEW } from './carModel.js';
 import { buildWorld } from './world.js';
 import { LEVELS, GENERAL_LESSONS, makeLevel, randomVariant } from './levels.js';
 import { bumperClearance } from './sim.js';
 import { RoadNetwork, nextManeuver } from './city/network.js';
 import { buildCity } from './city/cityWorld.js';
 import { RuleMonitor } from './city/rules.js';
+import { Traffic } from './city/traffic.js';
 
 // data/ qovluğundakı şəhər xəritələri (tools/osm-to-city.mjs ilə OSM-dən yaradılır)
 const CITIES = Object.values(import.meta.glob('../data/*.json', { eager: true, import: 'default' }));
@@ -28,6 +29,7 @@ const DEFAULTS = {
   sensors: true, details: false, voice: false, realGear: true, clutchMode: false,
   mirrors: true, autoRearCam: true, shadows: !TOUCH, volume: 0.7,
   touchMode: 'wheel', touchSens: 2, touchSize: 1, touchSwap: false,
+  steerDeadzone: 0.02, steerCurve: 1, pedalCurve: 1, kbSteerSpeed: 1, traffic: 1,
 };
 const SETTING_LABELS = {
   sensors: 'Park sensoru köməkçisi (2023 SEL-də standart deyil — İmtahanda sönülüdür)',
@@ -43,6 +45,11 @@ const SETTING_LABELS = {
   touchSens: 'Telefon: sükan həssaslığı',
   touchSize: 'Telefon: düymələrin ölçüsü',
   touchSwap: 'Telefon: pedallar solda, sükan sağda',
+  steerDeadzone: 'Sükan: ölü zona (mərkəzdə reaksiya verməyən hissə)',
+  steerCurve: 'Sükan: əyri (1 — xətti, böyük — mərkəzdə yumşaq)',
+  pedalCurve: 'Qaz/əyləc pedalı: əyri (1 — xətti, böyük — başlanğıcda yumşaq)',
+  kbSteerSpeed: 'Klaviatura: sükanın fırlanma sürəti',
+  traffic: 'Şəhər: trafikin sıxlığı',
 };
 const DRIVE_MODES = {
   learn: { name: 'Öyrənmə', desc: 'Təlimatçı, köməkçi xətlər, səhvdən geri qayıtma' },
@@ -232,6 +239,7 @@ function layoutViews() {
 // ---------- Vəziyyət ----------
 const input = new Input();
 const touchUI = setupTouch(input, settings);
+input.cfg = settings;
 const calib = new Calibrator(input);
 const sound = new Sound();
 sound.setVolume(settings.volume);
@@ -417,7 +425,7 @@ function renderSettings() {
       inp.onchange = () => { settings[k] = inp.value; save(); };
     } else if (typeof DEFAULTS[k] === 'number') {
       inp = document.createElement('input');
-      const [min, max, step] = { volume: [0, 1, 0.05], touchSens: [1, 4, 0.5], touchSize: [0.8, 1.4, 0.1] }[k];
+      const [min, max, step] = { volume: [0, 1, 0.05], touchSens: [1, 4, 0.5], touchSize: [0.8, 1.4, 0.1], steerDeadzone: [0, 0.1, 0.01], steerCurve: [1, 2.5, 0.1], pedalCurve: [1, 2.5, 0.1], kbSteerSpeed: [0.5, 2, 0.1], traffic: [0, 2, 0.25] }[k];
       Object.assign(inp, { type: 'range', min, max, step, value: settings[k] });
       inp.oninput = () => { settings[k] = +inp.value; sound.setVolume(settings.volume); save(); };
     } else {
@@ -791,11 +799,24 @@ function startCity(data) {
   if (!route) {
     for (const cand of ids) { const r = net.route(startNode, cand); if (r && (!route || r.length > route.length)) { route = r; dest = cand; } }
   }
+  // trafik: şəbəkənin uzunluğuna görə (hər ~110 m zolağa bir maşın), ayarla dəyişir
+  const totalLen = net.segs.reduce((a, s2) => a + s2.len * (s2.road.oneway ? 1 : 2), 0);
+  const count = Math.round(Math.min(40, totalLen / 110) * settings.traffic);
+  const traffic = new Traffic(net, count, Math.floor(Math.random() * 1e9));
+  // oyunçunun yanında doğulan maşınları uzaqlaşdır
+  traffic.cars = traffic.cars.filter((c) => Math.hypot(c.x - px, c.z - pz) > 25);
+  const TRAFFIC_COLORS = [0xf2f2f2, 0x1b1d22, 0x9aa0a8, 0x2f4f7f, 0x8a1c1c, 0xd9d4c5, 0x4b5320, 0xc9a227];
+  traffic.makeMesh = (c) => {
+    const m = buildParkedCar(TRAFFIC_COLORS[c.color % TRAFFIC_COLORS.length]);
+    m.root.userData.traffic = true;
+    world.group.add(m.root);
+    c.mesh = m;
+  };
   game.world = { group: world.group, obstacles: [] };
   game.obstacles = [];
   game.level = null;
   game.coach = null;
-  game.city = { data, net, world, rules: new RuleMonitor(net), route, dest, time: 0, odo: 0, maxSpeed: 0, collisions: 0, lastHit: -9, startNode };
+  game.city = { data, net, world, traffic, rules: new RuleMonitor(net), route, dest, time: 0, odo: 0, maxSpeed: 0, collisions: 0, lastHit: -9, startNode };
   car.reset({ x: px - Math.sin(h) * CAR.centerOffset, z: pz - Math.cos(h) * CAR.centerOffset, h }, 'city');
   input.kbSteer = 0;
   if (input.touch) input.touch.steer = 0;
@@ -826,13 +847,16 @@ function updateCity(dt, inp) {
   const sp = Math.abs(car.v);
   input.steerRate = Math.max(0.22, 1 - sp / 22);
   input.selfCenter = sp > 1 ? 0.4 + sp * 0.06 : 0;
-  const near = C.world.nearObstacles(car.x, car.z);
+  const cb = carBox(car.x, car.z, car.h);
+  C.traffic.update(dt, C.time, { cx: cb.cx, cz: cb.cz, h: car.h, v: car.v, len: CAR.length });
+  const near = C.world.nearObstacles(car.x, car.z).concat(C.traffic.obstacles().filter((o) => Math.abs(o.cx - car.x) < 15 && Math.abs(o.cz - car.z) < 15));
   const pin = { ...inp, clutchMode: settings.clutchMode && !!input.map?.clutch };
   for (let i = 0; i < 4; i++) {
     const hit = car.step(dt / 4, pin, near);
     if (hit && C.time - C.lastHit > 1) {
       C.collisions++;
-      const v = C.rules.collision(C.time);
+      let v;
+      if (hit.hit.ai) { hit.hit.ai.stunned = 6; v = C.rules.carCrash(C.time); } else v = C.rules.collision(C.time);
       if (v) violationToast(v);
       sound.crash(hit.impact);
       input.rumble(Math.min(1, 0.4 + hit.impact), 0.6, 250);
@@ -848,7 +872,9 @@ function updateCity(dt, inp) {
   sound.engine(inp.throttle, sp, true);
   C.world.update(C.time);
   const f = toWorld(0, CAR.wheelbase + CAR.frontOverhang, car.pose);
-  for (const v of C.rules.update(dt, { x: car.x, z: car.z, h: car.h, v: car.v, frontX: f.x, frontZ: f.z }, game.blinker, C.time)) violationToast(v);
+  for (const v of C.rules.update(dt, { x: car.x, z: car.z, h: car.h, v: car.v, frontX: f.x, frontZ: f.z }, game.blinker, C.time, C.traffic)) violationToast(v);
+  updateTrafficMeshes(C.traffic);
+  if (car.slip > 0.14 && sp > 6) sound.skid?.(car.slip);
   // naviqasiya
   const man = nextManeuver(C.net, C.route?.nodes, car.x, car.z);
   const [dx, dz] = C.net.pos.get(C.dest) || [0, 0];
@@ -856,6 +882,22 @@ function updateCity(dt, inp) {
   renderNav(man, toDest);
   if (toDest < 12 && sp < 0.5) finishCity();
   updateCityHUD(inp);
+}
+
+function updateTrafficMeshes(T) {
+  for (const c of T.cars) {
+    if (!c.mesh) T.makeMesh(c);
+    // modelin mənşəyi arxa oxdadır (4.8 m maşında mərkəzdən 1.35 m geri)
+    c.mesh.root.position.set(c.x - Math.sin(c.h) * 1.35, 0, c.z - Math.cos(c.h) * 1.35);
+    c.mesh.root.rotation.y = c.h;
+    c.mesh.lights.brake.emissiveIntensity = c.braking ? 1.6 : 0.1;
+    const spin = (c.v / 60) / 0.316;
+    for (const k of ['fl', 'fr', 'rl', 'rr']) c.mesh.wheels[k].wheel.rotation.x += spin;
+  }
+  // yenidən doğulanda köhnə model qalmasın
+  for (const ch of [...game.city.world.group.children]) {
+    if (ch.userData.traffic && !T.cars.some((c) => c.mesh && c.mesh.root === ch)) game.city.world.group.remove(ch);
+  }
 }
 
 function violationToast(v) {

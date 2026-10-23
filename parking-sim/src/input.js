@@ -60,7 +60,8 @@ export class Input {
     const left = k.has('KeyA') || k.has('ArrowLeft');
     const right = k.has('KeyD') || k.has('ArrowRight');
     // klaviatura sükanı: əllə çevrilən sükan kimi — buraxanda yerində qalır
-    const rate = (k.has('ShiftLeft') || k.has('ShiftRight') ? 2.0 : 1.0) * (this.steerRate ?? 1);
+    const cfg = this.cfg || {};
+    const rate = (k.has('ShiftLeft') || k.has('ShiftRight') ? 2.0 : 1.0) * (this.steerRate ?? 1) * (cfg.kbSteerSpeed || 1);
     if (left) this.kbSteer -= rate * dt;
     if (right) this.kbSteer += rate * dt;
     // şəhərdə: düymə buraxılanda sükan özü mərkəzə qayıdır (sürətdən asılı)
@@ -86,7 +87,10 @@ export class Input {
         let s = v >= c ? (v - c) / (m.steer.right - c) : -(v - c) / (m.steer.left - c);
         if (!isFinite(s)) s = 0;
         s = clamp(s, -1, 1);
-        if (Math.abs(s) < 0.004) s = 0;
+        // həssaslıq: ölü zona və əyri
+        const dzn = cfg.steerDeadzone ?? 0.004;
+        const a = Math.abs(s) <= dzn ? 0 : (Math.abs(s) - dzn) / (1 - dzn);
+        s = Math.sign(s) * Math.pow(a, cfg.steerCurve || 1);
         if (!left && !right) { steer = s; this.kbSteer = s; }
       }
       const pedal = (cfg) => {
@@ -95,7 +99,7 @@ export class Input {
         const r = (v - cfg.rest) / (cfg.pressed - cfg.rest);
         return clamp(isFinite(r) ? r : 0, 0, 1);
       };
-      const dz = (x) => (x < 0.03 ? 0 : (x - 0.03) / 0.97);
+      const dz = (x) => (x < 0.03 ? 0 : Math.pow((x - 0.03) / 0.97, cfg.pedalCurve || 1));
       throttle = Math.max(throttle, dz(pedal(m.throttle)));
       brake = Math.max(brake, dz(pedal(m.brake)));
       clutch = dz(pedal(m.clutch));
@@ -115,8 +119,8 @@ export class Input {
     if (t && t.active) {
       if (left || right) t.steer = this.kbSteer;
       else if (source !== 'wheel') { steer = t.steer; this.kbSteer = t.steer; }
-      throttle = Math.max(throttle, t.throttle);
-      brake = Math.max(brake, t.brake);
+      throttle = Math.max(throttle, Math.pow(t.throttle, cfg.pedalCurve || 1));
+      brake = Math.max(brake, Math.pow(t.brake, cfg.pedalCurve || 1));
       if (source === 'keyboard') source = 'touch';
     }
 

@@ -12,7 +12,17 @@ export const RULES = {
   noSignal: { name: 'Dönmə siqnalı verilmədi', points: 5 },
   stopSign: { name: '“STOP” nişanında tam dayanmamaq', points: 10 },
   collision: { name: 'Toqquşma', points: 25, critical: true },
+  carCrash: { name: 'Başqa maşınla toqquşma (yol-nəqliyyat hadisəsi)', points: 30, critical: true },
+  tailgate: { name: 'Öndəki maşınla təhlükəsiz məsafə saxlanılmadı', points: 5 },
+  yieldMain: { name: 'Əsas yolda hərəkət edən maşına yol verilmədi', points: 15, critical: true },
+  yieldRight: { name: 'Bərabərhüquqlu kəsişmədə sağdan gələnə yol verilmədi', points: 15, critical: true },
 };
+
+// Yolun əhəmiyyəti (əsas / ikinci dərəcəli yol) — OSM növünə görə; dairəvi yol daxilindəkilər üstündür
+const RANK = { motorway: 6, trunk: 5, primary: 4, secondary: 3, tertiary: 2, unclassified: 1, residential: 1, living_street: 0, service: 0 };
+export function roadRank(r) {
+  return (RANK[r.type.replace('_link', '')] ?? 1) + (r.roundabout ? 10 : 0);
+}
 
 export class RuleMonitor {
   constructor(net) {
@@ -25,6 +35,8 @@ export class RuleMonitor {
     this.turn = null;
     this.limit = net.city.defaults.urbanLimit;
     this.road = null;
+    this.timers.tailgate = 0;
+    this.inJunction = null;
   }
 
   add(key, time, extra = '') {
@@ -36,7 +48,8 @@ export class RuleMonitor {
   }
 
   // car: { x, z, h, v (m/s), frontX, frontZ }, blinker, time
-  update(dt, car, blinker, time) {
+  // traffic: Traffic obyekti (və ya null)
+  update(dt, car, blinker, time, traffic = null) {
     const events = [];
     const push = (v) => { if (v) events.push(v); };
     const m = this.net.match(car.x, car.z, car.h);
@@ -91,8 +104,32 @@ export class RuleMonitor {
       if (prev !== undefined && prev < 0 && s >= 0 && st === 'red') push(this.add('redLight', time));
     }
 
-    // dönmə siqnalı: kəsişmədə 40°-dən çox dönmə
     const nj = this.nearJunction(car.x, car.z);
+    if (traffic) {
+      // təhlükəsiz məsafə: öndəki maşına qədər vaxt intervalı < 1 san (sürət > 20 km/saat)
+      const fx = Math.sin(car.h), fz = Math.cos(car.h);
+      let gap = Infinity;
+      for (const o of traffic.cars) {
+        const rx = o.x - car.x, rz = o.z - car.z;
+        const ahead = rx * fx + rz * fz;
+        if (ahead <= 0 || ahead > 60 || Math.abs(rx * fz - rz * fx) > 1.8) continue;
+        if (Math.sin(o.h) * fx + Math.cos(o.h) * fz < 0.7) continue;
+        gap = Math.min(gap, ahead - 4.8);
+      }
+      const headway = car.v > 0.1 ? gap / car.v : Infinity;
+      this.timers.tailgate = kmh > 20 && headway < 1.0 ? this.timers.tailgate + dt : 0;
+      if (headway < 1.5 && kmh > 20) this.warning = this.warning || 'Məsafəni artırın';
+      if (this.timers.tailgate > 3) push(this.add('tailgate', time, `${headway.toFixed(1)} san`));
+      // kəsişməyə girərkən yol vermə
+      if (nj && nj !== this.inJunction && car.v > 1) {
+        const hasSignal = this.net.city.signals.some((sg) => sg.id === nj);
+        const myRoad = m && m.seg.road;
+        if (!hasSignal && myRoad) push(this.checkYield(nj, car, myRoad, traffic, time));
+      }
+    }
+    this.inJunction = nj;
+
+    // dönmə siqnalı: kəsişmədə 40°-dən çox dönmə
     if (nj && !this.turn) this.turn = { h0: car.h, node: nj, sig: blinker };
     if (this.turn) {
       if (blinker) this.turn.sig = blinker;
@@ -108,6 +145,32 @@ export class RuleMonitor {
       }
     }
     return events;
+  }
+
+  checkYield(node, car, myRoad, traffic, time) {
+    const [nx, nz] = this.net.pos.get(node);
+    const myRank = roadRank(myRoad);
+    for (const o of traffic.cars) {
+      if (o.seg.road === myRoad || o.v < 2) continue;
+      const dx = nx - o.x, dz = nz - o.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 30 || dist < 2) continue;
+      if ((dx * o.fx + dz * o.fz) / dist < 0.7) continue; // kəsişməyə doğru gəlmir
+      if (dist / o.v > 3) continue; // 3 saniyədən gec çatacaq
+      const rank = roadRank(o.seg.road);
+      if (rank > myRank) return this.add('yieldMain', time, o.seg.road.name);
+      if (rank === myRank) {
+        // sağdan gəlir? (oyunçunun lokal koordinatında sağ tərəf: lx < 0)
+        const rx = o.x - car.x, rz = o.z - car.z;
+        const lx = rx * Math.cos(car.h) - rz * Math.sin(car.h);
+        if (lx < -2) return this.add('yieldRight', time, o.seg.road.name);
+      }
+    }
+    return null;
+  }
+
+  carCrash(time) {
+    return this.add('carCrash', time);
   }
 
   nearJunction(x, z) {

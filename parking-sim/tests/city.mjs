@@ -68,3 +68,85 @@ check('növbəti dönüş göstərişi var', !!man, man ? `${man.turn} ${Math.ro
 
 if (failed) { console.error(`${failed} şəhər testi keçilmədi`); process.exit(1); }
 console.log('Şəhər testləri keçildi (süni xəritə).');
+
+// ---------- Trafik (süni xəritə + varsa real Nərimanov) ----------
+import { Traffic } from '../src/city/traffic.js';
+import { existsSync } from 'node:fs';
+const maps = [['süni xəritə', city]];
+if (existsSync(new URL('../data/narimanov.json', import.meta.url))) maps.push(['Nərimanov', JSON.parse(readFileSync(new URL('../data/narimanov.json', import.meta.url)))]);
+let tfail = 0;
+for (const [name, data] of maps) {
+  const n2 = new RoadNetwork(data);
+  const T = new Traffic(n2, 12, 7);
+  let redRuns = 0, overlaps = 0, moved = 0;
+  const startPos = new Map(T.cars.map((c) => [c, [c.x, c.z]]));
+  for (let t = 0; t < 180; t += 1 / 30) {
+    // qırmızıda dayanma xəttini keçən varmı
+    // maşın obyektinə görə (yenidən doğulanda massivdəki sıra dəyişir)
+    const before = new Map(T.cars.map((c) => [c, n2.approaches.map((ap) => ({ ap, s: (c.x + c.fx * 2.4 - ap.x) * ap.dx + (c.z + c.fz * 2.4 - ap.z) * ap.dz, lat: Math.abs((c.x - ap.x) * ap.dz - (c.z - ap.z) * ap.dx), al: c.fx * ap.dx + c.fz * ap.dz }))]));
+    T.update(1 / 30, t, null);
+    T.cars.forEach((c) => {
+      if (!before.has(c)) return;
+      n2.approaches.forEach((ap, k) => {
+        const b = before.get(c)[k];
+        const s = (c.x + c.fx * 2.4 - ap.x) * ap.dx + (c.z + c.fz * 2.4 - ap.z) * ap.dz;
+        if (b.al > 0.7 && b.lat < ap.halfW + 0.5 && b.s < 0 && s >= 0 && signalState(ap, t) === 'red') redRuns++;
+      });
+    });
+    for (let i = 0; i < T.cars.length; i++) for (let j = i + 1; j < T.cars.length; j++) {
+      const a = T.cars[i], b = T.cars[j];
+      if (Math.hypot(a.x - b.x, a.z - b.z) < 2.5 && a.fx * b.fx + a.fz * b.fz > 0.7) overlaps++;
+    }
+  }
+  for (const [c, [x, z]] of startPos) if (Math.hypot(c.x - x, c.z - z) > 30) moved++;
+  const ok1 = moved >= Math.min(6, T.cars.length - 2), ok2 = redRuns === 0, ok3 = overlaps < 30;
+  console.log(`${ok1 ? '✓' : '✗'} trafik hərəkət edir (${name}): ${moved}/${T.cars.length} maşın 30 m-dən çox getdi`);
+  console.log(`${ok2 ? '✓' : '✗'} trafik qırmızı işıqda keçmir (${name}): ${redRuns} hal`);
+  console.log(`${ok3 ? '✓' : '✗'} eyni istiqamətdə maşınlar üst-üstə düşmür (${name}): ${overlaps} kadr`);
+  if (!ok1 || !ok2 || !ok3) tfail++;
+}
+if (tfail) { console.error('Trafik testləri keçilmədi'); process.exit(1); }
+
+// ---------- Yeni qaydalar: məsafə və yol vermə (süni xəritə) ----------
+{
+  const rm = new RuleMonitor(net);
+  // ikitərəfli "Küçə 0" üzrə: öndə 8 m məsafədə eyni istiqamətdə gedən maşın, sürət 50 km/saat
+  const v = 50 / 3.6, fx = Math.sin(hTwo), fz = Math.cos(hTwo);
+  const seg0 = net.segs.find((sg) => sg.road === two);
+  const ai = { x: 0, z: 0, h: hTwo, v, fx, fz, seg: seg0 };
+  const fake = { cars: [ai] };
+  let x = m1x + rx * R, z = m1z + rz * R;
+  for (let t = 0; t < 5; t += 1 / 30) {
+    x += fx * v / 30; z += fz * v / 30;
+    ai.x = x + fx * 12; ai.z = z + fz * 12; // arxa oxdan 12 m irəli ≈ 7 m boşluq (0.5 san)
+    rm.update(1 / 30, { x, z, h: hTwo, v, frontX: x + fx * 3.6, frontZ: z + fz * 3.6 }, null, t, fake);
+  }
+  check('təhlükəsiz məsafə pozuntusu tutulur', rm.violations.some((q) => q.key === 'tailgate'));
+}
+{
+  // ikinci dərəcəli yoldan (Küçə 0, residential) əsas yola (Yol 1, secondary) çıxış; əsas yolda maşın yaxınlaşır
+  const node = '1001';
+  const [nx, nz] = net.pos.get(node);
+  const mainSeg = net.segs.find((sg) => sg.road.name === 'Yol 1' && (sg.a === node || sg.b === node));
+  const dirTo = mainSeg.a === node ? -1 : 1; // node-a doğru
+  const afx = mainSeg.dx * dirTo, afz = mainSeg.dz * dirTo;
+  const ai = { x: nx - afx * 15, z: nz - afz * 15, h: Math.atan2(afx, afz), v: 9, fx: afx, fz: afz, seg: mainSeg };
+  const resSeg = net.segs.find((sg) => sg.road.name === 'Küçə 0' && (sg.a === node || sg.b === node));
+  const rd = resSeg.a === node ? -1 : 1;
+  const pfx = resSeg.dx * rd, pfz = resSeg.dz * rd, ph = Math.atan2(pfx, pfz);
+  const rm = new RuleMonitor(net);
+  let x = nx - pfx * 20 - pfz * 1.6, z = nz - pfz * 20 + pfx * 1.6;
+  for (let t = 0; t < 3; t += 1 / 30) {
+    x += pfx * 6 / 30; z += pfz * 6 / 30;
+    rm.update(1 / 30, { x, z, h: ph, v: 6, frontX: x + pfx * 3.6, frontZ: z + pfz * 3.6 }, null, t, { cars: [ai] });
+  }
+  check('əsas yoldakı maşına yol verməmək tutulur', rm.violations.some((q) => q.key === 'yieldMain'));
+  const rm2 = new RuleMonitor(net);
+  x = nx - pfx * 20 - pfz * 1.6; z = nz - pfz * 20 + pfx * 1.6;
+  for (let t = 0; t < 3; t += 1 / 30) {
+    x += pfx * 6 / 30; z += pfz * 6 / 30;
+    rm2.update(1 / 30, { x, z, h: ph, v: 6, frontX: x + pfx * 3.6, frontZ: z + pfz * 3.6 }, null, t, { cars: [] });
+  }
+  check('yol boş olanda — yol vermə pozuntusu yoxdur', !rm2.violations.some((q) => q.key.startsWith('yield')));
+}
+if (failed) { console.error(`${failed} şəhər testi keçilmədi`); process.exit(1); }

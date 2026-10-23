@@ -61,6 +61,8 @@ export const GEARS = ['P', 'R', 'N', 'D'];
 
 // Şəhər sürüşü üçün (təxmini): kütlə sürücü ilə, güc, hava müqaviməti əmsalı 0.5·ρ·Cd·A/m
 export const CITY = { mass: 1380, power: 110000, drag: (0.5 * 1.2 * 0.27 * 2.2) / 1380 };
+// Yan dinamika (təxmini): təkər yan sərtliyi N/rad, ətalət momenti kq·m², sürtünmə
+export const DYN = { mass: 1380, Iz: 2250, Cf: 95000, Cr: 105000, mu: 0.9, frontShare: 0.39 };
 
 export function wrapAngle(a) {
   while (a > Math.PI) a -= 2 * Math.PI;
@@ -173,6 +175,9 @@ export class CarPhysics {
 
   reset(pose, profile = 'park') {
     this.profile = profile;
+    this.vy = 0;
+    this.r = 0;
+    this.slip = 0;
     this.x = pose.x;
     this.z = pose.z;
     this.h = pose.h;
@@ -239,11 +244,14 @@ export class CarPhysics {
     this.accel = (vNew - this.v) / dt;
     this.v = vNew;
 
-    // velosiped modeli
     const px = this.x, pz = this.z, ph = this.h;
-    this.h = wrapAngle(this.h + (this.v / CAR.wheelbase) * Math.tan(this.delta) * dt);
-    this.x += Math.sin(this.h) * this.v * dt;
-    this.z += Math.cos(this.h) * this.v * dt;
+    if (this.profile === 'city') this.dynamicStep(dt);
+    else {
+      // velosiped modeli (kinematik — park sürətlərində dəqiqdir)
+      this.h = wrapAngle(this.h + (this.v / CAR.wheelbase) * Math.tan(this.delta) * dt);
+      this.x += Math.sin(this.h) * this.v * dt;
+      this.z += Math.cos(this.h) * this.v * dt;
+    }
     this.odometer += Math.abs(this.v * dt);
 
     if (obstacles) {
@@ -251,13 +259,48 @@ export class CarPhysics {
       for (const o of obstacles) {
         if (o.poly ? polyOverlap(box, o.poly) : obbOverlap(box, o)) {
           this.x = px; this.z = pz; this.h = ph;
-          const impact = Math.abs(this.v);
+          const impact = Math.hypot(this.v, this.vy);
           this.v = -this.v * 0.15;
+          this.vy = 0;
+          this.r = 0;
           return { hit: o, impact };
         }
       }
     }
     return null;
+  }
+
+  // Dinamik velosiped modeli (şəhər sürətləri): təkərlərin yan sürüşməsi, sürtünmə həddi, kütlənin ətaləti.
+  // Aşağı sürətdə kinematik modelə keçir. Parametrlər təxminidir (ön ağırlıq ~61%, μ≈0.9 quru asfalt).
+  dynamicStep(dt) {
+    const L = CAR.wheelbase, a = L * DYN.frontShare, b = L - a;
+    const vx = this.v, d = this.delta;
+    const rKin = (vx / L) * Math.tan(d);
+    const w = vx > 0 ? clamp((vx - 3) / 2, 0, 1) : 0; // 3–5 m/s arası keçid; geri hərəkət kinematik
+    let r = this.r, vy = this.vy;
+    this.slip = 0;
+    if (w > 0) {
+      const Fzf = (DYN.mass * 9.81 * b) / L, Fzr = (DYN.mass * 9.81 * a) / L;
+      const af = d - Math.atan2(vy + a * r, vx);
+      const ar = -Math.atan2(vy - b * r, vx);
+      const Fyf = clamp(DYN.Cf * af, -DYN.mu * Fzf, DYN.mu * Fzf);
+      const Fyr = clamp(DYN.Cr * ar, -DYN.mu * Fzr, DYN.mu * Fzr);
+      vy += ((Fyf * Math.cos(d) + Fyr) / DYN.mass - vx * r) * dt;
+      r += ((a * Fyf * Math.cos(d) - b * Fyr) / DYN.Iz) * dt;
+      this.slip = Math.max(Math.abs(af), Math.abs(ar));
+    }
+    this.r = w * r + (1 - w) * rKin;
+    this.vy = w * vy;
+    // ağırlıq mərkəzi arxa oxdan b qədər irəlidədir
+    let fx = Math.sin(this.h), fz = Math.cos(this.h);
+    let cx = this.x + fx * b, cz = this.z + fz * b;
+    const lx = fz, lz = -fx; // sol
+    cx += (fx * vx + lx * this.vy) * dt;
+    cz += (fz * vx + lz * this.vy) * dt;
+    this.h = wrapAngle(this.h + this.r * dt);
+    fx = Math.sin(this.h); fz = Math.cos(this.h);
+    this.x = cx - fx * b;
+    this.z = cz - fz * b;
   }
 
   // Cari sükanla gələcək trayektoriya (arxa ox nöqtələri + künclər)
