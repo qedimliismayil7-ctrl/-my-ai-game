@@ -109,6 +109,15 @@ export class Input {
       source = 'pad-uncalibrated';
     }
 
+    const t = this.touch;
+    if (t && t.active) {
+      if (left || right) t.steer = this.kbSteer;
+      else if (source !== 'wheel') { steer = t.steer; this.kbSteer = t.steer; }
+      throttle = Math.max(throttle, t.throttle);
+      brake = Math.max(brake, t.brake);
+      if (source === 'keyboard') source = 'touch';
+    }
+
     this.state = {
       steer, throttle, brake, clutch,
       handbrake: k.has('Space'),

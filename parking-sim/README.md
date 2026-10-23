@@ -10,6 +10,7 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build    # dist/ — istənilən statik hostinqə yükləmək olar
 npm test         # avtomatik sürücü təlimatçıya əməl edib 5 səviyyəni keçir
+npm run build:single  # dist/park-ustasi.html — hər şey daxildə olan tək fayl (telefon üçün link)
 ```
 
 ## Nə var
@@ -24,6 +25,10 @@ npm test         # avtomatik sürücü təlimatçıya əməl edib 5 səviyyəni 
 | Qiymətləndirmə (`src/scoring.js`) | Toqquşma, bordürə toxunma, vaxt, manevr sayı, xəttin içində olmaq, bucaq xətası, mərkəzdən sürüşmə, bordürə məsafə, siqnal, sürət → 100 bal və 3 ulduz |
 | Park sensorları | Ön/arxa 8 sensor, yaxınlaşdıqca siqnal sürətlənir, 30 sm-dən az — fasiləsiz səs |
 | Dərslər | "Real həyatda park": hazırlıq, sürət nəzarəti, müşahidə, istinad nöqtələri, qaydalar və hər manevrin nəzəriyyəsi |
+
+## Telefon
+
+Telefonda (toxunma ekranı) ekranın altında sükan (barmaqla fırladın), Əyləc və Qaz pedalları (yuxarı sürüşdürdükcə daha çox basılır), P/R/N/D düymələri, siqnal, kamera, arxaya baxış, təlimatçı, bitir və menyu düymələri çıxır. Telefonu üfüqi tutun.
 
 ## Klaviatura
 

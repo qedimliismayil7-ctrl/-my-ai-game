@@ -8,6 +8,9 @@ import { Input, Calibrator } from './input.js';
 import { Sound, speak } from './audio.js';
 import { Coach } from './coach.js';
 import { evaluate, overlapsTarget } from './scoring.js';
+import { setupTouch, isTouchDevice } from './touch.js';
+
+const TOUCH = isTouchDevice();
 
 const $ = (id) => document.getElementById(id);
 
@@ -16,7 +19,7 @@ const SETTINGS_KEY = 'park-sim-settings';
 const RESULTS_KEY = 'park-sim-results';
 const DEFAULTS = {
   coach: true, helpers: true, voice: false, realGear: true, clutchMode: false,
-  mirrors: true, autoRearCam: true, sensors: true, shadows: true, volume: 0.7,
+  mirrors: true, autoRearCam: true, sensors: true, shadows: !TOUCH, volume: 0.7,
 };
 const SETTING_LABELS = {
   coach: 'Təlimatçı (addım-addım yol göstərmə)',
@@ -37,7 +40,7 @@ const results = loadJSON(RESULTS_KEY, {});
 
 // ---------- Renderer və səhnə ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.setPixelRatio(Math.min(devicePixelRatio, TOUCH ? 1.25 : 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -186,12 +189,12 @@ function layoutViews() {
   const W = innerWidth, H = innerHeight;
   const sw = Math.min(W * 0.22, 330), sh = sw * 0.62;
   const cw = Math.min(W * 0.3, 440), ch = cw * 0.3;
-  const rw = Math.min(W * 0.34, 500), rh = rw * 0.6;
+  const rw = Math.min(W * (TOUCH ? 0.3 : 0.34), 500), rh = rw * 0.6;
   const rect = {
     L: { x: 12, y: H - 12 - sh, w: sw, h: sh },
     R: { x: W - 12 - sw, y: H - 12 - sh, w: sw, h: sh },
     C: { x: (W - cw) / 2, y: H - 10 - ch, w: cw, h: ch },
-    B: { x: (W - rw) / 2, y: 70, w: rw, h: rh },
+    B: { x: (W - rw) / 2, y: TOUCH ? 64 : 70, w: rw, h: rh },
   };
   const pr = renderer.getPixelRatio();
   for (const v of views) {
@@ -211,6 +214,7 @@ function layoutViews() {
 
 // ---------- Vəziyyət ----------
 const input = new Input();
+const touchUI = setupTouch(input);
 const calib = new Calibrator(input);
 const sound = new Sound();
 sound.setVolume(settings.volume);
@@ -268,6 +272,7 @@ function show(name) {
 }
 function setMode(m) {
   game.mode = m;
+  touchUI.show(TOUCH && m === 'play');
   $('hud').classList.toggle('hidden', m !== 'play' && m !== 'pause');
   $('views').classList.toggle('hidden', !(m === 'play' || m === 'pause'));
   if (m === 'play') show('none');
@@ -314,6 +319,13 @@ $('briefStart').onclick = () => {
   settings.helpers = $('briefGhost').checked;
   saveJSON(SETTINGS_KEY, settings);
   sound.unlock();
+  if (TOUCH) {
+    // tam ekran və üfüqi rejim (dəstəklənirsə)
+    try {
+      const fs = document.documentElement.requestFullscreen?.();
+      fs?.then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});
+    } catch { /* dəstəklənmir */ }
+  }
   startLevel(briefLevel);
 };
 
@@ -406,7 +418,7 @@ function updateCalibScreen(dt) {
 function updatePadStatus() {
   const p = input.pad();
   const el = $('padStatus');
-  if (!p) { el.textContent = 'Sükan tapılmadı — klaviatura ilə oynaya bilərsiniz (W/A/S/D). Sükanı qoşub düymə basın.'; el.className = 'pad-status'; return; }
+  if (!p) { el.textContent = TOUCH ? 'Telefon rejimi: ekrandakı sükan, pedallar və düymələrlə idarə edin. Telefonu üfüqi tutun.' : 'Sükan tapılmadı — klaviatura ilə oynaya bilərsiniz (W/A/S/D). Sükanı qoşub düymə basın.'; el.className = 'pad-status'; return; }
   const m = input.map;
   el.textContent = m ? `✓ Sükan hazırdır: ${p.id}${input.hasFFB ? ' · titrəmə dəstəklənir' : ''}` : `Sükan tapıldı: ${p.id} — kalibrasiya edin.`;
   el.className = 'pad-status' + (m ? ' ok' : '');
@@ -434,7 +446,7 @@ function shiftTo(g, inp) {
   const moving = Math.abs(car.v) > 0.3;
   if (settings.realGear) {
     if (g !== 'N' && inp.brake < 0.25 && !inp.handbrake) {
-      toast('Ötürməni dəyişmək üçün əyləci basıb saxlayın (S)', true);
+      toast(TOUCH ? 'Ötürməni dəyişmək üçün əvvəlcə Əyləc pedalını basıb saxlayın' : 'Ötürməni dəyişmək üçün əyləci basıb saxlayın (S)', true);
       sound.warn();
       return;
     }
@@ -635,8 +647,9 @@ function renderCoach(r) {
   const key = r.text + '|' + r.hint + '|' + r.status;
   if (key === coachShown) return;
   coachShown = key;
-  $('coachText').textContent = r.text;
-  $('coachHint').textContent = r.hint;
+  const keys = (t) => (TOUCH ? t.replace(/\(X\)/g, '(▶)').replace(/\(Z\)/g, '(◀)').replace(/\(B\)/g, '(👀)').replace(/Z\/X/g, '◀/▶').replace(/ \(S\)/g, '') : t);
+  $('coachText').textContent = keys(r.text);
+  $('coachHint').textContent = keys(r.hint);
   $('coachStep').textContent = `Addım ${Math.min(r.stepNo, r.total)}/${r.total}`;
   $('coach').className = 'coach' + (r.status === 'stop' ? ' stop' : r.status === 'back' ? ' back' : '');
   if (settings.voice && r.text !== game.lastSpoken) {
@@ -811,7 +824,7 @@ function frame(now) {
   if (game.mode === 'play') {
     if (game.menuWorld) { scene.remove(game.menuWorld); game.menuWorld = null; }
     updatePlay(dt, inp);
-    if (game.mode === 'play') updateHUD(inp);
+    if (game.mode === 'play') { updateHUD(inp); if (TOUCH) touchUI.update(car); }
   } else if (game.mode === 'calib') {
     updateCalibScreen(dt);
   } else {
