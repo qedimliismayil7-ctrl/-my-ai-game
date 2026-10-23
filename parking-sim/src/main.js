@@ -148,6 +148,7 @@ function applyTime(key) {
   headL.visible = !!t.night || !!t.evening;
   if (curWorld) curWorld.setAtmosphere(t);
   sound.setWet(t.wet);
+  queueMicrotask(() => warmUp()); // işıq sayı dəyişir → yeni şeyderlər
   lampT = 0;
 }
 let lampT = 0;
@@ -411,6 +412,35 @@ function layoutViews() {
   }
 }
 
+// Şeyderləri əvvəlcədən kompilyasiya et (ekran + güzgü/arxa kamera variantları), yoxsa sürüşün ilk
+// saniyələrində telefon donur. KHR_parallel_shader_compile varsa fonda gedir; bu vaxt "Yüklənir…" görünür.
+let warmToken = 0;
+async function warmUp() {
+  const token = ++warmToken;
+  game.loading = true;
+  $('loading').classList.remove('hidden');
+  await new Promise((r) => requestAnimationFrame(() => r()));
+  const cam = new THREE.PerspectiveCamera();
+  cam.layers.enableAll();
+  const seat = model.driverSeat, seatVis = seat?.visible, ghostVis = ghost.visible;
+  if (seat) seat.visible = true;
+  ghost.visible = true;
+  try {
+    if (renderer.compileAsync) {
+      const a = renderer.compileAsync(scene, cam);
+      renderer.setRenderTarget(views[3].rt); // güzgülər və arxa kamera: render hədəfi variantı (tonlamasız)
+      const b = renderer.compileAsync(scene, cam);
+      renderer.setRenderTarget(null);
+      await Promise.all([a, b]);
+    } else renderer.compile(scene, cam);
+  } catch (e) { console.warn('warmUp', e); }
+  if (seat) seat.visible = seatVis;
+  ghost.visible = ghostVis;
+  if (token !== warmToken) return;
+  game.loading = false;
+  $('loading').classList.add('hidden');
+}
+
 // ---------- Vəziyyət ----------
 const input = new Input();
 const touchUI = setupTouch(input, settings);
@@ -481,6 +511,7 @@ function startLevel(base, drive = game.drive) {
   game.yaw = game.yawTarget = 0;
   game.lastSpoken = '';
   coachShown = '';
+  warmUp();
   $('lvName').textContent = `${lv.id}. ${lv.name}`;
   $('modeTag').textContent = DRIVE_MODES[drive].name;
   $('colLbl').textContent = 'Toqquşma';
@@ -1208,14 +1239,17 @@ onResize();
   car.reset(LEVELS[0].start);
 }
 
+warmUp();
+
 // ---------- Əsas dövr ----------
 let last = performance.now();
 let menuT = 0;
 const fpsMeter = new FpsMeter();
 let clusterT = 0;
 function frame(now) {
+  if (game.loading) { last = now; requestAnimationFrame(frame); return; }
   const real = (now - last) / 1000;
-  const dt = Math.min(0.05, real);
+  const dt = Math.min(0.1, real); // zəif cihazda oyun yavaş çəkilişə düşməsin (fizika sabit 120 Hz addımla qalır)
   last = now;
   fpsMeter.tick(real);
   if (settings.showFps && frameNo % 10 === 0) {

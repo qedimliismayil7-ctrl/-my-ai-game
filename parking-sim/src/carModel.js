@@ -441,7 +441,15 @@ export function buildCar(color = 0x8f9396, player = false, dims = null, kind = '
 
   setLayer(root, player ? LAYER.BODY : LAYER.WORLD);
   const out = { root, wheels, lights, paint };
-  if (player) addInterior(root, out, paint, S);
+  if (player) {
+    addInterior(root, out, paint, S);
+    // oyunçunun maşını: statik gövdə və salon birləşdirilir; təkərlər, sükan və sürücü oturacağı ayrıca
+    const moving = new Set([...Object.values(wheels).map((w) => w.pivot), out.driverSeat, out.steeringWheel?.parent].filter(Boolean));
+    bakeGroup(root, moving);
+    for (const w of Object.values(wheels)) bakeGroup(w.wheel);
+    if (out.driverSeat) bakeGroup(out.driverSeat);
+    if (out.steeringWheel) bakeGroup(out.steeringWheel);
+  }
   return out;
 }
 
@@ -450,28 +458,63 @@ const PARKED_KINDS = [
   { kind: 'suv', d: { length: 4.75, width: 1.88, height: 1.7, wheelbase: 2.75, rearOverhang: 1.0, track: 1.62 } },
   { kind: 'hatch', d: { length: 4.35, width: 1.8, height: 1.48, wheelbase: 2.65, rearOverhang: 0.85, track: 1.56 } },
 ];
+// Statik hissələri material (+ lay, kölgə) üzrə birləşdirir: onlarla obyekt → bir neçə draw call.
+// skip — hərəkət edən/ayrıca idarə olunan alt qruplar (təkərlər, sükan, sürücü oturacağı); onlar ayrıca birləşdirilir.
+// matKey — materialları necə qruplaşdırmaq (susmaya görə eyni material obyekti).
+const _inv = new THREE.Matrix4(), _m = new THREE.Matrix4();
+export function bakeGroup(group, skip = new Set(), matKey = (m) => m.uuid) {
+  group.updateMatrixWorld(true);
+  _inv.copy(group.matrixWorld).invert();
+  const buckets = new Map(), victims = [];
+  const visit = (o) => {
+    for (const c of [...o.children]) {
+      if (skip.has(c)) continue;
+      if (c.isMesh && !c.isInstancedMesh && c.visible && c.geometry.attributes.position) {
+        const key = matKey(c.material) + '|' + c.layers.mask + '|' + c.castShadow + '|' + c.renderOrder;
+        let g = c.geometry.index ? c.geometry.toNonIndexed() : c.geometry.clone();
+        g.applyMatrix4(_m.multiplyMatrices(_inv, c.matrixWorld));
+        for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') g.deleteAttribute(k);
+        if (!g.attributes.normal) g.computeVertexNormals();
+        if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+        g.morphAttributes = {};
+        if (!buckets.has(key)) buckets.set(key, { src: c, geos: [] });
+        buckets.get(key).geos.push(g);
+        victims.push(c);
+      }
+      if (c.visible) visit(c);
+    }
+  };
+  visit(group);
+  for (const v of victims) {
+    // uşaqları olan meshləri (nadir) saxlayırıq, yalnız həndəsəsini gizlədirik
+    if (v.children.length) { v.geometry = new THREE.BufferGeometry(); continue; }
+    v.parent.remove(v);
+  }
+  for (const { src, geos } of buckets.values()) {
+    const m = new THREE.Mesh(geos.length === 1 ? geos[0] : mergeGeometries(geos, false), src.material);
+    m.layers.mask = src.layers.mask;
+    m.castShadow = src.castShadow;
+    m.receiveShadow = true;
+    m.renderOrder = src.renderOrder;
+    group.add(m);
+  }
+  return group;
+}
+// Eyni görünən materialları birləşdirmək üçün açar (dayanan maşınlarda işıqlar dəyişmir)
+const lookKey = (m) => [m.type, m.color?.getHex(), m.emissive?.getHex(), m.emissiveIntensity, m.opacity, m.transparent, m.side, m.map?.uuid, m.roughness, m.metalness].join(',');
+
 // Ətraf maşınlar: hər növ+ölçü üçün bir dəfə qurulur, sonra hissələri material üzrə birləşdirilir
 // (~80 obyekt → ~12 draw call) və həndəsə eyni maşınlar arasında paylaşılır. Yalnız boya materialı fərqlidir.
 const parkedCache = new Map();
 const paintCache = new Map();
 function bakeTemplate(out) {
+  // dayanan maşının işıqları sönülüdür: oxşar fənər materiallarını birləşdiririk (az draw call)
+  const L = out.lights, mm = mats();
+  const remap = new Map([[L.brake, L.tail], [L.reverse, L.drl], [L.blinkR, L.blinkL], [mm.disc, mm.rim]]);
+  out.root.traverse((o) => { if (o.isMesh && remap.has(o.material)) o.material = remap.get(o.material); });
+  bakeGroup(out.root, new Set(), lookKey);
   out.root.updateMatrixWorld(true);
-  const groups = new Map();
-  out.root.traverse((o) => {
-    if (!o.isMesh || !o.visible) return;
-    let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
-    g.applyMatrix4(o.matrixWorld);
-    for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') g.deleteAttribute(k);
-    if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
-    if (!g.attributes.normal) g.computeVertexNormals();
-    const key = o.material.uuid;
-    if (!groups.has(key)) groups.set(key, { mat: o.material, geos: [], cast: false });
-    const e = groups.get(key);
-    e.geos.push(g);
-    e.cast ||= o.castShadow;
-  });
-  const parts = [];
-  for (const e of groups.values()) parts.push({ geo: mergeGeometries(e.geos, false), mat: e.mat, cast: e.cast, paint: e.mat === out.paint });
+  const parts = out.root.children.filter((c) => c.isMesh).map((c) => ({ geo: c.geometry, mat: c.material, cast: true, paint: c.material === out.paint }));
   return { parts, lights: out.lights };
 }
 export function buildParkedCar(color, variant = 0, size = null) {
