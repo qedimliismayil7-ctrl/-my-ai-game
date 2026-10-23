@@ -19,8 +19,8 @@ export const QUALITY_ORDER = ['low', 'medium', 'high', 'ultra'];
 
 // Günün vaxtı / hava. İşıq intensivlikləri təxminidir (fiziki məntiqə yaxın nisbətlər, kalibrlənmiş lüks deyil).
 export const TIMES = {
-  day: { name: 'Günəşli gündüz', sun: [0.45, 0.62, 0.3], sunColor: 0xfff1dc, sunInt: 2.8, hemiSky: 0xe4f0ff, hemiGround: 0x6b665c, hemiInt: 0.5, top: 0x4f86c6, horizon: 0xcfe0ee, ground: 0x8c877d, fog: 0xcfe0ee, exposure: 1.0, wet: false, night: false },
-  evening: { name: 'Axşam', sun: [-0.75, 0.14, 0.35], sunColor: 0xffb070, sunInt: 2.0, hemiSky: 0xffc9a0, hemiGround: 0x4a3c38, hemiInt: 0.35, top: 0x3c4f86, horizon: 0xf2a86e, ground: 0x5a4a40, fog: 0xd9a27c, exposure: 1.15, wet: false, night: false, evening: true },
+  day: { name: 'Günəşli gündüz', sun: [0.8, 1.25, 0.18], sunColor: 0xfff1dc, sunInt: 2.8, hemiSky: 0xe4f0ff, hemiGround: 0x6b665c, hemiInt: 0.5, top: 0x4f86c6, horizon: 0xcfe0ee, ground: 0x8c877d, fog: 0xcfe0ee, exposure: 1.0, wet: false, night: false },
+  evening: { name: 'Axşam', sun: [-0.95, 0.2, 0.12], sunColor: 0xffb070, sunInt: 2.0, hemiSky: 0xffc9a0, hemiGround: 0x4a3c38, hemiInt: 0.35, top: 0x3c4f86, horizon: 0xf2a86e, ground: 0x5a4a40, fog: 0xd9a27c, exposure: 1.15, wet: false, night: false, evening: true },
   night: { name: 'Yaş asfalt, gecə', sun: [0.3, 0.5, -0.4], sunColor: 0x8fa6d8, sunInt: 0.12, hemiSky: 0x24304a, hemiGround: 0x0c0d10, hemiInt: 0.12, top: 0x05070d, horizon: 0x1a2232, ground: 0x0b0c0e, fog: 0x141a24, exposure: 1.35, wet: true, night: true },
 };
 

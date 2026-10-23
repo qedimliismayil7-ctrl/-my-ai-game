@@ -84,7 +84,12 @@
         <ol id="briefTheory" class="theory"></ol></details>
         <h3>Rejim</h3>
         <div class="modes" id="briefModes"></div>
-        <label class="check" id="briefHelpRow"><input type="checkbox" id="briefHelp" /> Kömək: təlimatçı və köməkçi xətlər</label>
+        <label class="check" id="briefHelpRow">Köməkçilər:
+          <select id="briefHelp">
+            <option value="auto">Mərhələli — uğurlu park etdikcə azalır</option>
+            <option value="full">Tam (təlimatçı, xəyali maşın, xətlər)</option>
+            <option value="none">Yoxdur — yalnız güzgülər və baxış</option>
+          </select><small id="briefStage"></small></label>
         <div class="btns row">
           <button data-go="levels">← Geri</button>
           <button id="briefStart" class="primary">Başla</button>

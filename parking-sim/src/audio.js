@@ -43,34 +43,59 @@ export class Sound {
     o.stop(t + dur + 0.02);
   }
 
+  // Mühərrik: 2.0 L 4 silindr — alışma tezliyi = dövr/dəq ÷ 60 × 2. Sürünmədə ~750 dövr/dəq,
+  // qaz yükü artdıqca dövr və "sərtlik" (filtr) artır. Dəyərlər təxminidir (yazılmış səs deyil, sintez).
   startEngine() {
     const c = this.ctx;
-    this.eng = c.createOscillator();
-    this.eng.type = 'sawtooth';
-    this.eng.frequency.value = 38;
-    this.engSub = c.createOscillator();
-    this.engSub.type = 'sine';
-    this.engSub.frequency.value = 19;
-    const lp = c.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = 220;
+    const mk = (type, gain) => { const o = c.createOscillator(); o.type = type; const g = c.createGain(); g.gain.value = gain; o.connect(g); o.start(); return { o, g }; };
+    this.e1 = mk('sawtooth', 0.6); // alışma
+    this.e2 = mk('sine', 0.8); // dirsəkli val (yarım tezlik)
+    this.e3 = mk('square', 0.0); // yük altında harmonika
+    this.engLp = c.createBiquadFilter();
+    this.engLp.type = 'lowpass';
+    this.engLp.frequency.value = 200;
     this.engGain = c.createGain();
-    this.engGain.gain.value = 0.0;
-    this.eng.connect(lp);
-    this.engSub.connect(lp);
-    lp.connect(this.engGain).connect(this.master);
-    this.eng.start();
-    this.engSub.start();
+    this.engGain.gain.value = 0;
+    for (const e of [this.e1, this.e2, this.e3]) e.g.connect(this.engLp);
+    this.engLp.connect(this.engGain).connect(this.master);
+    this.eng = this.e1.o;
+    // təkər səsi: səs-küy → zolaq filtri; sürətlə artır, yaş asfaltda daha "xışıltılı"
+    const len = c.sampleRate * 2;
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < len; i++) { last = last * 0.97 + (Math.random() * 2 - 1) * 0.03; d[i] = last * 6; }
+    const src = c.createBufferSource();
+    src.buffer = buf; src.loop = true;
+    this.tireBp = c.createBiquadFilter();
+    this.tireBp.type = 'bandpass'; this.tireBp.frequency.value = 420; this.tireBp.Q.value = 0.7;
+    this.tireGain = c.createGain(); this.tireGain.gain.value = 0;
+    src.connect(this.tireBp).connect(this.tireGain).connect(this.master);
+    src.start();
+    this.wet = false;
   }
 
-  engine(throttle, speed, running) {
+  // throttle 0..1, speed m/s, running, gear ('P','R','N','D')
+  engine(throttle, speed, running, gear = 'D') {
     if (!this.ctx || !this.eng) return;
     const t = this.ctx.currentTime;
-    const f = 34 + throttle * 30 + speed * 4;
-    this.eng.frequency.setTargetAtTime(f, t, 0.15);
-    this.engSub.frequency.setTargetAtTime(f / 2, t, 0.15);
-    this.engGain.gain.setTargetAtTime(running ? 0.05 + throttle * 0.06 : 0, t, 0.2);
+    const free = gear === 'P' || gear === 'N';
+    const rpm = free ? 720 + throttle * 2300 : 750 + throttle * 1100 + speed * 70;
+    const load = free ? throttle * 0.4 : Math.min(1, throttle + (speed < 0.2 && !free ? 0.15 : 0));
+    const f = (rpm / 60) * 2;
+    this.e1.o.frequency.setTargetAtTime(f, t, 0.12);
+    this.e2.o.frequency.setTargetAtTime(f / 2, t, 0.12);
+    this.e3.o.frequency.setTargetAtTime(f * 2, t, 0.12);
+    this.e3.g.gain.setTargetAtTime(0.08 + load * 0.25, t, 0.15);
+    this.engLp.frequency.setTargetAtTime(160 + load * 700 + (rpm - 700) * 0.12, t, 0.15);
+    this.engGain.gain.setTargetAtTime(running ? 0.045 + load * 0.05 : 0, t, 0.2);
+    // təkər: park sürətlərində çox zəif; cırıltı yoxdur
+    const tg = running ? Math.min(1, speed / 2.8) * (this.wet ? 0.07 : 0.035) : 0;
+    this.tireGain.gain.setTargetAtTime(tg, t, 0.15);
+    this.tireBp.frequency.setTargetAtTime(this.wet ? 1400 : 380 + speed * 60, t, 0.2);
   }
+
+  setWet(w) { this.wet = !!w; }
 
   // Park sensoru: məsafə (m) azaldıqca siqnal sürətlənir, ~0.3 m-dən az — fasiləsiz.
   sensors(front, rear, dt, enabled) {
@@ -162,7 +187,7 @@ export class Sound {
 
   stopAll() {
     this.stopContinuous();
-    this.engine(0, 0, false);
+    this.engine(0, 0, false, 'P');
   }
 }
 

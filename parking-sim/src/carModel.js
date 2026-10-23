@@ -5,6 +5,7 @@
 // Siluet, barmaqlıq, işıqlar və salon fotolara əsasən TƏXMİNİDİR (zavod CAD məlumatı deyil).
 import * as THREE from 'three';
 import { CAR, PARKED } from './physics.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export const LAYER = { WORLD: 0, BODY: 1, INTERIOR: 2, REARCAM: 3, HELPERS: 4 };
 
@@ -24,15 +25,21 @@ export const MAT = {
 
 function paintMat(color) {
   if (!MAT.physical) return new THREE.MeshStandardMaterial({ color, metalness: 0.55, roughness: 0.35 });
-  return new THREE.MeshPhysicalMaterial({ color, metalness: 0.62, roughness: 0.34, clearcoat: 1, clearcoatRoughness: 0.06 });
+  // metallik boya: əsas qat yarı-metal (piqment + alüminium hissəcikləri), üstündə şəffaf lak
+  return new THREE.MeshPhysicalMaterial({ color, metalness: 0.35, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.05 });
 }
 const M = {};
 function mats() {
   if (M.ready === MAT.physical) return M;
   M.ready = MAT.physical;
   M.glass = MAT.physical
-    ? new THREE.MeshPhysicalMaterial({ color: 0x0d1418, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.55, envMapIntensity: 1.6, depthWrite: false })
+    ? new THREE.MeshPhysicalMaterial({ color: 0x0e1418, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.8, envMapIntensity: 1.1, depthWrite: false })
     : new THREE.MeshStandardMaterial({ color: 0x0d1418, metalness: 0.2, roughness: 0.08, transparent: true, opacity: 0.6, depthWrite: false });
+  // dayanan maşınlarda salon modeli yoxdur — tonlanmış şüşə daha az şəffafdır (real tonlama ilə də içi zəif görünür)
+  M.glassDark = MAT.physical
+    ? new THREE.MeshPhysicalMaterial({ color: 0x0a0e12, metalness: 0, roughness: 0.03, transparent: true, opacity: 0.86, envMapIntensity: 1.8, depthWrite: false })
+    : new THREE.MeshStandardMaterial({ color: 0x0a0e12, metalness: 0.2, roughness: 0.06, transparent: true, opacity: 0.88, depthWrite: false });
+  M.glossDS = new THREE.MeshStandardMaterial({ color: 0x08090a, roughness: 0.18, metalness: 0.2, side: THREE.DoubleSide });
   M.trim = new THREE.MeshStandardMaterial({ color: 0x0c0d0f, roughness: 0.55, metalness: 0.1 }); // qara plastik
   M.gloss = new THREE.MeshStandardMaterial({ color: 0x08090a, roughness: 0.18, metalness: 0.2 }); // parlaq qara
   M.chrome = new THREE.MeshStandardMaterial({ color: 0xd5d8dc, roughness: 0.12, metalness: 1 });
@@ -63,6 +70,34 @@ function setLayer(obj, layer, extra = []) {
   });
 }
 
+// Yan tərəfdə düz çoxbucaqlı: pts = [[z, y], ...], x — sabit (sol +, sağ −)
+function sidePoly(pts, x, mat) {
+  const pos = [];
+  for (let i = 1; i < pts.length - 1; i++) for (const k of [0, i, i + 1]) pos.push(x, pts[k][1], pts[k][0]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  const m = mesh(g, mat, false);
+  m.material = mat;
+  return m;
+}
+
+function flipWinding(g) {
+  if (g.index) {
+    const ix = g.index.array;
+    for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; }
+    g.index.needsUpdate = true;
+    return;
+  }
+  for (const name of Object.keys(g.attributes)) {
+    const a = g.attributes[name], n = a.itemSize, arr = a.array;
+    for (let i = 0; i < a.count; i += 3) {
+      for (let k = 0; k < n; k++) { const t = arr[(i + 1) * n + k]; arr[(i + 1) * n + k] = arr[(i + 2) * n + k]; arr[(i + 2) * n + k] = t; }
+    }
+    a.needsUpdate = true;
+  }
+}
+
 // Yan profildən (Shape: x = maşının z-i, y = hündürlük) eninə uzanan gövdə, sonra plan və en kəsiyinə görə əyilir.
 // widthAt(y, z) → həmin nöqtədə yarım en (m)
 function sculpt(shape, width, widthAt, steps = 10, curveSegments = 10) {
@@ -74,6 +109,9 @@ function sculpt(shape, width, widthAt, steps = 10, curveSegments = 10) {
     const hw = widthAt(y, z);
     p.setXYZ(i, (x / (width / 2)) * hw, y, z);
   }
+  // oxların yerdəyişməsi həndəsəni güzgüləyir — üçbucaqların istiqaməti tərsinə çevrilməlidir,
+  // yoxsa normallar içəri baxır (gövdə qaranlıq görünür, şüşə çöldən görünmür)
+  flipWinding(g);
   g.computeVertexNormals();
   return g;
 }
@@ -212,15 +250,24 @@ export function buildCar(color = 0x8f9396, player = false, dims = null, kind = '
 
   const lw = lowerWidth(S);
   body.add(mesh(sculpt(lowerShape(S), W, lw, player ? 12 : 6, player ? 12 : 6), paint));
-  body.add(mesh(sculpt(greenhouseShape(S), W, greenWidth(S), player ? 8 : 4, player ? 10 : 5), m.glass, false));
+  body.add(mesh(sculpt(greenhouseShape(S), W, greenWidth(S), player ? 8 : 4, player ? 10 : 5), player ? m.glass : m.glassDark, false));
+  if (!player) {
+    // sadə salon siluyeti: oturacaq arxalıqları və baş dayaqları (şüşədən tünd kölgə kimi görünür)
+    const seatM = m.trim;
+    for (const zz of [S.roofF - 0.35, S.roofR + 0.25]) {
+      body.add(box(W - 0.45, 0.55, 0.12, seatM, 0, S.belt + 0.05, zz));
+      for (const xx of [0.38, -0.38]) body.add(box(0.26, 0.18, 0.1, seatM, xx, S.belt + 0.42, zz - 0.02));
+    }
+  }
   // dam paneli (rəngli) — şüşənin üstündə
   const rs = new THREE.Shape();
-  rs.moveTo(S.roofF - 0.08, S.H - 0.03);
-  rs.quadraticCurveTo((S.roofF + S.roofR) / 2, S.H + 0.02, S.roofR + 0.12, S.H - 0.04);
-  rs.lineTo(S.roofR + 0.12, S.H - 0.09);
-  rs.quadraticCurveTo((S.roofF + S.roofR) / 2, S.H - 0.04, S.roofF - 0.08, S.H - 0.08);
+  // dam: şüşənin üstünü örtür (yalnız yanlarda, öndə və arxada şüşə görünür — real Elantra kimi)
+  rs.moveTo(S.roofF - 0.02, S.H - 0.015);
+  rs.quadraticCurveTo((S.roofF + S.roofR) / 2, S.H + 0.035, S.roofR + 0.06, S.H - 0.02);
+  rs.lineTo(S.roofR + 0.06, S.H - 0.07);
+  rs.quadraticCurveTo((S.roofF + S.roofR) / 2, S.H - 0.03, S.roofF - 0.02, S.H - 0.07);
   const gw = greenWidth(S);
-  body.add(mesh(sculpt(rs, W, (y) => gw(y) + 0.005, 4, 8), paint));
+  body.add(mesh(sculpt(rs, W, (y) => gw(y) + 0.012, 4, 10), paint));
   // dirəklər: B (qara), C (rəngli üçbucaq) — yan şüşələrin arasında
   const midB = (S.roofF + S.roofR) / 2 - 0.05;
   for (const s of [1, -1]) {
@@ -228,14 +275,8 @@ export function buildCar(color = 0x8f9396, player = false, dims = null, kind = '
     const b = box(0.02, S.H - S.belt - 0.05, 0.09, m.gloss, s * (gw(yB) + 0.006), yB, midB);
     b.rotation.z = s * 0.2;
     body.add(b);
-    const cs = new THREE.Shape();
-    cs.moveTo(S.roofR + 0.25, S.H - 0.06); cs.lineTo(S.glassR + 0.3, S.deck + 0.05); cs.lineTo(S.roofR - 0.05, S.belt + 0.02); cs.closePath();
-    const cg = new THREE.ShapeGeometry(cs);
-    cg.rotateY((s * Math.PI) / 2);
     // C dirəyində qara üçbucaqlı örtük (fotolardakı kimi)
-    const cm = mesh(cg, m.gloss, false);
-    cm.position.x = s * (gw(S.belt + 0.2) + 0.008);
-    body.add(cm);
+    body.add(sidePoly([[S.roofR + 0.2, S.H - 0.07], [S.glassR + 0.3, S.deck + 0.05], [S.roofR - 0.08, S.belt + 0.03]], s * (gw(S.belt + 0.2) + 0.008), m.glossDS));
     // pəncərə ətrafı xrom zolaq
     const ch = box(0.012, 0.012, (S.cowl - S.glassR) * 0.86, m.chrome, s * (lw(S.belt, 0.5) - 0.012), S.belt + 0.005, (S.cowl + S.glassR) / 2 - 0.05);
     body.add(ch);
@@ -339,16 +380,20 @@ export function buildCar(color = 0x8f9396, player = false, dims = null, kind = '
     body.add(box(W - 0.3, 0.01, S.wb - 0.75, new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.95 }), 0, 0.17, S.wb / 2));
     // arxa şüşənin altında qara zolaq
     body.add(box(W * 0.78, 0.012, 0.13, m.gloss, 0, S.deck + 0.004, S.glassR + 0.08));
-    // "Z" formalı yan xətt: qapılar boyunca enən üçbucaqlı faset (fərqli normal — işıq onu ayırır)
+    // "Z" formalı yan xətt: qapılar boyunca enən kəskin qırış — tünd kölgə xətti + üstündə işıqlı kənar
+    const creaseDark = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false });
+    const creaseLight = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.12, depthWrite: false });
     for (const sd of [1, -1]) {
-      const fs = new THREE.Shape();
-      fs.moveTo(1.9, 0.84); fs.lineTo(-0.55, 0.58); fs.lineTo(-0.2, 0.42); fs.lineTo(1.55, 0.5); fs.closePath();
-      const fgeo = new THREE.ShapeGeometry(fs);
-      fgeo.rotateY((sd * Math.PI) / 2);
-      const facet = mesh(fgeo, paint, false);
-      facet.position.x = sd * (lw(0.62, 0.7) + 0.006);
-      facet.rotation.z = sd * 0.14; // aşağıya baxan faset
-      body.add(facet);
+      const line = (dy, mat) => {
+        const pts = [];
+        for (let i = 0; i <= 12; i++) {
+          const t = i / 12, z = 2.05 - t * 2.5, y = 0.84 - t * 0.27 + dy;
+          pts.push(new THREE.Vector3(sd * (lw(y, z) + 0.003), y, z));
+        }
+        body.add(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.004, 4), mat, false));
+      };
+      line(0, creaseDark);
+      line(0.012, creaseLight);
       // ön bamperin küncündə qara üçbucaqlı hava girişi
       const tri = new THREE.Shape();
       tri.moveTo(0, 0); tri.lineTo(0.16, 0.0); tri.lineTo(0.02, 0.13); tri.closePath();
@@ -360,7 +405,7 @@ export function buildCar(color = 0x8f9396, player = false, dims = null, kind = '
       body.add(tm);
       // arxa künclərdə üçbucaqlı fənərlər (zolağın uclarında, yana keçir)
       const tl = new THREE.Shape();
-      tl.moveTo(0, 0); tl.lineTo(-0.42, 0.03); tl.lineTo(0, -0.17); tl.closePath();
+      tl.moveTo(0, 0); tl.lineTo(0.42, 0.03); tl.lineTo(0, -0.17); tl.closePath(); // gövdənin içinə doğru
       const tlg = new THREE.ShapeGeometry(tl);
       const tlm = mesh(tlg, lights.tail, false);
       tlm.position.set(sd * (HW - 0.06), S.deck - 0.055, R0 + 0.04);
@@ -405,14 +450,51 @@ const PARKED_KINDS = [
   { kind: 'suv', d: { length: 4.75, width: 1.88, height: 1.7, wheelbase: 2.75, rearOverhang: 1.0, track: 1.62 } },
   { kind: 'hatch', d: { length: 4.35, width: 1.8, height: 1.48, wheelbase: 2.65, rearOverhang: 0.85, track: 1.56 } },
 ];
-// Ətraf maşınlar toqquşma üçün PARKED ölçüsündədir (4.8 × 1.86) — görünən model ona yaxın seçilir
-export function buildParkedCar(color, variant = 0) {
+// Ətraf maşınlar: hər növ+ölçü üçün bir dəfə qurulur, sonra hissələri material üzrə birləşdirilir
+// (~80 obyekt → ~12 draw call) və həndəsə eyni maşınlar arasında paylaşılır. Yalnız boya materialı fərqlidir.
+const parkedCache = new Map();
+const paintCache = new Map();
+function bakeTemplate(out) {
+  out.root.updateMatrixWorld(true);
+  const groups = new Map();
+  out.root.traverse((o) => {
+    if (!o.isMesh || !o.visible) return;
+    let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+    g.applyMatrix4(o.matrixWorld);
+    for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') g.deleteAttribute(k);
+    if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    if (!g.attributes.normal) g.computeVertexNormals();
+    const key = o.material.uuid;
+    if (!groups.has(key)) groups.set(key, { mat: o.material, geos: [], cast: false });
+    const e = groups.get(key);
+    e.geos.push(g);
+    e.cast ||= o.castShadow;
+  });
+  const parts = [];
+  for (const e of groups.values()) parts.push({ geo: mergeGeometries(e.geos, false), mat: e.mat, cast: e.cast, paint: e.mat === out.paint });
+  return { parts, lights: out.lights };
+}
+export function buildParkedCar(color, variant = 0, size = null) {
   const k = PARKED_KINDS[variant % PARKED_KINDS.length];
-  const d = { ...k.d, length: Math.min(k.d.length, PARKED.length), width: Math.min(k.d.width, PARKED.width) };
-  const out = buildCar(color, false, d, k.kind);
+  // görünən model toqquşma qutusu ilə eyni ölçüdədir (qonşu maşınların ölçüsü məşqdə dəyişir)
+  const L = size?.l || PARKED.length, Wd = size?.w || PARKED.width;
+  const sc = L / k.d.length;
+  const d = { ...k.d, length: L, width: Wd, wheelbase: k.d.wheelbase * sc, rearOverhang: k.d.rearOverhang * sc };
+  const key = `${variant % PARKED_KINDS.length}|${L}|${Wd}|${MAT.physical}`;
+  if (!parkedCache.has(key)) parkedCache.set(key, bakeTemplate(buildCar(0x888888, false, d, k.kind)));
+  const t = parkedCache.get(key);
+  if (!paintCache.has(color)) paintCache.set(color, paintMat(color));
+  const paint = paintCache.get(color);
+  const root = new THREE.Group();
+  for (const p of t.parts) {
+    const m = new THREE.Mesh(p.geo, p.paint ? paint : p.mat);
+    m.castShadow = p.cast;
+    m.receiveShadow = true;
+    m.layers.set(LAYER.WORLD);
+    root.add(m);
+  }
   // modelin mənşəyi arxa oxdadır; mərkəzə qədər məsafə
-  out.centerOffset = d.length / 2 - d.rearOverhang;
-  return out;
+  return { root, lights: t.lights, paint, centerOffset: d.length / 2 - d.rearOverhang };
 }
 
 // ---------- Salon (yalnız sürücü kamerası) ----------
@@ -439,20 +521,20 @@ function addInterior(root, out, paint, S) {
 
   // panel: alçaq, üfüqi; üst hissə yumşaq plastik
   const dash = new THREE.Shape();
-  dash.moveTo(1.38, 0.6); dash.lineTo(1.5, 0.83); dash.quadraticCurveTo(1.7, 0.9, 2.02, 0.92); dash.lineTo(2.02, 0.6);
-  g.add(mesh(sculpt(dash, S.W - 0.1, () => HW - 0.06, 6, 6), soft, false));
+  dash.moveTo(1.38, 0.55); dash.lineTo(1.5, 0.78); dash.quadraticCurveTo(1.7, 0.85, 2.02, 0.88); dash.lineTo(2.02, 0.55);
+  g.add(mesh(sculpt(dash, S.W - 0.1, () => HW - 0.15, 6, 6), soft, false));
   // havalandırma xətti (xrom)
-  g.add(box(S.W - 0.2, 0.01, 0.015, silver, 0, 0.78, 1.47));
+  g.add(box(S.W - 0.2, 0.01, 0.015, silver, 0, 0.74, 1.47));
   // cihazlar + multimedia: bir çərçivədə, sürücüyə tərəf əyilmiş (SEL: analog cihazlar + 8" ekran — təxmini)
   const tex = canvasTex(512, 128, (c) => { clusterCtx = c; drawCluster(0, 'P'); });
   out.clusterTex = tex;
   const bezel = new THREE.Group();
-  bezel.add(box(0.92, 0.16, 0.05, soft, 0, 0, 0));
-  const scr = mesh(new THREE.PlaneGeometry(0.86, 0.13), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }), false);
+  bezel.add(box(0.84, 0.14, 0.05, soft, 0, 0, 0));
+  const scr = mesh(new THREE.PlaneGeometry(0.79, 0.115), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }), false);
   scr.position.z = -0.026;
   scr.rotation.y = Math.PI;
   bezel.add(scr);
-  bezel.position.set(0.13, 0.95, 1.55);
+  bezel.position.set(0.13, 0.9, 1.57); // üst kənarı kapota baxış xəttindən aşağıdadır
   bezel.rotation.set(-0.12, -0.16, 0);
   g.add(bezel);
   // sərnişin tərəfdə diaqonal konsol "qanadı"
@@ -463,8 +545,9 @@ function addInterior(root, out, paint, S) {
   g.add(box(0.05, 0.1, 0.05, silver, 0.02, 0.6, 0.95)); // ötürmə qolu
   // qapı panelləri
   for (const s of [1, -1]) {
-    g.add(box(0.06, 0.32, 2.3, trim, s * (HW - 0.06), 0.78, 0.55));
-    g.add(box(0.02, 0.012, 1.2, silver, s * (HW - 0.09), 0.9, 0.85));
+    // gövdə qabığının içində qalır (çöldən salon görünəndə qapı panelləri gövdədən çıxmasın)
+    g.add(box(0.05, 0.3, 2.0, trim, s * (HW - 0.13), 0.76, 0.6));
+    g.add(box(0.02, 0.012, 1.1, silver, s * (HW - 0.16), 0.88, 0.85));
   }
   // A dirəkləri ön şüşənin kənarı boyunca (şüşənin həndəsəsinə görə)
   const a0 = new THREE.Vector3(0, S.belt - 0.02, S.cowl - 0.03), a1 = new THREE.Vector3(0, S.H - 0.03, S.roofF + 0.02);
@@ -477,7 +560,7 @@ function addInterior(root, out, paint, S) {
     pl.lookAt(pl.position.clone().add(dir));
     pl.rotateX(Math.PI / 2);
     g.add(pl);
-    g.add(box(0.08, 0.5, 0.1, trim, s * (HW - 0.14), 1.1, (S.roofF + S.roofR) / 2 - 0.05)); // B
+    g.add(box(0.06, 0.45, 0.1, trim, s * (HW - 0.2), 1.1, (S.roofF + S.roofR) / 2 - 0.05)); // B
   }
   // tavan
   const roof = mesh(new THREE.PlaneGeometry(S.W - 0.36, S.roofF - S.roofR - 0.05), headliner, false);
@@ -506,13 +589,15 @@ function addInterior(root, out, paint, S) {
     g.add(seat);
   }
   g.add(box(0.2, 0.08, 0.3, soft, 0, 0.6, 0.45)); // qoltuqaltı
-  g.add(box(S.W - 0.3, 0.12, 0.5, cloth, 0, 0.47, -0.32)); // arxa oturacaq
-  g.add(box(S.W - 0.3, 0.55, 0.12, cloth, 0, 0.8, -0.55));
-  g.add(box(S.W - 0.3, 0.04, 0.5, soft, 0, 0.98, -0.85)); // arxa rəf
+  g.add(box(S.W - 0.36, 0.12, 0.5, cloth, 0, 0.47, -0.08)); // arxa oturacaq (arxa şüşənin altında qalır)
+  const rb = box(S.W - 0.36, 0.55, 0.12, cloth, 0, 0.78, -0.33);
+  rb.rotation.x = -0.2;
+  g.add(rb);
+  g.add(box(S.W - 0.36, 0.03, 0.32, soft, 0, 0.95, S.glassR + 0.2)); // arxa rəf (arxa şüşənin altında, baqajın içinə çıxmır)
 
   // sükan: üç qollu (2023 Elantra kimi — sadələşdirilmiş), ortada loqo
   const steer = new THREE.Group();
-  steer.position.set(VIEW.eye[0], 0.86, 1.36);
+  steer.position.set(VIEW.eye[0], 0.82, 1.38);
   steer.rotation.x = -0.42;
   const ringMat = new THREE.MeshStandardMaterial({ color: 0x141517, roughness: 0.65 });
   const spin = new THREE.Group();

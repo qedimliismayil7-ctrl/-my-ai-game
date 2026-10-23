@@ -1,7 +1,8 @@
 // Səviyyələr: yalnız məlumat (Three.js-siz). world.js bunu 3D-yə çevirir, coach.js təlimatı oxuyur.
 // Bucaqlar: +X istiqaməti = π/2, +Z = 0, −Z = π, −X = −π/2. Pozalar ARXA OXUN mərkəzidir.
 // Ölçülər ABŞ dayanacaq standartlarına yaxındır: perpendikulyar yer 9×18 ft (2.7×5.5 m), koridor 24 ft (7.3 m).
-import { CAR, DEG, PARKED, wrapAngle } from './physics.js';
+import { CAR, DEG, PARKED, wrapAngle, collide } from './physics.js';
+import { obstaclesOf } from './sim.js';
 
 const P = Math.PI;
 const R = CAR.minRadius;
@@ -42,8 +43,14 @@ function arc(pose, k, dh) {
   return { x, z, h: wrapAngle(pose.h + dh) };
 }
 
-function parkedCar(r, x, z, h, exact = false) {
+// Qonşu maşınların ölçüləri (ABŞ-da yayğın: kompakt, sedan, böyük sedan, krossover — təxmini dəyərlər)
+export const NEIGHBOR_SIZES = [
+  { l: 4.45, w: 1.78 }, { l: 4.68, w: 1.83 }, { l: 4.8, w: 1.86 }, { l: 4.95, w: 1.88 }, { l: 5.1, w: 1.95 },
+];
+function parkedCar(r, x, z, h, exact = false, size = null) {
   return {
+    l: size ? size.l : PARKED.length,
+    w: size ? size.w : PARKED.width,
     x: exact ? x : x + (r() - 0.5) * 0.16,
     z: exact ? z : z + (r() - 0.5) * 0.16,
     h: exact ? h : h + (r() - 0.5) * 3 * DEG,
@@ -55,12 +62,38 @@ function emptyLayout(kind) {
   return { kind, lines: [], dashed: [], cars: [], curbs: [], boxes: [], trees: [], grass: [], sidewalks: [], arrows: [] };
 }
 
+// Yol boyunca maşının bütün hissələri (gövdə, güzgülər) maşınlara ~8 sm-dən çox yaxınlaşmırmı?
+function pathFree(L, poses, margin = 0.08) {
+  const g = obstaclesOf(L).filter((o) => o.type === 'car').map((o) => ({ ...o, hw: o.hw + margin, hl: o.hl + margin }));
+  return poses.every((q) => !collide(q, g));
+}
+function arcPoses(pose, k, dh, n = 24) {
+  const out = [];
+  for (let i = 0; i <= n; i++) out.push(arc(pose, k, (dh * i) / n));
+  return out;
+}
+function linePoses(a, b, n = 10) {
+  const out = [];
+  for (let i = 0; i <= n; i++) out.push({ x: a.x + ((b.x - a.x) * i) / n, z: a.z + ((b.z - a.z) * i) / n, h: b.h });
+  return out;
+}
+// Məşq variantı bir hərəkətlə fiziki mümkün deyilsə (dar yer + xəttə yaxın böyük qonşu), başqa düzülüş seçilir
+const retry = (f) => (v, T) => {
+  if (!v.vary) return f(v, T);
+  let lv;
+  for (let k = 0; k < 12; k++) { lv = f({ ...v, seed: (v.seed || 1) + k * 7919 }, T); if (lv.feasible) return lv; }
+  return lv;
+};
+const DX_TRY = [0, 0.15, -0.15, 0.3, -0.3, 0.45];
+
 // ---------- Perpendikulyar dayanacaq ----------
 const LOT = { W: 2.7, D: 5.5, A: 3.65 }; // yer eni, dərinliyi, koridorun yarısı
+// Məşqdə qonşu maşının ölçüsü təsadüfi seçilir (Öyrənmə/İmtahan sabit 4.8 × 1.86)
+const sizeOf = (r, vary) => (vary ? NEIGHBOR_SIZES[Math.floor(r() * NEIGHBOR_SIZES.length)] : null);
 
-function perpLot({ seed, targetIdx }) {
+function perpLot({ seed, targetIdx, W = LOT.W, vary = false }) {
   const r = rng(seed);
-  const { W, D, A } = LOT;
+  const { D, A } = LOT;
   const L = emptyLayout('lot');
   for (let i = -7; i <= 7; i++) {
     const x = i * W;
@@ -72,7 +105,10 @@ function perpLot({ seed, targetIdx }) {
       const near = side > 0 && Math.abs(i - targetIdx) === 1;
       if (near || r() < 0.72) {
         const h = r() < 0.6 ? (side > 0 ? 0 : P) : side > 0 ? P : 0;
-        L.cars.push(parkedCar(r, x, (A + D / 2) * side, h));
+        const sz = sizeOf(r, vary);
+        // qonşu maşın yerin içində, amma xəttə yaxın da dura bilər (məşqdə)
+        const off = vary && near ? (r() - 0.5) * Math.max(0, W - (sz?.w || PARKED.width) - 0.25) : 0;
+        L.cars.push(parkedCar(r, x + off, (A + D / 2) * side, h, false, sz));
       }
     }
   }
@@ -145,19 +181,29 @@ export const GENERAL_LESSONS = [
 // ---------- Səviyyələr ----------
 // v = { seed, shift, startJitter } — Məşq rejimində dəyişir; Öyrənmə və İmtahanda sabitdir.
 
-function level1(v, T = TUNE.l1) {
+function level1once(v, T = TUNE.l1) {
   const ti = v.shift || 0;
-  const tx = ti * LOT.W;
-  const target = { x: tx, z: LOT.A + LOT.D / 2, h: 0, w: LOT.W, l: LOT.D, strict: true };
-  const start = { x: tx - 16 + (v.startJitter || 0), z: T.lane, h: P / 2 };
-  const turnAt = { x: tx - R + T.dx, z: T.lane, h: P / 2 };
-  const arcEnd = arc(turnAt, -1, -P / 2);
-  const final = { x: arcEnd.x, z: LOT.A + LOT.D - 0.3 - FRONT, h: 0 };
+  const W = v.W || LOT.W;
+  const tx = ti * W;
+  const lane = T.lane + (v.laneOff || 0);
+  const target = { x: tx, z: LOT.A + LOT.D / 2, h: 0, w: W, l: LOT.D, strict: true };
+  const start = { x: tx - 16 + (v.startJitter || 0), z: lane, h: P / 2 };
+  const layout = perpLot({ seed: v.seed ?? 11, targetIdx: ti, W, vary: !!v.vary });
+  // dönmə nöqtəsi: qonşu maşınlara toxunmayan ilk variant (Öyrənmədə sabit)
+  let turnAt, arcEnd, final, feasible = false;
+  for (const d of v.vary ? DX_TRY : [0]) {
+    turnAt = { x: tx - R + T.dx + d, z: lane, h: P / 2 };
+    arcEnd = arc(turnAt, -1, -P / 2);
+    final = { x: arcEnd.x, z: LOT.A + LOT.D - 0.3 - FRONT, h: 0 };
+    if (pathFree(layout, [...arcPoses(turnAt, -1, -P / 2), ...linePoses(arcEnd, final)])) { feasible = true; break; }
+  }
+  if (!feasible) { turnAt = { x: tx - R + T.dx, z: lane, h: P / 2 }; arcEnd = arc(turnAt, -1, -P / 2); final = { x: arcEnd.x, z: LOT.A + LOT.D - 0.3 - FRONT, h: 0 }; }
   return {
     id: 1,
+    feasible,
     name: 'Düz park (irəli ilə)',
     short: 'Perpendikulyar yerə irəli ilə',
-    layout: perpLot({ seed: v.seed ?? 11, targetIdx: ti }),
+    layout,
     start, target,
     par: { time: 60, moves: 1 },
     signal: 'R',
@@ -181,19 +227,29 @@ function level1(v, T = TUNE.l1) {
   };
 }
 
-function level2(v, T = TUNE.l2) {
+function level2once(v, T = TUNE.l2) {
   const ti = v.shift || 0;
-  const tx = ti * LOT.W;
-  const target = { x: tx, z: LOT.A + LOT.D / 2, h: P, w: LOT.W, l: LOT.D, strict: true };
-  const start = { x: tx - 16 + (v.startJitter || 0), z: T.lane, h: P / 2 };
-  const stopAt = { x: tx + R + T.dx, z: T.lane, h: P / 2 };
-  const arcEnd = arc(stopAt, -1, P / 2);
-  const final = { x: arcEnd.x, z: LOT.A + LOT.D - 0.3 - BACK, h: P };
+  const W = v.W || LOT.W;
+  const tx = ti * W;
+  const lane = T.lane + (v.laneOff || 0);
+  const target = { x: tx, z: LOT.A + LOT.D / 2, h: P, w: W, l: LOT.D, strict: true };
+  const start = { x: tx - 16 + (v.startJitter || 0), z: lane, h: P / 2 };
+  // geri dönmə qövsü: arxa ox R radiusla lane-dən yerin mərkəzinə; lane dəyişəndə dayanma nöqtəsi də dəyişir
+  const layout = perpLot({ seed: v.seed ?? 23, targetIdx: ti, W, vary: !!v.vary });
+  let stopAt, arcEnd, final, feasible = false;
+  for (const d of v.vary ? DX_TRY : [0]) {
+    stopAt = { x: tx + R + T.dx + d, z: lane, h: P / 2 };
+    arcEnd = arc(stopAt, -1, P / 2);
+    final = { x: arcEnd.x, z: LOT.A + LOT.D - 0.3 - BACK, h: P };
+    if (pathFree(layout, [...arcPoses(stopAt, -1, P / 2), ...linePoses(arcEnd, final)])) { feasible = true; break; }
+  }
+  if (!feasible) { stopAt = { x: tx + R + T.dx, z: lane, h: P / 2 }; arcEnd = arc(stopAt, -1, P / 2); final = { x: arcEnd.x, z: LOT.A + LOT.D - 0.3 - BACK, h: P }; }
   return {
     id: 2,
+    feasible,
     name: 'Arxa ilə park',
     short: 'Perpendikulyar yerə arxa ilə',
-    layout: perpLot({ seed: v.seed ?? 23, targetIdx: ti }),
+    layout,
     start, target,
     par: { time: 75, moves: 2 },
     signal: 'R',
@@ -218,10 +274,10 @@ function level2(v, T = TUNE.l2) {
   };
 }
 
-function level3(v, T = TUNE.l3) {
+function level3once(v, T = TUNE.l3) {
   const r = rng(v.seed ?? 37);
   const ox = v.shift ? v.shift * 9 : 0; // Məşqdə boşluq küçə boyu yerini dəyişir
-  const gap = T.gap || 7.3, curbZ = 5.5; // 24 ft yer; küçə 11 m (36 ft): 2 zolaq + hər tərəfdə park zolağı
+  const gap = v.gap || T.gap || 7.3, curbZ = 5.5; // 24 ft yer; küçə 11 m (36 ft): 2 zolaq + hər tərəfdə park zolağı
   const laneZ = curbZ - 2.45; // park zolağının xətti (8 ft)
   const carZ = curbZ - 0.2 - PARKED.width / 2;
   const L = emptyLayout('street');
@@ -230,8 +286,11 @@ function level3(v, T = TUNE.l3) {
   L.dashed.push([-70, 0, 70, 0]);
   L.lines.push([-70, laneZ, ox - gap / 2, laneZ], [ox + gap / 2, laneZ, 70, laneZ]);
   L.lines.push([ox - gap / 2, laneZ, ox - gap / 2, curbZ], [ox + gap / 2, laneZ, ox + gap / 2, curbZ]);
-  const front = ox + gap / 2 + PARKED.length / 2, rear = ox - gap / 2 - PARKED.length / 2;
-  L.cars.push(parkedCar(r, front, carZ, P / 2, true), parkedCar(r, rear, carZ, P / 2, true));
+  const fs = sizeOf(r, v.vary) || { l: PARKED.length, w: PARKED.width }, rs = sizeOf(r, v.vary) || { l: PARKED.length, w: PARKED.width };
+  const front = ox + gap / 2 + fs.l / 2, rear = ox - gap / 2 - rs.l / 2;
+  // qabaqdakı maşının bordürdən məsafəsi də dəyişir (məşqdə)
+  const fz = curbZ - 0.2 - (v.vary ? r() * 0.25 : 0) - fs.w / 2;
+  L.cars.push(parkedCar(r, front, fz, P / 2, true, fs), parkedCar(r, rear, curbZ - 0.2 - rs.w / 2, P / 2, true, rs));
   for (const dx of [6.4, 12.9]) L.cars.push(parkedCar(r, front + dx, carZ, P / 2), parkedCar(r, rear - dx, carZ, P / 2));
   for (const x of [-20, -8, 5, 18]) L.cars.push(parkedCar(r, x, -carZ, -P / 2));
   for (let x = -40; x <= 40; x += 10) L.trees.push([x + 3, curbZ + 3.4], [x - 2, -curbZ - 3.4]);
@@ -241,17 +300,63 @@ function level3(v, T = TUNE.l3) {
   }
 
   const target = { x: ox, z: (laneZ + curbZ) / 2, h: P / 2, w: curbZ - laneZ, l: gap, strict: true, curbZ };
-  const za = carZ - PARKED.width / 2 - T.lat - HALF_W;
+  const lat = T.lat + (v.latOff || 0);
+  const za = fz - fs.w / 2 - lat - HALF_W;
   const start = { x: ox - 16 + (v.startJitter || 0), z: za, h: P / 2 };
-  const stopAt = { x: ox + gap / 2 + BACK - 0.4 + T.s0, z: za, h: P / 2 };
-  const a1 = arc(stopAt, -1, T.th * DEG);
-  // 45°-də sükanı düzəldib düz geri: ön künc qabaqdakı maşının arxasını keçsin
-  const hb = a1.h;
-  const b1 = { x: a1.x - Math.sin(hb) * T.back, z: a1.z - Math.cos(hb) * T.back, h: hb };
-  const a2 = arc(b1, 1, -T.th * DEG);
+  // Yol bu boşluğun öz həndəsəsindən hesablanır (sabit əzbər hərəkət deyil):
+  // tam sağ qövs (θ) → düz geri (b) → tam sol qövs (θ); son mövqe bordürdən ~22 sm, arxadakı maşından ~m.
+  const zf = curbZ - 0.22 - HALF_W;
+  const plan = (th, b, xr) => {
+    const s0 = { x: 0, z: za, h: P / 2 };
+    const a1r = arc(s0, -1, th);
+    const b1r = { x: a1r.x - Math.sin(a1r.h) * b, z: a1r.z - Math.cos(a1r.h) * b, h: a1r.h };
+    const a2r = arc(b1r, 1, -th);
+    const dx = xr - a2r.x;
+    const sh = (q) => ({ x: q.x + dx, z: q.z, h: q.h });
+    return { stopAt: sh(s0), a1: sh(a1r), b1: sh(b1r), a2: sh(a2r), th, b };
+  };
+  const solveB = (th, xr) => {
+    const p0 = plan(th, 0, xr), p1 = plan(th, 1, xr);
+    return (zf - p0.a2.z) / (p1.a2.z - p0.a2.z);
+  };
+  const obs = obstaclesOf(L).filter((o) => o.type === 'car');
+  const pathFree = (pl) => {
+    // qövs və düz hissə boyunca maşının bütün hissələri yoxlanılır
+    const pts = [];
+    for (let i = 0; i <= 24; i++) pts.push(arc(pl.stopAt, -1, (pl.th * i) / 24));
+    for (let i = 0; i <= 8; i++) { const t = (pl.b * i) / 8; pts.push({ x: pl.a1.x - Math.sin(pl.a1.h) * t, z: pl.a1.z - Math.cos(pl.a1.h) * t, h: pl.a1.h }); }
+    for (let i = 0; i <= 24; i++) pts.push(arc(pl.b1, 1, (-pl.th * i) / 24));
+    const grow = (o) => ({ ...o, hw: o.hw + 0.08, hl: o.hl + 0.08 }); // ~8 sm ehtiyat
+    const g = obs.map(grow);
+    return pts.every((q) => !collide(q, g));
+  };
+  let best = null;
+  for (const m of [0.45, 0.65, 0.85, 0.3]) {
+    const xr = ox - gap / 2 + m + BACK;
+    for (const thd of [45, 40, 50, 35, 55]) {
+      let th = thd * DEG, b = solveB(th, xr);
+      if (b < 0) {
+        // yan məsafə azdır: düz hissəsiz, bucağı kiçildirik
+        let lo = 10 * DEG, hi = th;
+        for (let k = 0; k < 30; k++) { const mid = (lo + hi) / 2; if (solveB(mid, xr) < 0) hi = mid; else lo = mid; }
+        th = lo; b = 0;
+      }
+      const pl = plan(th, b, xr);
+      if (pathFree(pl)) { best = pl; break; }
+    }
+    if (best) break;
+  }
+  const feasible = !!best;
+  if (!best) best = plan(T.th * DEG, Math.max(0, solveB(T.th * DEG, ox - gap / 2 + 0.6 + BACK)), ox - gap / 2 + 0.6 + BACK);
+  const { stopAt, a1, b1, a2 } = best;
+  const thDeg = Math.round(best.th / DEG);
   const final = { x: ox - CAR.centerOffset, z: a2.z, h: P / 2 };
+  // istinad: arxa təkərin qabaqdakı maşının arxa bamperinə nisbəti (bu boşluq üçün)
+  const rel = stopAt.x - (front - fs.l / 2);
+  const relText = Math.abs(rel) < 0.15 ? 'arxa təkəriniz onun arxa bamperinin bərabərində' : `arxa təkəriniz onun arxa bamperindən ~${Math.abs(rel).toFixed(1)} m ${rel > 0 ? 'qabaqda' : 'arxada'}`;
   return {
     id: 3,
+    feasible,
     name: 'Paralel park',
     short: 'İki maşının arasına, bordür boyunca',
     layout: L,
@@ -270,16 +375,16 @@ function level3(v, T = TUNE.l3) {
     coach: [
       { check: 'gear', to: 'D', text: 'Əyləc + D' },
       { check: 'signal', to: 'R', text: 'Sağa siqnal (X)' },
-      { check: 'goto', axis: 'x', to: stopAt.x, sign: 1, tol: 0.25, ghost: stopAt, text: 'Qabaqdakı maşına paralel, ~0.8 m aralı', hint: 'Arxa təkəriniz onun arxa bamperinin bərabərində' },
+      { check: 'goto', axis: 'x', to: stopAt.x, sign: 1, tol: 0.25, ghost: stopAt, text: `Qabaqdakı maşına paralel, ~${lat.toFixed(1)} m aralı`, hint: `Bu boşluq üçün: ${relText}` },
       { check: 'gear', to: 'R', text: 'Əyləc + R, çiyin üstündən baxın' },
       { check: 'steer', to: 1, text: 'Sükan tam SAĞA' },
-      { check: 'turn', to: P / 2 + T.th * DEG, sign: 1, tol: 2, ghost: a1, text: 'Yavaş geri', hint: '~45°: sol güzgüdə arxadakı maşının hər iki farası' },
-      ...(T.back > 0.05 ? [
+      { check: 'turn', to: a1.h, sign: 1, tol: 2, ghost: a1, text: 'Yavaş geri', hint: `~${thDeg}°: sol güzgüdə arxadakı maşın görünür, bucağı güzgüyə görə yoxlayın` },
+      ...(best.b > 0.05 ? [
         { check: 'steer', to: 0, text: 'Sükanı düzəldin' },
-        { check: 'goto', axis: 'x', to: b1.x, sign: -1, tol: 0.2, ghost: b1, text: 'Düz geri', hint: 'Ön bamperiniz qabaqdakı maşının arxa bamperini keçəndə' },
+        { check: 'goto', axis: 'z', to: b1.z, sign: 1, tol: 0.06, ghost: b1, text: 'Düz geri', hint: 'Ön bamperiniz qabaqdakı maşının arxa bamperini keçəndə' },
       ] : []),
       { check: 'steer', to: -1, text: 'Sükan tam SOLA' },
-      { check: 'turn', to: P / 2, sign: -1, tol: 2, ghost: a2, text: 'Yavaş geri', hint: 'Bordürə paralel olanda dayanın' },
+      { check: 'turn', to: P / 2, sign: -1, tol: 2, ghost: a2, text: 'Yavaş geri', hint: 'Sağ ön künc qabaqdakı maşına yaxınlaşır — sağa baxın; bordürə paralel olanda dayanın' },
       { check: 'gear', to: 'D', text: 'Əyləc + D' },
       { check: 'steer', to: 0, text: 'Sükanı düzəldin' },
       { check: 'goto', axis: 'x', to: final.x, sign: 1, tol: 0.3, ghost: final, text: 'Bir az irəli', hint: 'Qabaq və arxa məsafə bərabər' },
@@ -288,11 +393,11 @@ function level3(v, T = TUNE.l3) {
   };
 }
 
-function level4(v, T = TUNE.l4) {
+function level4once(v, T = TUNE.l4) {
   const r = rng(v.seed ?? 53);
   const hs = P / 6; // yer 60° bucaq altında
   const f = [Math.sin(hs), Math.cos(hs)];
-  const W = LOT.W, D = LOT.D;
+  const W = v.W || LOT.W, D = LOT.D;
   const sp = W / Math.sin(P / 3);
   const ti = v.shift || 0;
   const e0 = 3.5; // girişin xətti
@@ -301,7 +406,7 @@ function level4(v, T = TUNE.l4) {
     const xe = i * sp;
     for (const off of i === 7 ? [-sp / 2, sp / 2] : [-sp / 2]) L.lines.push([xe + off, e0, xe + off + f[0] * D, e0 + f[1] * D]);
     if (i === ti) continue;
-    if (Math.abs(i - ti) === 1 || r() < 0.7) L.cars.push(parkedCar(r, xe + f[0] * D / 2, e0 + f[1] * D / 2, r() < 0.85 ? hs : hs + P));
+    if (Math.abs(i - ti) === 1 || r() < 0.7) L.cars.push(parkedCar(r, xe + f[0] * D / 2, e0 + f[1] * D / 2, r() < 0.85 ? hs : hs + P, false, sizeOf(r, v.vary)));
   }
   const zBack = e0 + f[1] * D;
   L.lines.push([-7.5 * sp, zBack, 7.5 * sp + f[0] * D, zBack]);
@@ -318,14 +423,24 @@ function level4(v, T = TUNE.l4) {
   const xe0 = ti * sp;
   const center = { x: xe0 + f[0] * D / 2, z: e0 + f[1] * D / 2 };
   const target = { x: center.x, z: center.z, h: hs, w: W, l: D, strict: true };
-  const start = { x: xe0 - 18 + (v.startJitter || 0), z: T.lane, h: P / 2 };
-  const tEnd = (T.lane + R * 0.5 - e0) / f[1];
-  const turnAt = { x: xe0 + f[0] * tEnd - R * Math.sin(P / 3) + T.dx, z: T.lane, h: P / 2 };
-  const arcEnd = arc(turnAt, -1, hs - P / 2);
+  const lane = T.lane + (v.laneOff || 0);
+  const start = { x: xe0 - 18 + (v.startJitter || 0), z: lane, h: P / 2 };
+  const tEnd = (lane + R * 0.5 - e0) / f[1];
   const finalZ = zBack - 0.3 * f[1] - FRONT * f[1];
-  const final = { x: arcEnd.x + (finalZ - arcEnd.z) * Math.tan(hs), z: finalZ, h: hs };
+  let turnAt, arcEnd, final, feasible = false;
+  const mk = (d) => {
+    turnAt = { x: xe0 + f[0] * tEnd - R * Math.sin(P / 3) + T.dx + d, z: lane, h: P / 2 };
+    arcEnd = arc(turnAt, -1, hs - P / 2);
+    final = { x: arcEnd.x + (finalZ - arcEnd.z) * Math.tan(hs), z: finalZ, h: hs };
+  };
+  for (const d of v.vary ? DX_TRY : [0]) {
+    mk(d);
+    if (pathFree(L, [...arcPoses(turnAt, -1, hs - P / 2), ...linePoses(arcEnd, final)])) { feasible = true; break; }
+  }
+  if (!feasible) mk(0);
   return {
     id: 4,
+    feasible,
     name: 'Maili park',
     short: '60° bucaq altında yerə irəli ilə',
     layout: L,
@@ -354,7 +469,7 @@ function level4(v, T = TUNE.l4) {
 
 function level5(v) {
   const r = rng(v.seed ?? 71);
-  const half = 3.75;
+  const half = v.half || 3.75;
   const L = emptyLayout('street');
   L.curbs.push([-70, half + 0.15, 70, half + 0.15], [-70, -half - 0.15, 70, -half - 0.15]);
   L.sidewalks.push({ cx: 0, cz: half + 2.3, w: 140, l: 4 }, { cx: 0, cz: -half - 2.3, w: 140, l: 4 });
@@ -372,6 +487,7 @@ function level5(v) {
   const start = { x: -6 + (v.startJitter || 0), z: half - 0.3 - HALF_W, h: P / 2 };
   return {
     id: 5,
+    feasible: true,
     name: 'Dar küçədə dönmə',
     short: '3 hərəkətlə geri dönün (7.5 m küçə)',
     layout: L,
@@ -403,13 +519,23 @@ function level5(v) {
   };
 }
 
+const level1 = retry(level1once), level2 = retry(level2once), level3 = retry(level3once), level4 = retry(level4once);
 const FACTORIES = [level1, level2, level3, level4, level5];
 
 // Məşq rejimi üçün təsadüfi variant
 export function randomVariant(id) {
   const s = Math.floor(Math.random() * 1e9);
   const shifts = { 1: [-2, -1, 0, 1, 2], 2: [-2, -1, 0, 1, 2], 3: [-1, 0, 1], 4: [-2, -1, 0, 1, 2], 5: [0] }[id];
-  return { seed: s, shift: shifts[s % shifts.length], startJitter: ((s >> 4) % 7) - 3 };
+  const r = rng(s);
+  const pick = (a) => a[Math.floor(r() * a.length)];
+  return {
+    seed: s, shift: shifts[s % shifts.length], startJitter: ((s >> 4) % 7) - 3, vary: true,
+    W: pick([2.5, 2.6, 2.7, 2.8, 2.9]), // yer eni 8.2–9.5 ft
+    laneOff: (r() - 0.5) * 0.7, // başlanğıc zolağında yana sürüşmə ±35 sm
+    gap: pick([6.7, 7.0, 7.3, 7.8]), // paralel boşluq (6.7 m-dən qısa boşluğa bu maşın bir qövs hərəkəti ilə girmir — testlə yoxlanıb)
+    latOff: (r() - 0.5) * 0.5, // qabaqdakı maşından yan məsafə ±25 sm
+    half: pick([3.7, 3.75, 3.8]), // dar küçənin yarı eni (7.4–7.6 m; 7.2 m-də 3 hərəkət kifayət etmir)
+  };
 }
 
 export function makeLevel(id, variant = {}, tune) {

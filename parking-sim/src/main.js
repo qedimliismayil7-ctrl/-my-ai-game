@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import './style.css';
-import { CarPhysics, CAR, SPEC, GEARS, toWorld, carBox, FixedStepper, ContactTracker, STEER_RATE, closestOnObb } from './physics.js';
+import { CarPhysics, CAR, SPEC, GEARS, toWorld, carBox, FixedStepper, ContactTracker, STEER_RATE, closestOnObb, clamp } from './physics.js';
 import { buildCar, updateCarVisual, buildGhost, drawCluster, LAYER, VIEW } from './carModel.js';
 import { QUALITY, QUALITY_ORDER, TIMES, makeSky, makeEnvironment, makeComposer, FpsMeter } from './gfx.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { decal } from './textures.js';
 import { buildWorld } from './world.js';
+import { advise } from './advisor.js';
 import { LEVELS, GENERAL_LESSONS, makeLevel, randomVariant } from './levels.js';
 import { bumperClearance } from './sim.js';
 
@@ -24,9 +25,10 @@ const SETTINGS_KEY = 'park-sim-settings';
 const RESULTS_KEY = 'park-sim-results';
 const DEFAULTS = {
   sensors: true, details: false, voice: false, realGear: true, clutchMode: false,
-  mirrors: true, autoRearCam: true, quality: 'auto', timeOfDay: 'day', showFps: false, volume: 0.7,
+  mirrors: true, autoRearCam: true, rearStatic: true, rearDynamic: true, quality: 'auto', timeOfDay: 'day', showFps: false, volume: 0.7,
   touchMode: 'wheel', touchSens: 2, touchSize: 1, touchSwap: false,
   steerDeadzone: 0.02, steerCurve: 1, pedalCurve: 1, kbSteerSpeed: 1,
+  seatHeight: 0, seatFwd: 0, fov: 50, mirrorL: 0, mirrorR: 0, mirrorTilt: 0,
 };
 const SETTING_LABELS = {
   sensors: 'Park sensoru köməkçisi (2023 SEL-də standart deyil — İmtahanda sönülüdür)',
@@ -36,10 +38,18 @@ const SETTING_LABELS = {
   clutchMode: 'Debriyaj rejimi (ötürmə üçün debriyaj)',
   mirrors: 'Güzgüləri göstər',
   autoRearCam: 'R-də arxa kamera avtomatik açılsın',
+  rearStatic: 'Arxa kamerada məsafə xətləri (0.5/1/2 m)',
+  rearDynamic: 'Arxa kamerada sükanla əyilən xətlər (simulyator köməkçisi — SEL-də təsdiqlənməyib)',
   quality: 'Qrafika keyfiyyəti',
   timeOfDay: 'Günün vaxtı / hava',
   showFps: 'Ölçmə paneli (FPS, kadr vaxtı, draw call, yaddaş)',
   volume: 'Səs səviyyəsi',
+  seatHeight: 'Oturacaq hündürlüyü (sm)',
+  seatFwd: 'Oturacaq irəli/geri (sm)',
+  fov: 'Baxış sahəsi (şaquli °; real hiss üçün 45–55)',
+  mirrorL: 'Sol güzgü: sola/sağa (°)',
+  mirrorR: 'Sağ güzgü: sola/sağa (°)',
+  mirrorTilt: 'Yan güzgülər: yuxarı/aşağı (°)',
   touchMode: 'Telefon: sükan növü',
   touchSens: 'Telefon: sükan həssaslığı',
   touchSize: 'Telefon: düymələrin ölçüsü',
@@ -58,6 +68,22 @@ function loadJSON(k, d) { try { return { ...d, ...JSON.parse(localStorage.getIte
 function saveJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* boş */ } }
 const settings = loadJSON(SETTINGS_KEY, DEFAULTS);
 const results = loadJSON(RESULTS_KEY, {});
+// Məşq irəliləyişi: hər səviyyədə uğurlu park sayı → köməkçilər mərhələli söndürülür
+const PROGRESS_KEY = 'park-sim-progress';
+const progress = loadJSON(PROGRESS_KEY, {});
+const STAGES = [
+  { name: 'Mərhələ 1/4: təlimatçı + xəyali maşın + xətlər', coach: true, ghost: true, traj: true, dyn: true, advisor: true },
+  { name: 'Mərhələ 2/4: təlimatçı + xətlər (xəyali maşın yox)', coach: true, ghost: false, traj: true, dyn: true, advisor: true },
+  { name: 'Mərhələ 3/4: yalnız xəbərdarlıqlar və arxa kamera xətləri', coach: false, ghost: false, traj: false, dyn: true, advisor: true },
+  { name: 'Mərhələ 4/4: köməksiz — güzgülər və sürücü baxışı', coach: false, ghost: false, traj: false, dyn: false, advisor: false },
+];
+function helpFor(drive, levelId) {
+  if (drive === 'learn') return STAGES[0];
+  if (drive === 'exam') return { ...STAGES[3], name: 'İmtahan' };
+  if (game.practiceHelp === 'full') return STAGES[0];
+  if (game.practiceHelp === 'none') return STAGES[3];
+  return STAGES[Math.min(3, progress[levelId] || 0)];
+}
 
 // ---------- Renderer və səhnə ----------
 // Keyfiyyət: "auto" — telefonda Orta, kompüterdə Yüksək ilə başlayır, FPS 48-dən aşağı düşəndə endirilir.
@@ -121,6 +147,7 @@ function applyTime(key) {
   for (const l of lampLights) l.intensity = t.night ? 60 : 12;
   headL.visible = !!t.night || !!t.evening;
   if (curWorld) curWorld.setAtmosphere(t);
+  sound.setWet(t.wet);
   lampT = 0;
 }
 let lampT = 0;
@@ -187,9 +214,18 @@ function mirrorCam(fov, aspect, pos, yaw, pitch, layers) {
   return c;
 }
 // Sürücü tərəfi düz güzgü, sərnişin tərəfi qabarıq (ABŞ: geniş bucaq — obyektlər göründüyündən yaxındır)
-const camL = mirrorCam(24, 1.6, VIEW.mirrorL, -0.22, -0.08, [LAYER.WORLD, LAYER.BODY]);
-const camR = mirrorCam(34, 1.6, VIEW.mirrorR, 0.3, -0.12, [LAYER.WORLD, LAYER.BODY]);
-const camC = mirrorCam(22, 3.4, VIEW.mirrorC, 0, -0.06, [LAYER.WORLD]);
+// Baxış bucaqları (üfüqi): düz güzgünün sahəsi gözdən göründüyü bucağa bərabərdir (≈ şüşənin eni / məsafə).
+// Sol düz ≈18°, sağ qabarıq ≈30°, salon ≈32°, arxa kamera ≈120° (genişbucaqlı). Hamısı təxminidir.
+const MIRROR_BASE = { L: { yaw: -0.13, pitch: -0.07 }, R: { yaw: 0.23, pitch: -0.1 } };
+const camL = mirrorCam(12, 1.6, VIEW.mirrorL, MIRROR_BASE.L.yaw, MIRROR_BASE.L.pitch, [LAYER.WORLD, LAYER.BODY]);
+const camR = mirrorCam(20, 1.6, VIEW.mirrorR, MIRROR_BASE.R.yaw, MIRROR_BASE.R.pitch, [LAYER.WORLD, LAYER.BODY]);
+const camC = mirrorCam(10, 3.4, VIEW.mirrorC, 0, -0.05, [LAYER.WORLD]);
+// Güzgü tənzimləməsi (ayarlarda yadda qalır)
+function applyMirrorAdjust() {
+  const D = Math.PI / 180;
+  camL.rotation.set(MIRROR_BASE.L.pitch + settings.mirrorTilt * D, MIRROR_BASE.L.yaw - settings.mirrorL * D, 0);
+  camR.rotation.set(MIRROR_BASE.R.pitch + settings.mirrorTilt * D, MIRROR_BASE.R.yaw - settings.mirrorR * D, 0);
+}
 // Arxa kamera baqaj qapağında (standart). Dinamik xətlər rəsmi təsdiqlənmədiyi üçün köməkçi kimi göstərilir.
 const camRear = mirrorCam(110, 1.6, VIEW.rearCam, 0, -0.55, [LAYER.WORLD, LAYER.REARCAM]);
 
@@ -218,12 +254,13 @@ function setRibbon(mesh, pts, width, y = 0.03) {
 }
 // Arxa kameranın statik xətləri (maşına bərkidilir)
 const rearGuides = new THREE.Group();
-const rearDyn = [ribbon(0xffd400), ribbon(0xffd400)];
+const rearStatic = new THREE.Group(); // statik məsafə xətləri (0.5 / 1 / 2 m)
+const rearDyn = [ribbon(0xffd400), ribbon(0xffd400)]; // dinamik — sükanla əyilir (simulyator köməkçisi)
 {
   const addBar = (z, color, w = 2.0) => {
     const r = ribbon(color);
     setRibbon(r, [{ x: -w / 2, z }, { x: w / 2, z }], 0.06);
-    rearGuides.add(r);
+    rearStatic.add(r);
   };
   addBar(-CAR.rearOverhang - 0.5, 0xff3030);
   addBar(-CAR.rearOverhang - 1.0, 0xffd400);
@@ -231,9 +268,9 @@ const rearDyn = [ribbon(0xffd400), ribbon(0xffd400)];
   for (const s of [1, -1]) {
     const r = ribbon(0x2ee66b, 0.55);
     setRibbon(r, [{ x: s * 0.95, z: -CAR.rearOverhang - 0.2 }, { x: s * 0.95, z: -CAR.rearOverhang - 3 }], 0.05);
-    rearGuides.add(r);
+    rearStatic.add(r);
   }
-  rearGuides.add(...rearDyn);
+  rearGuides.add(rearStatic, ...rearDyn);
   rearGuides.traverse((o) => o.layers.set(LAYER.REARCAM));
   model.root.add(rearGuides);
 }
@@ -243,7 +280,8 @@ function updateRearDynamic() {
     const pts = [];
     let x = 0, z = 0, h = 0;
     for (let n = 0; n <= 24; n++) {
-      const c = { x: x + Math.cos(h) * s * 0.9 + Math.sin(h) * -CAR.rearOverhang, z: z - Math.sin(h) * s * 0.9 + Math.cos(h) * -CAR.rearOverhang };
+      // arxa bamperin künclərinin gələcək yolu — fizika ilə eyni kinematika (car.predict ilə eyni düstur)
+      const c = { x: x + Math.cos(h) * s * (CAR.width / 2) + Math.sin(h) * -CAR.rearOverhang, z: z - Math.sin(h) * s * (CAR.width / 2) + Math.cos(h) * -CAR.rearOverhang };
       pts.push(c);
       const ds = -0.14;
       h += ds * k; x += Math.sin(h) * ds; z += Math.cos(h) * ds;
@@ -253,7 +291,10 @@ function updateRearDynamic() {
 }
 // Dünyada trayektoriya (köməkçi layı)
 const trajL = ribbon(0x2ee66b, 0.75), trajR = ribbon(0x2ee66b, 0.75);
-for (const t of [trajL, trajR]) { t.layers.set(LAYER.HELPERS); scene.add(t); }
+// dönərkən: irəli — daxili arxa təkərin izi (ön təkərlərdən içəridən keçir); geri — xarici ön küncün açılması
+const trajX = ribbon(0xff8c1a, 0.8);
+const trajLines = [trajL, trajR, trajX];
+for (const t of trajLines) { t.layers.set(LAYER.HELPERS); scene.add(t); }
 function updateTrajectory() {
   const dir = car.gear === 'R' ? -1 : 1;
   const pts = car.predict(dir, 7, 40);
@@ -261,16 +302,24 @@ function updateTrajectory() {
   const side = (s) => pts.map((p) => toWorld(s * CAR.width / 2, lz, p));
   setRibbon(trajL, side(1), 0.08);
   setRibbon(trajR, side(-1), 0.08);
+  const turn = Math.abs(car.delta) > 0.05 ? Math.sign(car.delta) : 0; // +1 sol
+  trajX.visible = !!turn;
+  if (turn) {
+    const p = dir > 0
+      ? pts.map((q) => toWorld(turn * CAR.track / 2, 0, q)) // daxili arxa təkər
+      : pts.map((q) => toWorld(-turn * CAR.width / 2, CAR.wheelbase + CAR.frontOverhang, q)); // xarici ön künc
+    setRibbon(trajX, p, 0.07, 0.035);
+  }
 }
 
 // ---------- Güzgü görünüşləri (render hədəfləri + ekran üstü quad-lar) ----------
 const overlay = new THREE.Scene();
 const orthoCam = new THREE.OrthographicCamera(0, innerWidth, innerHeight, 0, -10, 10);
 const views = [
-  { key: 'L', cam: camL, label: '', mirror: true, glass: [0.19, 0.115], boost: 1.9, pos: VIEW.mirrorL, shape: 'side' },
-  { key: 'C', cam: camC, label: '', mirror: true, glass: [0.25, 0.068], boost: 1.25, pos: VIEW.mirrorC, shape: 'center' },
-  { key: 'R', cam: camR, label: 'Obyektlər göründüyündən yaxındır', mirror: true, glass: [0.19, 0.115], boost: 1.9, pos: VIEW.mirrorR, shape: 'side' },
-  { key: 'B', cam: camRear, label: 'Arxa kamera — ətrafı yoxlayın', mirror: true, shape: 'screen' },
+  { key: 'L', cam: camL, hfov: 18, label: '', mirror: true, glass: [0.19, 0.115], boost: 1.9, pos: VIEW.mirrorL, shape: 'side' },
+  { key: 'C', cam: camC, hfov: 32, label: '', mirror: true, glass: [0.25, 0.068], boost: 1.25, pos: VIEW.mirrorC, shape: 'center' },
+  { key: 'R', cam: camR, hfov: 30, label: 'Obyektlər göründüyündən yaxındır', mirror: true, glass: [0.19, 0.115], boost: 1.9, pos: VIEW.mirrorR, shape: 'side' },
+  { key: 'B', cam: camRear, hfov: 120, label: 'Arxa kamera — ətrafı yoxlayın', mirror: true, shape: 'screen' },
 ];
 // güzgü formaları (alfa maskası): yan güzgü — yuvarlaq trapesiya, salon — uzun oval, ekran — düzbucaqlı
 function maskTex(kind) {
@@ -346,6 +395,8 @@ function layoutViews() {
       v.size = [tw, th];
       v.rt.setSize(tw, th);
       v.cam.aspect = r.w / r.h;
+      // üfüqi bucaq sabit qalır (ekrandakı ölçüdən asılı olmayaraq eyni sahə görünür)
+      v.cam.fov = (2 * Math.atan(Math.tan((v.hfov * Math.PI) / 360) / v.cam.aspect) * 180) / Math.PI;
       v.cam.updateProjectionMatrix();
     }
     v.cam.far = v.key === 'B' ? 40 : QUALITY[quality].mirrorFar;
@@ -374,7 +425,7 @@ const game = {
   coach: null,
   camMode: 'driver',
   topZoom: 24,
-  yaw: 0, pitch: -0.1, yawTarget: 0,
+  yaw: 0, pitch: -0.1, yawTarget: 0, headSway: 0,
   rearCamManual: false,
   blinker: null, blinkT: 0, blinkOn: false,
   stats: null,
@@ -384,7 +435,7 @@ const game = {
   clear: { front: 9, rear: 9 },
   drive: 'learn',
   help: { coach: true, ghost: true, sensors: true, freeCam: true },
-  practiceHelp: false,
+  practiceHelp: 'auto',
   coachRes: null,
   lastSpoken: '',
   time: 0,
@@ -407,14 +458,18 @@ function startLevel(base, drive = game.drive) {
   car.reset(lv.start);
   input.kbSteer = 0;
   if (input.touch) input.touch.steer = 0;
-  const help = drive === 'learn' || (drive === 'practice' && game.practiceHelp);
-  game.help = { coach: help, ghost: help, sensors: drive !== 'exam' && settings.sensors, freeCam: drive !== 'exam' };
+  const st = helpFor(drive, base.id);
+  game.help = { coach: st.coach, ghost: st.ghost, traj: st.traj, dyn: st.dyn && settings.rearDynamic, advisor: st.advisor, sensors: drive !== 'exam' && settings.sensors, freeCam: drive !== 'exam', stage: st.name };
+  if (drive === 'practice') setTimeout(() => toast(st.name), 300);
   game.coach = game.help.coach ? new Coach(lv.coach) : null;
   game.stats = { time: 0, collisions: 0, curbHits: 0, moves: 0, signaled: false, signalTime: 0, maxSpeed: 0, reversed: false, lookedBack: false, gearAbuse: 0 };
   game.lastDir = 0;
   game.lastHit = -10;
   stepper.reset();
   game.curbContact = new ContactTracker(0.6);
+  game.mistakes = [];
+  game.lastWhy = '';
+  game.advice = null; game.adviceT = 0; game.adviceHold = 0;
   game.bodyContact = new ContactTracker(0.6);
   game.parkTimer = 0;
   game.blinker = null;
@@ -481,7 +536,8 @@ function openBrief(lv) {
   $('briefTitle').textContent = `${lv.id}. ${lv.name}`;
   $('briefShort').textContent = lv.short + ` · Norma: ${lv.par.moves} manevr, ${lv.par.time} saniyə`;
   $('briefTheory').innerHTML = lv.theory.map((t) => `<li>${t}</li>`).join('');
-  $('briefHelp').checked = game.practiceHelp;
+  $('briefHelp').value = game.practiceHelp;
+  $('briefStage').textContent = ` · indi: ${STAGES[Math.min(3, progress[lv.id] || 0)].name} (uğurlu: ${progress[lv.id] || 0})`;
   renderModes();
   show('brief');
 }
@@ -492,7 +548,7 @@ function renderModes() {
   $('briefHelpRow').classList.toggle('hidden', game.drive !== 'practice');
 }
 $('briefStart').onclick = () => {
-  game.practiceHelp = $('briefHelp').checked;
+  game.practiceHelp = $('briefHelp').value;
   sound.unlock();
   if (TOUCH) {
     // tam ekran və üfüqi rejim (dəstəklənirsə)
@@ -549,9 +605,15 @@ function renderSettings() {
       inp.onchange = () => { settings[k] = inp.value; save(); };
     } else if (typeof DEFAULTS[k] === 'number') {
       inp = document.createElement('input');
-      const [min, max, step] = { volume: [0, 1, 0.05], touchSens: [1, 4, 0.5], touchSize: [0.8, 1.4, 0.1], steerDeadzone: [0, 0.1, 0.01], steerCurve: [1, 2.5, 0.1], pedalCurve: [1, 2.5, 0.1], kbSteerSpeed: [0.5, 2, 0.1] }[k];
+      const [min, max, step] = { seatHeight: [-6, 6, 1], seatFwd: [-10, 10, 1], fov: [35, 70, 1], mirrorL: [-10, 10, 0.5], mirrorR: [-10, 10, 0.5], mirrorTilt: [-6, 6, 0.5], volume: [0, 1, 0.05], touchSens: [1, 4, 0.5], touchSize: [0.8, 1.4, 0.1], steerDeadzone: [0, 0.1, 0.01], steerCurve: [1, 2.5, 0.1], pedalCurve: [1, 2.5, 0.1], kbSteerSpeed: [0.5, 2, 0.1] }[k];
       Object.assign(inp, { type: 'range', min, max, step, value: settings[k] });
-      inp.oninput = () => { settings[k] = +inp.value; sound.setVolume(settings.volume); save(); };
+      const out = document.createElement('output');
+      out.textContent = settings[k];
+      inp.oninput = () => { settings[k] = +inp.value; out.textContent = inp.value; sound.setVolume(settings.volume); save(); };
+      l.append(SETTING_LABELS[k], inp, out);
+      inp.id = 'set-' + k;
+      box.appendChild(l);
+      continue;
     } else {
       inp = document.createElement('input');
       inp.type = 'checkbox';
@@ -608,7 +670,13 @@ function applyQuality(q) {
   layoutViews();
 }
 
+function applySeat() {
+  driverCam.fov = settings.fov;
+  driverCam.updateProjectionMatrix();
+}
 function applySettings() {
+  applySeat();
+  applyMirrorAdjust();
   const want = settings.quality === 'auto' ? quality : settings.quality;
   if (want !== quality || settings.quality !== appliedQualitySetting) { appliedQualitySetting = settings.quality; applyQuality(settings.quality === 'auto' ? (TOUCH ? 'medium' : 'high') : settings.quality); }
   $('fps').classList.toggle('hidden', !settings.showFps);
@@ -827,7 +895,7 @@ function updatePlay(dt, inp) {
     else { game.coach = new Coach(game.level.coach); fastForwardCoach(); }
     $('coach').classList.toggle('hidden', !game.coach);
   }
-  if (input.consume('KeyG') && game.drive !== 'exam') game.help.ghost = !game.help.ghost;
+  if (input.consume('KeyG') && game.drive !== 'exam') { game.help.ghost = !game.help.ghost; game.help.traj = game.help.ghost; }
   if (input.consume('KeyT')) { startLevel(game.level); return; }
   if (input.consume('Enter')) { finish(); return; }
   for (const ev of input.padEvents) {
@@ -857,6 +925,7 @@ function updatePlay(dt, inp) {
       game.stats.collisions++;
       const where = hit.part === 'mirrorL' ? 'sol güzgü' : hit.part === 'mirrorR' ? 'sağ güzgü' : partName(hit);
       toast(`Toqquşma: ${where} → ${hit.hit.name}`, true);
+      game.mistakes.push(`Toqquşma (${where}).` + (game.lastWhy ? ' ' + game.lastWhy : ''));
       sound.crash(hit.impact);
       input.rumble(Math.min(1, 0.4 + hit.impact), 0.6, 250);
     }
@@ -884,16 +953,30 @@ function updatePlay(dt, inp) {
 
   game.clear = bumperClearance(car.pose, game.obstacles, sensorDetail);
   sound.sensors(game.clear.front, game.clear.rear, dt, game.help.sensors && car.gear !== 'P');
-  sound.engine(inp.throttle, Math.abs(car.v), true);
+  sound.engine(inp.throttle, Math.abs(car.v), true, car.gear);
 
   // təlimatçı
+  let r = null;
   if (game.coach) {
     const prev = game.coach.i;
-    const r = game.coach.update({ ...car.pose, v: car.v, delta: car.delta, gear: car.gear, steer: car.steer, blinker: game.blinker, clear: game.clear });
+    r = game.coach.update({ ...car.pose, v: car.v, delta: car.delta, gear: car.gear, steer: car.steer, blinker: game.blinker, clear: game.clear });
     game.coachRes = r;
     if (game.coach.i !== prev) sound.step();
-    renderCoach(r);
   } else game.coachRes = null;
+  // səhvə uyğun izah (maşının real həndəsəsindən): hər 0.1 s; mesaj ən azı 1.2 s qalır ki, titrəməsin
+  game.adviceT -= dt;
+  if (game.adviceT <= 0) {
+    game.adviceT = 0.1;
+    const a = advise({ pose: car.pose, v: car.v, delta: car.delta, gear: car.gear, steer: car.steer, obstacles: game.obstacles, step: r?.step, rem: r?.rem });
+    if (a) { game.advice = a; game.adviceHold = 1.2; if (a.why) game.lastWhy = a.why; }
+  }
+  game.adviceHold -= dt;
+  if (game.adviceHold <= 0) game.advice = null;
+  const adv = game.help.advisor ? game.advice : null;
+  if (r || adv) {
+    $('coach').classList.remove('hidden');
+    renderCoach(adv && (adv.level !== 'info' || !r) ? { ...(r || { stepNo: 0, total: 0 }), text: adv.text, hint: adv.why, remain: '', status: adv.level === 'danger' ? 'stop' : adv.level === 'warn' ? 'back' : 'go', forceHint: true } : r);
+  } else $('coach').classList.add('hidden');
 
   // P-də avtomatik yoxlama
   if (car.gear === 'P' && Math.abs(car.v) < 0.05 && st.moves > 0 && overlapsTarget(game.level, car)) {
@@ -913,15 +996,15 @@ function fastForwardCoach() {
 
 let coachShown = '';
 function renderCoach(r) {
-  const showHint = settings.details || r.status === 'back' || r.status === 'stop';
+  const showHint = settings.details || r.forceHint || r.status === 'back' || r.status === 'stop';
   const key = r.text + '|' + r.remain + '|' + (showHint ? r.hint : '') + '|' + r.status;
   if (key === coachShown) return;
   coachShown = key;
   const keys = (t) => (TOUCH ? t.replace(/\(X\)/g, '(▶)').replace(/\(Z\)/g, '(◀)').replace(/\(B\)/g, '(👀)') : t);
   $('coachText').textContent = keys(r.text);
   $('coachRemain').textContent = r.remain || '';
-  $('coachHint').textContent = showHint && r.status !== 'stop' ? keys(r.hint) : '';
-  $('coachStep').textContent = `${Math.min(r.stepNo, r.total)}/${r.total}`;
+  $('coachHint').textContent = showHint && (r.status !== 'stop' || r.forceHint) ? keys(r.hint) : '';
+  $('coachStep').textContent = r.total ? `${Math.min(r.stepNo, r.total)}/${r.total}` : '';
   $('coach').className = 'coach' + (r.status === 'stop' ? ' stop' : r.status === 'back' ? ' back' : '');
   if (settings.voice && r.text !== game.lastSpoken) {
     game.lastSpoken = r.text;
@@ -934,6 +1017,10 @@ function finish() {
   game.finished = true;
   const res = evaluate(game.level, car, game.stats, game.drive);
   const key = `${game.level.id}-${game.drive}`;
+  if (res.passed && game.drive === 'practice' && res.stars >= 2) {
+    progress[game.level.id] = (progress[game.level.id] || 0) + 1;
+    saveJSON(PROGRESS_KEY, progress);
+  }
   if (res.passed && (!results[key] || res.score > results[key].score)) {
     results[key] = { score: res.score, stars: res.stars };
     saveJSON(RESULTS_KEY, results);
@@ -957,7 +1044,8 @@ function finish() {
     [t.zone ? 'Zolaqda' : 'Xəttin içində', res.inside ? 'Bəli' : `${(res.maxOut * 100).toFixed(0)} sm kənar`],
     ...(res.curbDist !== null ? [['Bordürə', `${(res.curbDist * 100).toFixed(0)} sm`]] : []),
   ].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
-  $('resNotes').innerHTML = [...res.fails.map((n) => `<li class="fail">✗ ${n}</li>`), ...res.notes.map((n) => `<li>${n}</li>`)].join('');
+  const why = [...new Set(game.mistakes)].slice(0, 3).map((n) => `<li class="why">↳ ${n}</li>`);
+  $('resNotes').innerHTML = [...res.fails.map((n) => `<li class="fail">✗ ${n}</li>`), ...why, ...res.notes.map((n) => `<li>${n}</li>`)].join('');
   setMode('result');
   show('result');
 }
@@ -997,7 +1085,9 @@ function updateVisuals(dt, inp) {
   const yawGoal = lookBack ? -2.45 : game.yawTarget;
   game.yaw += (yawGoal - game.yaw) * Math.min(1, dt * 8);
   driverCam.rotation.set(lookBack ? -0.12 : game.pitch, Math.PI + game.yaw, 0);
-  driverCam.position.x = 0.37 + (lookBack ? -0.12 : 0);
+  // oturacaq mövqeyi (ayar) + çiyin üstündən baxış; çox zəif yellənmə: təcildə baş 1–2 mm-dən az hərəkət edir
+  game.headSway += (clamp(-car.accel * 0.002, -0.006, 0.006) - game.headSway) * Math.min(1, dt * 4);
+  driverCam.position.set(VIEW.eye[0] + (lookBack ? -0.12 : 0), VIEW.eye[1] + settings.seatHeight / 100, VIEW.eye[2] + settings.seatFwd / 100 + game.headSway);
 
   const c = carBox(car.x, car.z, car.h);
   if (game.camMode === 'top') {
@@ -1015,18 +1105,21 @@ function updateVisuals(dt, inp) {
   }
 
   // köməkçilər
-  const helpers = game.help.ghost;
-  const ghostPose = helpers && game.coachRes && game.coachRes.ghost;
+  const ghostPose = game.help.ghost && game.coachRes && game.coachRes.ghost;
   ghost.visible = !!ghostPose;
   if (ghostPose) {
     ghost.position.set(ghostPose.x, 0, ghostPose.z);
     ghost.rotation.y = ghostPose.h;
   }
-  if (helpers) updateTrajectory();
-  rearDyn.forEach((r) => { r.visible = helpers; });
-  if (helpers) updateRearDynamic();
+  for (const t of trajLines) t.visible = !!game.help.traj;
+  if (game.help.traj) updateTrajectory();
+  rearDyn.forEach((r) => { r.visible = !!game.help.dyn; });
+  rearStatic.visible = settings.rearStatic;
+  if (game.help.dyn) updateRearDynamic();
 
-  sun.position.set(car.x + 20, 40, car.z + 12);
+  // günəş: seçilmiş vaxtın istiqamətindən (kölgə kamerası maşının ətrafında)
+  const sd = sky.material.uniforms.sunDir.value;
+  sun.position.set(car.x + sd.x * 50, sd.y * 50, car.z + sd.z * 50);
   sun.target.position.set(car.x, 0, car.z);
 }
 
@@ -1037,7 +1130,7 @@ function mainCamera() {
   cam.layers.enable(LAYER.INTERIOR); // salon həm içəridən, həm şüşədən görünür
   if (game.camMode !== 'driver') cam.layers.enable(LAYER.BODY);
   if (model.driverSeat) model.driverSeat.visible = game.camMode !== 'driver';
-  if (game.help.ghost && game.camMode !== 'photo') cam.layers.enable(LAYER.HELPERS);
+  if ((game.help.ghost || game.help.traj) && game.camMode !== 'photo') cam.layers.enable(LAYER.HELPERS);
   return cam;
 }
 
@@ -1189,4 +1282,4 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) autoP
 addEventListener('blur', autoPause);
 addEventListener('pagehide', autoPause);
 
-window.__park = { game, car, startLevel, LEVELS, finish, setMode, applyTime, togglePhoto, renderer };
+window.__park = { game, car, startLevel, LEVELS, finish, setMode, applyTime, togglePhoto, renderer, model, scene, settings, applySettings };

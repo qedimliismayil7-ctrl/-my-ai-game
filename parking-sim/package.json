@@ -7,8 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node tests/physics.mjs && node tests/run.mjs",
-    "build:single": "vite build && node scripts/single.mjs"
+    "test": "node tests/physics.mjs && node tests/advisor.mjs && node tests/run.mjs",
+    "build:single": "vite build && node scripts/single.mjs",
+    "test:variants": "node tests/variants.mjs"
   },
   "dependencies": {
     "three": "^0.169.0"

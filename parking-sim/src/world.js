@@ -197,7 +197,7 @@ export function buildWorld(level) {
   const so = new THREE.Object3D();
   L.cars.forEach((c, i) => {
     const variant = Math.floor(R() * 3);
-    const m = buildParkedCar(PALETTE[Math.floor(R() * PALETTE.length)], variant);
+    const m = buildParkedCar(PALETTE[Math.floor(R() * PALETTE.length)], variant, { l: c.l, w: c.w });
     m.root.position.set(c.x - Math.sin(c.h) * m.centerOffset, 0, c.z - Math.cos(c.h) * m.centerOffset);
     m.root.rotation.y = c.h;
     m.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
@@ -206,7 +206,7 @@ export function buildWorld(level) {
     group.add(m.root);
     so.position.set(c.x, 0.008, c.z);
     so.rotation.set(0, c.h, 0);
-    so.scale.set(2.3, 1, 5.2);
+    so.scale.set((c.w || 1.86) + 0.45, 1, (c.l || 4.8) + 0.4);
     so.updateMatrix();
     shadows.setMatrixAt(i, so.matrix);
   });

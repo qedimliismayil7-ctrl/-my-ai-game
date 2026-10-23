@@ -7,7 +7,7 @@ export function obstaclesOf(L) {
     const dx = x2 - x1, dz = z2 - z1;
     o.push({ cx: (x1 + x2) / 2, cz: (z1 + z2) / 2, h: Math.atan2(dx, dz), hw: 0.15, hl: Math.hypot(dx, dz) / 2, type: 'curb', name: 'bordür' });
   }
-  for (const c of L.cars) o.push({ cx: c.x, cz: c.z, h: c.h, hw: PARKED.width / 2, hl: PARKED.length / 2, type: 'car', name: 'maşın' });
+  for (const c of L.cars) o.push({ cx: c.x, cz: c.z, h: c.h, hw: (c.w || PARKED.width) / 2, hl: (c.l || PARKED.length) / 2, type: 'car', name: 'maşın' });
   for (const b of L.boxes) {
     const name = b.type === 'building' ? 'bina' : b.type === 'pole' ? 'dirək' : 'maneə';
     o.push({ cx: b.cx, cz: b.cz, h: b.h, hw: b.hw, hl: b.hl, type: b.type, name });

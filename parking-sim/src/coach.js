@@ -21,7 +21,7 @@ export class Coach {
     }
     const s = this.step;
     const stopped = Math.abs(ctx.v) < STOP;
-    let text = s.text, hint = s.hint || '', remain = '', status = 'go', done = false;
+    let text = s.text, hint = s.hint || '', remain = '', status = 'go', done = false, rem = 0;
 
     switch (s.check) {
       case 'gear':
@@ -41,7 +41,7 @@ export class Coach {
       }
       case 'goto': {
         const val = s.axis === 'x' ? ctx.x : ctx.z;
-        const rem = (s.to - val) * s.sign;
+        rem = (s.to - val) * s.sign;
         const lead = (ctx.v * ctx.v) / 14; // əyləc yolu
         if (rem < -s.tol) {
           status = 'back';
@@ -104,6 +104,6 @@ export class Coach {
       advanced = true;
       if (this.i >= this.steps.length) this.doneAll = true;
     }
-    return { text, hint, remain, status, stepNo: this.i + 1, total: this.steps.length, ghost: s.ghost || null, advanced };
+    return { text, hint, remain, status, rem, step: s, stepNo: this.i + 1, total: this.steps.length, ghost: s.ghost || null, advanced };
   }
 }
