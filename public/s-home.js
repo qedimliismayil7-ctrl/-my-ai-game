@@ -59,10 +59,16 @@
   }
 
   /* companion + fx (all guarded) */
-  function chatty() { try { return App.companionConfig ? App.companionConfig().chatty !== false : true; } catch (e) { return true; } }
+  /* Speech policy: «Normal» (default) — only outcomes (done, problem found); «Çox» — everything; «Sakit» — nothing. */
+  function chatty(state) {
+    var c = null; try { c = App.companionConfig ? App.companionConfig() : null; } catch (e) { c = null; }
+    if (c && c.chatty === false) return false;
+    var t = (c && c.talk) || 'normal';
+    return t === 'cox' || (t !== 'sakit' && /^(success|worried|sad|celebrate)$/.test(state || ''));
+  }
   function nz(state, text, ms) {
     var c = App.companion; if (!c || typeof c.set !== 'function') return;
-    try { c.set(state, text && chatty() ? { say: text, ms: ms || 3000 } : { ms: ms || 1600 }); } catch (e) { /* ignore */ }
+    try { c.set(state, text && chatty(state || 'idle') ? { say: text, ms: ms || 3000 } : { ms: ms || 1600 }); } catch (e) { /* ignore */ }
   }
   function burstAt(el, kind) { try { if (App.fx && App.fx.burstAt && el && el.isConnected) App.fx.burstAt(el, kind || 'diamonds'); } catch (e) { /* ignore */ } }
   function pointOf(el) {
@@ -120,126 +126,125 @@
      3. CSS (screen-scoped, tokens only)
      ------------------------------------------------------------------ */
   var CSS = [
-    '.home-swap{animation:home-swap .32s var(--ease-out) both}',
+    '.home-swap{animation:home-swap .24s var(--ease-out) both}',
 
-    /* start card — Nuanza + one primary action */
-    '.home-start{display:grid;grid-template-columns:84px minmax(0,1fr);gap:14px;align-items:center}',
-    '@media (min-width:640px){.home-start{grid-template-columns:104px minmax(0,1fr);gap:22px;padding:26px 28px}}',
-    '.home-start-art{position:relative;z-index:1;min-height:104px;display:grid;place-items:end center}',
-    '.home-start-body{position:relative;z-index:1;display:grid;gap:8px;min-width:0}',
-    '.home-start-body h2{font-size:clamp(1.25rem,1.1rem + .8vw,1.5rem);line-height:1.2}',
-    '.home-start-body p{color:var(--soft);font-size:var(--fs-sm);line-height:1.55}',
-    '.home-start-body .btn{justify-self:start;margin-top:4px;max-width:100%}',
-    '@media (max-width:340px){.home-start{grid-template-columns:1fr}.home-start-art{min-height:0;justify-items:start}.home-start-body .btn{justify-self:stretch}}',
+    /* KPI strip — real numbers only */
+    '.home-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--line);overflow:hidden}',
+    '@media (min-width:760px){.home-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}',
+    '.home-kpi{display:grid;gap:2px;align-content:start;padding:14px 16px;min-width:0;background:var(--surface)}',
+    '.home-kpi span{font-size:var(--fs-xs);color:var(--soft)}',
+    '.home-kpi b{font-size:1.375rem;font-weight:700;line-height:1.2;letter-spacing:-.01em;font-variant-numeric:tabular-nums lining-nums}',
+    '.home-kpi small{font-size:var(--fs-xs);color:var(--faint)}',
 
-    /* recent work + empty state */
-    '.home-recent .list-row .tx small{display:block}',
-    '.home-recent .end{gap:8px}',
-    '.home-recent .progress{width:64px}',
-    '.home-empty{display:flex;align-items:center;gap:14px;padding:18px 20px;border:1px dashed var(--line-2);border-radius:var(--r-lg);background:transparent}',
+    /* projects table (grid rows → stacked on phones) */
+    '.home-pj{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);overflow:hidden}',
+    '.home-pj-head,.home-pj-row{display:grid;grid-template-columns:minmax(0,1fr) 88px 72px 132px 104px;gap:16px;align-items:center;padding:0 16px}',
+    '.home-pj-head{min-height:34px;background:var(--surface2);border-bottom:1px solid var(--line);color:var(--soft);font:600 .6875rem/1.2 var(--f-body);letter-spacing:.06em;text-transform:uppercase}',
+    '.home-pj-head .r,.home-pj-row .r{text-align:right}',
+    '.home-pj-row{width:100%;min-height:52px;padding-block:8px;border:0;border-bottom:1px solid var(--line);background:none;color:inherit;text-align:left;font:inherit;cursor:pointer;transition:background var(--t-fast)}',
+    '.home-pj-row:last-child{border-bottom:0}',
+    '.home-pj-row:hover{background:var(--hover)}',
+    '.home-pj-row:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    '.home-pj-name{display:grid;gap:1px;min-width:0}',
+    '.home-pj-name b{font-size:.875rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.home-pj-name small{font-size:var(--fs-xs);color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.home-pj-cell{font-size:var(--fs-sm);color:var(--soft);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.home-pj-prog{display:flex;align-items:center;gap:8px}',
+    '.home-pj-prog .progress{flex:1}',
+    '.home-pj-prog span{width:34px;text-align:right;font-size:var(--fs-xs);color:var(--soft);font-variant-numeric:tabular-nums}',
+    '.home-pj-due.late{color:var(--nar);font-weight:600}',
+    '.home-pj-due.soon{color:var(--zafaran-ink);font-weight:600}',
+    '@media (max-width:719px){',
+    '  .home-pj-head{display:none}',
+    '  .home-pj-row{grid-template-columns:minmax(0,1fr) 92px;gap:4px 12px}',
+    '  .home-pj-row .c-pair,.home-pj-row .c-words{display:none}',
+    '  .home-pj-row .home-pj-due{grid-column:1;grid-row:2;font-size:var(--fs-xs)}',
+    '  .home-pj-row .home-pj-prog{grid-column:2;grid-row:1 / span 2}',
+    '}',
+    '.home-pj-foot{display:flex;justify-content:flex-end;padding:8px 16px;border-top:1px solid var(--line);background:var(--surface)}',
+
+    /* empty state */
+    '.home-empty{display:flex;align-items:center;gap:14px;padding:16px;border:1px dashed var(--line-2);border-radius:var(--r-lg);background:var(--surface)}',
     '.home-empty .tx{flex:1;min-width:0;display:grid;gap:2px}',
-    '.home-empty .tx b{font-weight:600}',
+    '.home-empty .tx b{font-size:.875rem;font-weight:600}',
     '.home-empty .tx small{color:var(--soft);font-size:var(--fs-sm)}',
-    '.home-empty-acts{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}',
-    '@media (max-width:520px){.home-empty{flex-wrap:wrap}.home-empty-acts{width:100%}}',
+    '.home-empty-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}',
+    '@media (max-width:560px){.home-empty{flex-wrap:wrap}.home-empty-acts{width:100%}}',
 
-    /* compact tools */
-    '.home-tools{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}',
-    '@media (min-width:760px){.home-tools{grid-template-columns:repeat(4,minmax(0,1fr))}}',
-    '.home-tools .tile{min-height:0;padding:14px}',
+    /* tools — compact list grid */
+    '.home-tools{grid-template-columns:repeat(2,minmax(0,1fr))}',
+    '@media (min-width:1180px){.home-tools{grid-template-columns:repeat(4,minmax(0,1fr))}}',
+    '@media (max-width:420px){.home-tools .tile small{display:none}}',
 
     /* sheets content */
-    '.home-qt-out{min-height:92px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface2);display:grid;gap:10px;align-content:start}',
+    '.home-qt-out{min-height:92px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface2);display:grid;gap:10px;align-content:start}',
     '.home-qt-text{font-size:1rem;line-height:1.9;overflow-wrap:anywhere;white-space:pre-wrap}',
     '.home-qt-hint{display:flex;align-items:center;gap:10px;color:var(--soft);font-size:var(--fs-sm)}',
-    '.home-qt-hint svg{width:18px;height:18px;color:var(--zafaran-ink)}',
+    '.home-qt-hint svg{width:16px;height:16px;color:var(--soft)}',
     '.home-qa-top{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}',
     '.home-qa-top p{font-size:var(--fs-sm);color:var(--soft)}',
     '.home-file{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}',
     '.home-file .tx{flex:1;min-width:0;display:grid}',
     '.home-file .tx b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
     '.home-file .tx small{color:var(--soft)}',
-    '.home-ex{display:grid;gap:6px;padding:14px 16px;border-radius:var(--r-md);background:var(--surface2)}',
+    '.home-ex{display:grid;gap:6px;padding:12px 14px;border-radius:var(--r-md);background:var(--surface2)}',
     '.home-ex-src{color:var(--soft);font-size:var(--fs-sm)}',
-    '.home-ex-tgt{font-family:var(--f-body);font-weight:600;font-size:1.0625rem;line-height:1.45}',
+    '.home-ex-tgt{font-family:var(--f-body);font-weight:600;font-size:1rem;line-height:1.45}',
     '.home-risks{margin:0;padding-left:1.1em;display:grid;gap:4px;font-size:var(--fs-sm)}',
     /* the whole lesson sheet */
     '.home-ls{display:grid;gap:18px}',
     '.home-ls-sec{display:grid;gap:10px}',
-    '.home-ls-pit{display:grid;gap:4px;padding:12px 14px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--surface)}',
+    '.home-ls-pit{display:grid;gap:4px;padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--surface)}',
     '.home-ls-pit s{color:var(--nar);text-decoration-thickness:1.5px}',
     '.home-ls-pit ins{color:var(--ok);text-decoration:none;font-weight:600}',
     '.home-lq-q{font-weight:600;line-height:1.45}',
     '.home-lq-opts{display:grid;gap:8px}',
     '.home-lq-opts.locked .choice{pointer-events:none}',
-    '.choice.home-lq-opt{align-items:center;padding-block:12px}',
+    '.choice.home-lq-opt{align-items:center;padding-block:10px}',
     '.choice.home-lq-opt b{font-weight:500;line-height:1.45}',
-    '.home-lq-k{flex:none;width:26px;height:26px;display:grid;place-items:center;border-radius:8px;background:var(--surface2);color:var(--soft);font:700 var(--fs-sm)/1 var(--f-body)}',
-    '.choice.home-lq-opt.right{border-color:var(--ok);background:linear-gradient(var(--ok-t),var(--ok-t)),var(--surface);box-shadow:0 0 0 3px var(--ok-t)}',
+    '.home-lq-k{flex:none;width:24px;height:24px;display:grid;place-items:center;border-radius:6px;background:var(--surface2);color:var(--soft);font:700 var(--fs-xs)/1 var(--f-body)}',
+    '.choice.home-lq-opt.right{border-color:var(--ok);background:linear-gradient(var(--ok-t),var(--ok-t)),var(--surface)}',
     '.choice.home-lq-opt.right::after{background:var(--ok);border-color:var(--ok)}',
     '.choice.home-lq-opt.wrong{border-color:var(--nar);background:linear-gradient(var(--nar-t),var(--nar-t)),var(--surface)}',
     '.choice.home-lq-opt.wrong::after{background:var(--nar);border-color:var(--nar)}',
     '.choice.home-lq-opt.dim{opacity:.55}',
 
-    /* academy — first-lesson card (0 XP) */
-    '.home-first{display:flex;align-items:center;gap:14px;padding:16px 18px}',
-    '.home-first .medal{--size:44px;flex:none}',
-    '.home-first .tx{flex:1;min-width:0;display:grid;gap:2px}',
-    '.home-first .tx b{font-weight:600}',
-    '.home-first .tx small{color:var(--soft);font-size:var(--fs-sm);line-height:1.5}',
+    /* academy — today’s lesson row (class kept: .home-cta) */
+    '.home-cta{display:flex;align-items:center;gap:14px;width:100%;min-width:0;padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);text-align:left;font:inherit;cursor:pointer;transition:border-color var(--t-fast),background var(--t-fast)}',
+    '@media (hover:hover){.home-cta:hover{border-color:var(--line-2);background:color-mix(in srgb,var(--surface) 92%,var(--ink))}}',
+    '.home-cta-ic{width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:var(--r-md);background:var(--surface2);color:var(--firuze);box-shadow:inset 0 0 0 1px var(--line)}',
+    '.home-cta-ic svg{width:20px;height:20px}',
+    '.home-cta-tx{flex:1;min-width:0;display:grid;gap:2px}',
+    '.home-cta-tx small{font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}',
+    '.home-cta-tx b{font-size:1rem;font-weight:600;line-height:1.35}',
+    '.home-cta-tx span{font-size:var(--fs-sm);color:var(--soft)}',
+    '.home-cta-go{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border:1px solid var(--line-2);border-radius:var(--r-sm);font-size:var(--fs-sm);font-weight:600;color:var(--ink)}',
+    '.home-cta-go svg{width:15px;height:15px;color:var(--soft)}',
+    '@media (max-width:479px){.home-cta-go .t{display:none}.home-cta-go{padding:0 8px}}',
+    '.home-cta[aria-busy="true"]{pointer-events:none}',
+    '.home-cta[aria-busy="true"] .home-cta-go svg{display:none}',
+    '.home-cta[aria-busy="true"] .home-cta-go::after{content:"";width:14px;height:14px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:spin .7s linear infinite}',
 
-    /* rank card — göl medal on the deep panel (only from real XP) */
-    '.home-rank{display:grid;justify-items:center;text-align:center;gap:10px;padding:24px 22px 18px}',
-    '.home-rank .eyebrow{justify-content:center}',
-    '.home-medal{position:relative;display:grid;place-items:center;width:128px;height:128px;margin-block:2px;padding:0;border:0;border-radius:50%;background:none;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform var(--t-base) var(--ease-spring)}',
-    '@media (hover:hover){.home-medal:hover{transform:scale(1.04)}}',
-    '.home-medal:active{transform:scale(.96)}',
-    '.home-medal:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.home-medal-glow{position:absolute;inset:16px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--firuze) 34%,transparent),transparent 70%);animation:home-breathe 4.5s var(--ease-in-out) infinite;pointer-events:none}',
-    '.home-orbit{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}',
-    '.home-orbit .orb{fill:none;stroke:var(--firuze);stroke-width:1;stroke-dasharray:1.5 4.5;opacity:.5;transform-box:fill-box;transform-origin:center;animation:home-spin 70s linear infinite}',
-    '.home-orbit .pip{fill:color-mix(in srgb,var(--on-deep) 24%,transparent)}',
-    '.home-orbit .pip.on{fill:color-mix(in srgb,var(--firuze) 70%,transparent)}',
-    '.home-orbit .pip.cur{fill:var(--deep-acc,var(--firuze));stroke:var(--deep);stroke-width:1.5}',
-    '.home-medal .medal{position:relative}',
-    '.home-rank h2{font-size:clamp(1.625rem,1.4rem + 1vw,2rem);line-height:1.05}',
-    '.home-xp{width:min(340px,100%);display:grid;gap:7px;margin-top:2px}',
-    '.home-xp-lbl{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-xs);color:var(--on-deep-soft);font-variant-numeric:tabular-nums}',
-    '.home-xp-lbl b{color:var(--on-deep);font-weight:600}',
-    '.home-ladder-btn{margin-top:-2px;padding:4px 8px;border:0;border-radius:var(--r-sm);background:none;color:var(--deep-acc,var(--firuze));font:600 var(--fs-xs)/1.2 var(--f-body);cursor:pointer}',
-    '.home-ladder-btn:hover{background:color-mix(in srgb,var(--on-deep) 10%,transparent)}',
-    '.home-first .home-ladder-btn{color:var(--firuze);justify-self:start;padding-inline:0}',
-    '.home-first .home-ladder-btn:hover{background:none;text-decoration:underline}',
-    '.card.lacquer .home-rank-chips .badge{background:color-mix(in srgb,var(--on-deep) 10%,transparent);color:var(--on-deep)}',
+    /* academy — first-lesson note and rank summary */
+    '.home-first{display:flex;align-items:center;gap:14px;padding:16px}',
+    '.home-first .tx{flex:1;min-width:0;display:grid;gap:2px}',
+    '.home-first .tx b{font-size:.875rem;font-weight:600}',
+    '.home-first .tx small{color:var(--soft);font-size:var(--fs-sm);line-height:1.5}',
+    '.home-rank{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px 16px;padding:16px}',
+    '@media (max-width:559px){.home-rank{grid-template-columns:auto minmax(0,1fr)}.home-rank .home-ladder-btn{grid-column:1 / -1;justify-self:start}}',
+    '.home-rank-tx{display:grid;gap:6px;min-width:0}',
+    '.home-rank-tx .row{gap:8px}',
+    '.home-rank-tx b{font-size:1rem;font-weight:700}',
+    '.home-xp{display:grid;gap:6px}',
+    '.home-xp-lbl{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-xs);color:var(--soft);font-variant-numeric:tabular-nums}',
+    '.home-xp-lbl b{color:var(--ink);font-weight:600}',
+    '.home-ladder-btn{padding:0;border:0;background:none;color:var(--firuze);font:600 var(--fs-sm)/1.2 var(--f-body);cursor:pointer}',
+    '.home-ladder-btn:hover{text-decoration:underline;text-underline-offset:3px}',
     '.home-lock{display:inline-grid;place-items:center;color:var(--faint)}',
     '.home-lock svg{width:16px;height:16px}',
 
-    /* CTA — firuzə panel with a flat göl and a kilim edge */
-    '.home-cta{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;gap:16px;width:100%;min-width:0;padding:20px;border:0;border-radius:var(--r-lg);text-align:left;cursor:pointer;color:var(--on-firuze);font:inherit;',
-    '  background:radial-gradient(120% 160% at 0% 0%,color-mix(in srgb,var(--on-firuze) 10%,transparent),transparent 55%),linear-gradient(135deg,var(--firuze),color-mix(in srgb,var(--firuze) 78%,var(--lacquer)));',
-    '  box-shadow:var(--sh-2);transition:transform var(--t-base) var(--ease-out),box-shadow var(--t-base)}',
-    '@media (min-width:640px){.home-cta{padding:24px 26px}}',
-    '.home-cta::before{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;z-index:-1;pointer-events:none;background:var(--on-firuze);opacity:.22;-webkit-mask:var(--m-band) 0 100%/22px 6px repeat-x;mask:var(--m-band) 0 100%/22px 6px repeat-x}',
-    '.home-cta::after{content:"";position:absolute;right:-48px;top:-54px;width:196px;height:196px;z-index:-1;background:var(--on-firuze);opacity:.12;-webkit-mask:var(--m-gul) center/contain no-repeat;mask:var(--m-gul) center/contain no-repeat;pointer-events:none}',
-    '@media (hover:hover){.home-cta:hover{transform:translateY(-2px);box-shadow:var(--sh-3)}.home-cta:hover .home-cta-go{transform:translateX(4px)}}',
-    '.home-cta:active{transform:scale(.99)}',
-    '.home-cta-ic{width:52px;height:52px;flex:none;display:grid;place-items:center;border-radius:16px;background:color-mix(in srgb,var(--on-firuze) 12%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--on-firuze) 20%,transparent)}',
-    '.home-cta-ic svg{width:26px;height:26px}',
-    '.home-cta-tx{flex:1;min-width:0;display:grid;gap:4px}',
-    '.home-cta-tx small{font-size:var(--fs-xs);font-weight:600;letter-spacing:.06em;text-transform:uppercase;opacity:.8}',
-    '.home-cta-tx b{font-family:var(--f-display);font-size:1.125rem;font-weight:600;line-height:1.25}',
-    '@media (min-width:640px){.home-cta-tx b{font-size:1.3rem}}',
-    '.home-cta-tx span{font-size:var(--fs-sm);opacity:.9}',
-    '.home-cta-go{width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:50%;background:color-mix(in srgb,var(--on-firuze) 14%,transparent);transition:transform var(--t-base) var(--ease-spring)}',
-    '.home-cta-go svg{width:20px;height:20px}',
-    '.home-cta[aria-busy="true"]{pointer-events:none}',
-    '.home-cta[aria-busy="true"] .home-cta-go svg{display:none}',
-    '.home-cta[aria-busy="true"] .home-cta-go::after{content:"";width:18px;height:18px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:spin .7s linear infinite}',
-
     /* keyframes */
-    '@keyframes home-spin{to{transform:rotate(360deg)}}',
-    '@keyframes home-breathe{0%,100%{opacity:.55;transform:scale(.94)}50%{opacity:1;transform:scale(1.05)}}',
-    '@keyframes home-swap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}'
+    '@keyframes home-swap{from{opacity:0}to{opacity:1}}'
   ].join('\n');
 
   /* ------------------------------------------------------------------
@@ -275,8 +280,10 @@
     var last = sget('pj:last', null);
     var out = list.filter(function (p) { return p && p.id && p.name && !removed[p.id] && !isSample(p); }).map(function (p) {
       var done = typeof prog[p.id] === 'number' ? prog[p.id] : (Number(p.done) || 0);
+      var due = p.due ? new Date(p.due) : null;
       return { id: String(p.id), name: String(p.name), pair: p.pair || 'en-az', words: Number(p.words) || 0,
-        done: clamp(Math.round(done), 0, 100), status: status[p.id] || p.status || 'active', created: Number(p.created) || 0 };
+        done: clamp(Math.round(done), 0, 100), status: status[p.id] || p.status || 'active', created: Number(p.created) || 0,
+        due: due && !isNaN(due) ? due : null, client: p.client ? String(p.client) : '', qa: typeof p.qa === 'number' ? p.qa : null };
     });
     /* the project opened last comes first, the rest newest first */
     out.sort(function (a, b) { return (b.id === last) - (a.id === last) || b.created - a.created; });
@@ -289,68 +296,88 @@
   function isLive() { return !!(App.isLive && App.isLive()); }
 
   function renderPro(page, post) {
-    var p = profile(), now = new Date(), P = realProjects();
-    var search = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Axtar və keç', onclick: function () { if (App.palette) App.palette(); } }, ie('search'));
+    var now = new Date(), P = realProjects();
+    var active = P.filter(function (p) { return p.status !== 'delivered'; });
+    var sub = dateLine(now) + (P.length ? ' · ' + active.length + ' aktiv layihə' : '');
+    var newPj = h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { var c = pjApi('create'); if (c) c(); else newProjectSheet(); } }, ie('plus'), 'Yeni layihə');
+    var tr = h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { goFirst(['translate'], {}, 'Tərcümə ekranı hazırlanır'); } }, ie('translate'), 'Tərcüməçi');
     page.appendChild(h('div', { class: 'page-h' },
       h('div', null,
-        h('span', { class: 'eyebrow', text: dateLine(now) }),
-        h('h1', { html: helloHtml(p, now) }),
-        h('p', { text: P.length ? 'Qaldığınız yerdən davam edin və ya yeni mətnə başlayın.' : 'Mətni yapışdırın və ya sənəd yükləyin — qalanını birlikdə edək.' })),
-      h('div', { class: 'actions' }, search)));
+        h('h1', { text: 'İş masası' }),
+        h('p', { text: sub })),
+      h('div', { class: 'actions' }, tr, newPj)));
 
-    page.appendChild(startCard(post));
-    page.appendChild(P.length ? recentCard(P) : emptyProjects());
+    if (P.length) page.appendChild(kpiStrip(P));
+    page.appendChild(h('div', { class: 'sec-h' }, h('h2', { id: 'home-recent-h', text: 'Son layihələr' }),
+      P.length ? h('button', { class: 'link small', type: 'button', onclick: function () { goFirst(['projects'], {}, 'Layihələr bölməsi hazırlanır'); } }, 'Hamısı') : null));
+    page.appendChild(P.length ? recentTable(P) : emptyProjects());
     page.appendChild(h('div', { class: 'sec-h' }, h('h2', { text: 'Alətlər' })));
     page.appendChild(proTools());
   }
 
-  /* 5.1 the one primary action — with Nuanza beside it */
-  function startCard(post) {
-    var art = h('div', { class: 'home-start-art' });
-    var go = h('button', { class: 'btn btn-primary', type: 'button' }, ie('translate'), 'Tərcüməyə başla');
-    go.addEventListener('click', function () { goFirst(['translate'], {}, 'Tərcümə ekranı hazırlanır'); });
-    post.push(function () { var m = mountMini(art, 'point'); if (m && m.set) later(function () { m.set('idle', {}); }, 1800); });
-    return h('section', { class: 'card framed home-start', 'aria-labelledby': 'home-start-h' }, art,
-      h('div', { class: 'home-start-body' },
-        h('h2', { id: 'home-start-h', text: 'Mətni tərcümə edin' }),
-        h('p', { text: 'Mətni yapışdırın və ya fayl atın. Üslubu özüm tanıyacağam, Mirzə Məclisi isə yoxlayacaq.' }),
-        go));
+  /* 5.1 numbers from the user's real projects */
+  var DAY_MS = 86400000;
+  function kpiStrip(P) {
+    var active = P.filter(function (p) { return p.status !== 'delivered'; });
+    var left = active.reduce(function (s, p) { return s + Math.round(p.words * (100 - p.done) / 100); }, 0);
+    var week = active.filter(function (p) { return p.due && p.due.getTime() - Date.now() < 7 * DAY_MS; }).length;
+    var qa = P.filter(function (p) { return typeof p.qa === 'number'; });
+    var avg = qa.length ? Math.round(qa.reduce(function (s, p) { return s + p.qa; }, 0) / qa.length) : null;
+    function kpi(label, val, note) { return h('div', { class: 'home-kpi' }, h('span', { text: label }), h('b', { text: val }), note ? h('small', { text: note }) : null); }
+    return h('section', { class: 'home-kpis', 'aria-label': 'Göstəricilər' },
+      kpi('Aktiv layihələr', String(active.length), P.length - active.length ? (P.length - active.length) + ' təhvil verilib' : null),
+      kpi('Qalan söz', num(left), null),
+      kpi('7 gün ərzində təhvil', String(week), null),
+      kpi('Orta QA balı', avg == null ? '—' : String(avg), avg == null ? 'Hələ yoxlanmayıb' : qa.length + ' layihə üzrə'));
   }
-
-  /* 5.2 «Son işlər» — only real projects */
-  function recentCard(P) {
-    var rows = P.slice(0, 4).map(function (pj) {
-      var delivered = pj.status === 'delivered';
-      var meta = [pairLabel(pj.pair), pj.words ? num(pj.words) + ' söz' : '', pj.created ? relTime(pj.created) : ''].filter(Boolean).join(' · ');
-      return h('button', { class: 'list-row', type: 'button', 'aria-label': pj.name + ' — ' + (delivered ? 'təhvil verilib' : pj.done + '% hazır') + '. Redaktorda aç',
+  function dueInfo(pj) {
+    if (pj.status === 'delivered') return { t: 'Təhvil verilib', c: '' };
+    if (!pj.due || isNaN(pj.due)) return { t: '—', c: '' };
+    var d = pj.due, now = new Date(), ms = d.getTime() - now.getTime();
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    var days = Math.floor((d.getTime() - start) / DAY_MS);
+    var hhmm = (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
+    if (ms < 0) return { t: 'Gecikir', c: 'late' };
+    if (days === 0) return { t: 'Bu gün ' + hhmm, c: 'late' };
+    if (days === 1) return { t: 'Sabah ' + hhmm, c: 'soon' };
+    return { t: d.getDate() + ' ' + MONTHS[d.getMonth()], c: '' };
+  }
+  /* 5.2 recent projects — a compact table */
+  function recentTable(P) {
+    var rows = P.slice(0, 6).map(function (pj) {
+      var delivered = pj.status === 'delivered', due = dueInfo(pj);
+      var meta = [pj.client, pairLabel(pj.pair)].filter(Boolean).join(' · ');
+      return h('button', { class: 'home-pj-row', type: 'button', 'aria-label': pj.name + ' — ' + (delivered ? 'təhvil verilib' : pj.done + '% hazır') + '. Redaktorda aç',
         onclick: function () { var o = pjApi('open'); if (o) o(pj.id); else goFirst(['editor', 'projects'], { project: pj.id }, 'Redaktor hələ yüklənməyib'); } },
-        icTile(delivered ? 'check' : 'file', delivered ? 'green' : 'fir'),
-        h('span', { class: 'tx' }, h('b', { text: pj.name }), h('small', { text: meta })),
-        h('span', { class: 'end' }, delivered ? badge('Təhvil verilib', 'green') :
-          [h('span', { class: 'progress thin', 'aria-hidden': 'true' }, h('i', { style: 'width:' + pj.done + '%' })), h('span', { class: 'small muted tnum', text: pj.done + '%' })]));
+        h('span', { class: 'home-pj-name' }, h('b', { text: pj.name }), h('small', { text: meta || (pj.created ? relTime(pj.created) : '') })),
+        h('span', { class: 'home-pj-cell c-pair', text: pairLabel(pj.pair) }),
+        h('span', { class: 'home-pj-cell c-words r', text: pj.words ? num(pj.words) : '—' }),
+        h('span', { class: 'home-pj-prog' },
+          h('span', { class: 'progress thin' + (delivered ? ' green' : ''), 'aria-hidden': 'true' }, h('i', { style: 'width:' + (delivered ? 100 : pj.done) + '%' })),
+          h('span', { text: (delivered ? 100 : pj.done) + '%' })),
+        h('span', { class: 'home-pj-cell home-pj-due ' + due.c, text: due.t }));
     });
-    return h('section', { class: 'card home-recent', 'aria-labelledby': 'home-recent-h' },
-      h('div', { class: 'card-h' },
-        h('div', null, h('h2', { id: 'home-recent-h', text: 'Son işlər' })),
-        h('button', { class: 'link small', type: 'button', onclick: function () { goFirst(['projects'], {}, 'Layihələr bölməsi hazırlanır'); } }, 'Hamısı')),
-      h('div', { class: 'list' }, rows));
+    return h('section', { class: 'home-pj', 'aria-labelledby': 'home-recent-h' },
+      h('div', { class: 'home-pj-head', 'aria-hidden': 'true' },
+        h('span', { text: 'Layihə' }), h('span', { text: 'Dil cütü' }), h('span', { class: 'r', text: 'Söz' }), h('span', { text: 'Hazırlıq' }), h('span', { text: 'Təhvil' })),
+      rows);
   }
   function emptyProjects() {
-    return h('section', { class: 'home-empty', 'aria-label': 'Layihələr' },
+    return h('section', { class: 'home-empty', 'aria-labelledby': 'home-recent-h' },
       icTile('folder'),
-      h('span', { class: 'tx' }, h('b', { text: 'Hələ layihə yoxdur' }), h('small', { text: 'İlk layihənizi yaradın — sənəd, dil cütü və hazırdır.' })),
+      h('span', { class: 'tx' }, h('b', { text: 'Hələ layihə yoxdur' }), h('small', { text: 'Sənədi yükləyin, dil cütünü və təhvil tarixini seçin — layihə redaktorda açılacaq.' })),
       h('span', { class: 'home-empty-acts' },
         h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { var c = pjApi('create'); if (c) c(); else newProjectSheet(); } }, ie('plus'), 'Layihə yarat'),
-        h('button', { class: 'link small', type: 'button', onclick: function () { var o = pjApi('openSample'); if (o) o(); else goFirst(['projects'], {}, 'Layihələr bölməsi hazırlanır'); } }, 'Nümunəyə baxın')));
+        h('button', { class: 'link small', type: 'button', onclick: function () { var o = pjApi('openSample'); if (o) o(); else goFirst(['projects'], {}, 'Layihələr bölməsi hazırlanır'); } }, 'Nümunə layihəni açın')));
   }
 
   /* 5.3 compact tools */
   function proTools() {
     var items = [
-      { t: 'Sürətli tərcümə', s: 'Bir-iki cümlə', ic: 'zap', cls: 'gold', run: quickTranslateSheet },
-      { t: 'Fayl yüklə', s: 'Həcm və üslub', ic: 'upload', cls: 'green', run: uploadSheet },
-      { t: 'Termin axtar', s: 'Lüğət', ic: 'search', cls: 'navy', run: termSheet },
-      { t: 'Layihələr', s: 'Bütün işlər', ic: 'folder', cls: 'fir', run: function () { goFirst(['projects'], {}, 'Layihələr bölməsi hazırlanır'); } }
+      { t: 'Sürətli tərcümə', s: 'Bir-iki cümlə', ic: 'zap', run: quickTranslateSheet },
+      { t: 'Fayl analizi', s: 'Həcm, sahə, üslub', ic: 'upload', run: uploadSheet },
+      { t: 'Termin axtarışı', s: 'Layihə lüğəti', ic: 'book', run: termSheet },
+      { t: 'QA yoxlaması', s: 'Rəqəm, termin, forma', ic: 'shield', run: function () { goFirst(['qa'], {}, 'QA bölməsi hazırlanır'); } }
     ];
     return toolTiles(items, 'Alətlər');
   }
@@ -387,7 +414,7 @@
       { label: 'Yarat', kind: 'primary', icon: 'plus', onClick: function () {
         var n = name.value.trim();
         if (!n) { name.setAttribute('aria-invalid', 'true'); err.hidden = false; name.focus(); return false; }
-        nz('celebrate', 'Yeni layihə! Sənədi əlavə edin, terminləri özüm çıxarım.', 2800);
+        nz('success', 'Layihə yaradıldı.', 2400);
         setTimeout(function () { goFirst(['projects'], { created: n }, 'Layihələr bölməsi hazırlanır'); }, 200);
       } }
     ] });
@@ -542,7 +569,7 @@
           { label: 'Başqa fayl', kind: 'ghost', keepOpen: true, onClick: function () { res.textContent = ''; dz.hidden = false; sampleBtn.hidden = false; file.value = ''; s.setActions(null); } },
           { label: 'Layihə yarat', kind: 'primary', icon: 'plus', onClick: function () {
             App.toast('Layihə yaradıldı', 'ok', { sub: f.name + ' · ' + num(a.words) + ' söz · ' + a.register });
-            nz('celebrate', 'Layihə hazırdır! Terminləri lüğətə çıxardım.', 2600);
+            nz('success', 'Layihə hazırdır. Terminlər lüğətə çıxarıldı.', 2600);
             setTimeout(function () { if (hasScreen('projects')) App.go('projects', { created: f.name }); }, 500);
           } }
         ]);
@@ -590,7 +617,7 @@
   }
   function academySub(p) {
     var t = todayXP(), g = p.dailyGoal || 30, s = Number(p.streak) || 0;
-    if (!(Number(p.xp) > 0)) return 'Gündə bir qısa dərs kifayətdir. Başlayaq?';
+    if (!(Number(p.xp) > 0)) return 'Gündəlik hədəf: ' + g + ' XP';
     if (t >= g) return 'Bugünkü hədəf tamamdır: ' + t + ' XP.' + (s > 1 ? ' Seriya: ' + s + ' gün.' : '');
     return 'Bugünkü hədəf: ' + t + ' / ' + g + ' XP.' + (s > 1 ? ' Seriya: ' + s + ' gün.' : '');
   }
@@ -598,68 +625,50 @@
   function renderAcademy(page, post) {
     var p = profile(), now = new Date();
     A = {};
-    A.sub = h('p', { text: academySub(p) });
+    A.sub = h('p', { text: dateLine(now) + ' · ' + academySub(p) });
+    var start = h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { if (A.cta) lessonCTA(A.cta); } }, ie('play'), 'Dərsə başla');
     page.appendChild(h('div', { class: 'page-h' },
       h('div', null,
-        h('span', { class: 'eyebrow', text: 'Akademiya · ' + dateLine(now) }),
-        h('h1', { html: helloHtml(p, now) }),
-        A.sub)));
+        h('h1', { text: 'Akademiya' }),
+        A.sub),
+      h('div', { class: 'actions' }, start)));
+    page.appendChild(h('div', { class: 'sec-h' }, h('h2', { text: 'Bugünkü dərs' })));
     A.cta = ctaButton();
     page.appendChild(A.cta);
+    page.appendChild(h('div', { class: 'sec-h' }, h('h2', { text: 'İrəliləyiş' })));
     A.rank = rankBlock(p);
     page.appendChild(A.rank);
     page.appendChild(h('div', { class: 'sec-h' }, h('h2', { text: 'Alətlər' })));
     page.appendChild(toolsGrid());
   }
 
-  /* 6.1 rank — only from real XP; at 0 XP a small «İlk dərsinizi edin» card */
+  /* 6.1 rank — only from real XP; at 0 XP a small «İlk dərsinizi edin» note */
   function rankBlock(p) { return Number(p.xp) > 0 ? rankCard(p) : firstLessonCard(); }
   function firstLessonCard() {
     var R = ranks(), r = rankInfo({ xp: 0 });
     return h('section', { class: 'card home-first', 'aria-labelledby': 'home-first-h' },
       h('span', { class: 'medal sm', 'aria-hidden': 'true' }, h('b', { text: R[0].name.charAt(0) })),
       h('span', { class: 'tx' },
-        h('b', { id: 'home-first-h', text: 'İlk dərsinizi edin' }),
-        h('small', { text: 'Hər dərs XP gətirir. İlk XP ilə «' + R[0].name + '» rütbəsindən yolunuz başlayır.' }),
-        h('button', { class: 'home-ladder-btn', type: 'button', onclick: function () { ranksSheet(r); } }, 'Rütbə yolu')));
-  }
-
-  /* 6.1 rank — carpet medallion */
-  function orbitSvg(n, cur) {
-    var R = 66, s = '<svg class="home-orbit" viewBox="-72 -72 144 144" aria-hidden="true" focusable="false"><circle class="orb" r="' + R + '"/>';
-    for (var i = 0; i < n; i++) {
-      var a = -Math.PI / 2 + i * 2 * Math.PI / n, x = (R * Math.cos(a)).toFixed(2), y = (R * Math.sin(a)).toFixed(2), k = i === cur ? 6 : 4.2;
-      s += '<rect class="pip' + (i < cur ? ' on' : i === cur ? ' cur' : '') + '" x="' + (-k / 2) + '" y="' + (-k / 2) + '" width="' + k + '" height="' + k +
-        '" transform="translate(' + x + ' ' + y + ') rotate(45)"/>';
-    }
-    return s + '</svg>';
+        h('b', { id: 'home-first-h', text: 'Hələ XP yoxdur' }),
+        h('small', { text: 'Hər dərs və tapşırıq XP gətirir. İlk XP ilə «' + R[0].name + '» rütbəsindən başlayırsınız.' })),
+      h('button', { class: 'home-ladder-btn', type: 'button', onclick: function () { ranksSheet(r); } }, 'Rütbə yolu'));
   }
   function rankCard(p) {
-    var r = rankInfo(p), R = ranks();
+    var r = rankInfo(p);
     var pct = Math.round((r.progress || 0) * 100);
-    var medal = h('button', { class: 'home-medal', type: 'button', 'aria-label': 'Rütbə medalı: ' + r.name + '. Toxunun' },
-      h('span', { class: 'home-medal-glow', 'aria-hidden': 'true' }),
-      h('span', { html: orbitSvg(R.length, r.index), style: 'display:contents' }),
-      h('span', { class: 'medal lg', 'aria-hidden': 'true' }, h('b', { text: r.name.charAt(0) })));
-    medal.addEventListener('click', function () {
-      medalFx(r.name);
-      burstAt(medal, 'diamonds');
-      nz('celebrate', r.name + ' rütbəsi! ' + (r.nextName ? r.nextName + ' üçün ' + num(r.toNext) + ' XP qalıb.' : ''), 2800);
-    });
     var streak = Number(p.streak) || 0, t = todayXP(), g = p.dailyGoal || 30;
     var chips = [];
-    if (streak > 0) chips.push(badge(streak + ' gün ardıcıl', '', 'flame'));
-    if (t > 0) chips.push(badge('Bu gün ' + Math.min(t, 9999) + ' / ' + g + ' XP', '', t >= g ? 'check' : 'star'));
-    return h('section', { class: 'card lacquer home-rank', 'aria-label': 'Rütbəniz: ' + r.name },
-      h('span', { class: 'eyebrow', text: 'Rütbəniz' }),
-      medal,
-      h('h2', { html: '<em>' + esc(r.name) + '</em>' }),
-      h('div', { class: 'home-xp' },
-        h('div', { class: 'progress', role: 'progressbar', 'aria-label': 'Növbəti rütbəyə qədər', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct }, h('i', { style: 'width:' + pct + '%' })),
-        h('div', { class: 'home-xp-lbl' },
-          h('span', null, h('b', { text: num(r.xp) }), ' XP'),
-          h('span', { text: r.nextName ? r.nextName + ' üçün ' + num(r.toNext) + ' xal' : 'Ən yüksək rütbə' }))),
-      chips.length ? h('div', { class: 'chips home-rank-chips' }, chips) : null,
+    if (streak > 0) chips.push(badge(streak + ' gün ardıcıl', '', 'calendar'));
+    chips.push(badge('Bu gün ' + Math.min(t, 9999) + ' / ' + g + ' XP', t >= g ? 'green' : '', t >= g ? 'check' : null));
+    return h('section', { class: 'card home-rank', 'aria-label': 'Rütbəniz: ' + r.name },
+      h('span', { class: 'medal', style: '--size:44px', 'aria-hidden': 'true' }, h('b', { text: r.name.charAt(0) })),
+      h('div', { class: 'home-rank-tx' },
+        h('div', { class: 'row' }, h('b', { text: r.name }), chips),
+        h('div', { class: 'home-xp' },
+          h('div', { class: 'progress', role: 'progressbar', 'aria-label': 'Növbəti rütbəyə qədər', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct }, h('i', { style: 'width:' + pct + '%' })),
+          h('div', { class: 'home-xp-lbl' },
+            h('span', null, h('b', { text: num(r.xp) }), ' XP'),
+            h('span', { text: r.nextName ? r.nextName + ' rütbəsinə ' + num(r.toNext) + ' XP' : 'Ən yüksək rütbə' })))),
       h('button', { class: 'home-ladder-btn', type: 'button', onclick: function () { ranksSheet(r); } }, 'Rütbə yolu'));
   }
   function ranksSheet(r) {
@@ -695,7 +704,7 @@
         h('small', { text: L ? 'Dərsiniz hazırdır' : first ? 'İlk dərs' : 'Bugünkü dərs' }),
         h('b', { text: T ? T.title : 'Qısa dərsə başlayın' }),
         h('span', { text: T ? [T.topic, T.minutes ? T.minutes + ' dəqiqə' : '', T.xp ? '+' + T.xp + ' XP' : ''].filter(Boolean).join(' · ') : '5–7 dəqiqə' })),
-      h('span', { class: 'home-cta-go', html: App.icon('arrow'), 'aria-hidden': 'true' }));
+      h('span', { class: 'home-cta-go', 'aria-hidden': 'true' }, h('span', { class: 't', text: L ? 'Aç' : 'Başla' }), ie('arrow')));
     btn.addEventListener('click', function () { lessonCTA(btn); });
     return btn;
   }
@@ -787,7 +796,7 @@
       var all = doneLessons(); all[L.id] = true; sset('home:lessons-done', all);
       var xp = Math.max(5, Math.round((L.xp || 30) * (qz.length ? 0.5 + 0.5 * right / qz.length : 1)));
       addXP(xp, pointOf(el));
-      nz(right === qz.length ? 'celebrate' : 'success', right === qz.length ? 'Hamısı düzdür — afərin!' : right + ' / ' + qz.length + '. Səhv olanlara bir də baxın.', 2600);
+      nz(right === qz.length ? 'celebrate' : 'success', right === qz.length ? 'Hamısı düzdür.' : right + ' / ' + qz.length + '. Səhv olanlara bir də baxın.', 2600);
     }
     function taskBox() {
       var ta = h('textarea', { class: 'textarea', id: 'home-ls-ta', rows: '3', lang: L.to || 'az', placeholder: 'Tərcüməniz…' });
@@ -855,10 +864,10 @@
   /* 6.3 tools */
   function toolsGrid() {
     return toolTiles([
-      { t: 'Tapşırıq', s: 'Mətn tərcümə edin', ic: 'edit', cls: 'fir', run: function () { goFirst(['task', 'practice'], {}, 'Tapşırıq bölməsi hazırlanır'); } },
-      { t: 'Məşq', s: 'Qısa oyunlar', ic: 'target', cls: 'navy', run: function () { goFirst(['practice'], {}, 'Məşq bölməsi hazırlanır'); } },
-      { t: 'Səhv kartları', s: 'Təkrar', ic: 'cards', cls: 'gold', run: function () { goFirst(['cards'], {}, 'Kartlar bölməsi hazırlanır'); } },
-      { t: 'Termin lüğəti', s: '7 sahə · 265 termin', ic: 'tag', cls: 'green', run: function () { if (App.academyGlossary) App.academyGlossary(''); else termSheet(); } }
+      { t: 'Tapşırıq', s: 'Mətn tərcümə edin', ic: 'edit', run: function () { goFirst(['task', 'practice'], {}, 'Tapşırıq bölməsi hazırlanır'); } },
+      { t: 'Məşq', s: 'Qısa çalışmalar', ic: 'target', run: function () { goFirst(['practice'], {}, 'Məşq bölməsi hazırlanır'); } },
+      { t: 'Səhv kartları', s: 'Aralıqlı təkrar', ic: 'cards', run: function () { goFirst(['cards'], {}, 'Kartlar bölməsi hazırlanır'); } },
+      { t: 'Termin lüğəti', s: '7 sahə · 265 termin', ic: 'book', run: function () { if (App.academyGlossary) App.academyGlossary(''); else termSheet(); } }
     ], 'Alətlər');
   }
 
@@ -866,28 +875,9 @@
      7. NUANZA REACTS ON ENTER — greets by name only when one is set
      ------------------------------------------------------------------ */
   function react(mode) {
-    if (!sget('onboarded', false)) return;
-    var p = profile(), n = firstName(p), hi = n ? 'Salam, ' + n + '!' : 'Salam!';
-    var fresh = !(Number(p.xp) > 0);
-    if (firstEnter()) {
-      /* The shell greets with a wave right after start; only wave here when home is reached later. */
-      var t = W.performance && W.performance.now ? W.performance.now() : 99999;
-      if (t < 2600) return;
-      later(function () {
-        nz('wave', mode === 'academy' ? hi + (fresh ? ' İlk dərsə hazırsınız?' : ' Bu gün bir dərs?') : hi + ' Masanız hazırdır.', 3200);
-      }, 450);
-      return;
-    }
-    later(function () {
-      if (mode === 'academy') {
-        var tx = todayXP(), g = p.dailyGoal || 30;
-        if (fresh) nz('point', 'İlk dərs 5–7 dəqiqədir. Başlayaq?', 2600);
-        else if (tx >= g) nz('success', 'Bugünkü hədəf tamamdır. Əla iş!', 2600);
-        else nz('idle', 'Hədəfə ' + (g - tx) + ' XP qalıb.', 2400);
-      } else {
-        nz('point', realProjects().length ? 'Qaldığınız yerdən davam edək?' : 'Mətni yapışdırın — üslubu özüm tanıyacağam.', 2600);
-      }
-    }, 380);
+    /* Quiet by design: Nuanza does not greet on screen entry. She speaks when tapped or when
+       real work finishes (checks, QA, the Məclis). */
+    return mode;
   }
 
   /* ------------------------------------------------------------------

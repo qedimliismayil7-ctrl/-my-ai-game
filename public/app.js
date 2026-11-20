@@ -164,7 +164,7 @@
     x: '<path d="M18 6 6 18M6 6l12 12"/>',
     chevron: '<path d="m9 6 6 6-6 6"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
-    sparkle: '<path d="M11 3.5 12.7 8.3 17.5 10l-4.8 1.7L11 16.5l-1.7-4.8L4.5 10l4.8-1.7Z"/><path d="M18.5 14.5l.75 1.75 1.75.75-1.75.75-.75 1.75-.75-1.75L16 17l1.75-.75Z"/>',
+    sparkle: '<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8"/><path d="M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8"/><path d="M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16"/><path d="M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><path d="M8.5 10h7M8.5 14h4.5"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/>',
     file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>',
     globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18Z"/>',
@@ -400,63 +400,52 @@
   }
   var SHELL_CSS = [
     '.screen[tabindex="-1"]:focus,.screen[tabindex="-1"]:focus-visible{outline:none}',
-    '.dr-tools{flex:none;padding:6px 20px 2px 12px}',
-    '.dr-search{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 8px 0 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface2);color:var(--soft);font:500 var(--fs-sm)/1 var(--f-body);text-align:left;cursor:pointer;transition:border-color var(--t-fast),color var(--t-fast),background var(--t-fast)}',
-    '.dr-search svg{width:16px;height:16px}.dr-search .lbl{flex:1;min-width:0}',
+    '.dr-tools{flex:none;padding:4px 12px 8px}',
+    '.dr-search{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;padding:0 6px 0 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--soft);font:500 var(--fs-sm)/1 var(--f-body);text-align:left;cursor:pointer;transition:border-color var(--t-fast),color var(--t-fast)}',
+    '.dr-search svg{width:15px;height:15px}.dr-search .lbl{flex:1;min-width:0}',
     '.dr-search:hover{color:var(--ink);border-color:var(--line-2)}.dr-search:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.dr-nav.anim .dr-link,.dr-nav.anim .dr-grp{animation:rise .32s var(--ease-out) both;animation-delay:calc(var(--i,0) * 22ms)}',
-    '.dr-profile .who .badge{display:inline-flex}.dr-profile .who .badge:empty{display:none}',
+    '.dr-profile .who .badge{display:none}',
     '.avatar > svg.av-ic{width:56%;height:56%}',
     '.dr-profile.incomplete .who small{color:var(--firuze)}',
-    '.shell-dock{position:relative;width:var(--dock);height:var(--dock);padding:0;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;',
-    '  background:radial-gradient(circle at 35% 28%,color-mix(in srgb,var(--deep) 70%,var(--ivory)),var(--deep) 70%);',
-    '  box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--firuze),var(--sh-2);transition:transform var(--t-base) var(--ease-spring)}',
-    '.shell-dock svg{width:34px;height:34px;transition:transform .7s var(--ease-spring)}',
-    '@media (hover:hover){.shell-dock:hover{transform:translateY(-2px) scale(1.04)}.shell-dock:hover svg{transform:rotate(45deg)}}',
-    '.shell-dock:active{transform:scale(.94)}.shell-dock.bump{animation:medal-pop .6s var(--ease-spring)}',
-    '.shell-dock-bubble{position:absolute;right:0;bottom:calc(100% + 12px);width:max-content;max-width:min(260px,calc(100vw - 32px));animation:toast-in .32s var(--ease-spring) both;transform-origin:100% 100%}',
+    '.shell-dock{position:relative;width:var(--dock);height:var(--dock);padding:0;border:1px solid var(--line-2);border-radius:50%;display:grid;place-items:center;cursor:pointer;background:var(--surface);box-shadow:var(--sh-2);transition:border-color var(--t-fast)}',
+    '.shell-dock svg{width:26px;height:26px}',
+    '@media (hover:hover){.shell-dock:hover{border-color:var(--firuze)}}',
+    '.shell-dock-bubble{position:absolute;right:0;bottom:calc(100% + 10px);width:max-content;max-width:min(260px,calc(100vw - 32px));animation:toast-in .2s var(--ease-out) both;transform-origin:100% 100%}',
     '.sheet-grab{position:relative;touch-action:none}.sheet-grab::before{content:"";position:absolute;inset:-12px -56px}',
     '@media (max-width:639px){.sheet-h{touch-action:none}}',
     '.sheet.dragging,.drawer.dragging{transition:none!important}',
     '.sheet-nz{display:flex;align-items:flex-end;gap:12px;padding:2px 0 10px}',
-    '.sheet-nz-art{flex:none;width:84px;min-height:84px;display:grid;place-items:end center}',
-    '.sheet-nz-art .medal{--size:64px}',
-    '.sheet-nz .bubble{flex:1;min-width:0;max-width:none}',
+    '.sheet-nz-art{flex:none;width:64px;min-height:64px;display:grid;place-items:end center}',
+    '.sheet-nz-art .medal{--size:48px}',
+    '.sheet-nz .bubble{flex:1;min-width:0;max-width:none;box-shadow:none;background:var(--surface2)}',
     '.sheet-pal .sheet-b{padding-top:4px}',
-    '.sheet-pal-list{display:grid;gap:2px;margin-top:12px}',
-    '.sheet-pal-grp{padding:12px 10px 4px;font-size:.6875rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}',
-    '.sheet-pal-it{display:flex;align-items:center;gap:12px;width:100%;min-height:50px;padding:6px 10px;border:0;border-radius:var(--r-md);background:none;color:var(--ink);text-align:left;font:500 var(--fs-base)/1.3 var(--f-body);cursor:pointer;transition:background var(--t-fast)}',
-    '.sheet-pal-it .ic{width:34px;height:34px;border-radius:10px}.sheet-pal-it .ic svg{width:18px;height:18px}',
+    '.sheet-pal-list{display:grid;gap:1px;margin-top:10px}',
+    '.sheet-pal-grp{padding:12px 10px 4px;font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}',
+    '.sheet-pal-it{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:6px 10px;border:0;border-radius:var(--r-sm);background:none;color:var(--ink);text-align:left;font:500 .875rem/1.3 var(--f-body);cursor:pointer;transition:background var(--t-fast)}',
+    '.sheet-pal-it .ic{width:28px;height:28px;border-radius:6px}.sheet-pal-it .ic svg{width:16px;height:16px}',
     '.sheet-pal-it .tx{flex:1;min-width:0}.sheet-pal-it small{display:block;color:var(--soft);font-size:var(--fs-xs);font-weight:400}',
-    '.sheet-pal-it .end{display:flex;align-items:center;gap:6px;color:var(--faint)}.sheet-pal-it .end svg{width:16px;height:16px;opacity:0;transition:opacity var(--t-fast),transform var(--t-base) var(--ease-out)}',
-    '.sheet-pal-it[aria-selected="true"],.sheet-pal-it:hover{background:var(--surface2)}',
-    '.sheet-pal-it[aria-selected="true"] .end svg{opacity:1;transform:translateX(2px)}',
+    '.sheet-pal-it .end{display:flex;align-items:center;gap:6px;color:var(--faint)}.sheet-pal-it .end svg{width:16px;height:16px;opacity:0;transition:opacity var(--t-fast)}',
+    '.sheet-pal-it[aria-selected="true"],.sheet-pal-it:hover{background:var(--hover)}',
+    '.sheet-pal-it[aria-selected="true"] .end svg{opacity:1}',
     '.sheet-pal-it:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
     '.sheet-pal-empty{padding:28px 10px;text-align:center;color:var(--soft)}',
-    '.sheet-job-res{display:grid;justify-items:center;gap:12px;text-align:center;padding:10px 0 4px;animation:rise .4s var(--ease-out) both}',
+    '.sheet-job-res{display:grid;justify-items:center;gap:12px;text-align:center;padding:10px 0 4px;animation:fade-in .3s var(--ease-out) both}',
     '.sheet-job-res p{max-width:44ch;color:var(--soft)}',
     '.sheet-job .list-row .avatar{flex:none}',
     '.sheet-keys .list-row .end{gap:4px}',
     '.onb-skip{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2}',
-    '.onb-hero{position:relative;width:100%;display:grid;justify-items:center}',
-    /* room above her head for the greeting bubble so it never sits on the star */
-    '.onb-hero .onb-star{width:96px;height:96px;margin-bottom:30px}',
-    '.onb-hero .onb-stage{position:relative;z-index:1;min-height:120px;align-items:end;transition:opacity var(--t-slow)}',
-    '.onb-hero .onb-stage .nz{transition:width .35s var(--ease-out)}',
-    '.onb-hero .onb-rug{margin-top:-22px}',
-    '.onb-hero.small .onb-star{display:none}',
-    /* smaller companion on later steps — sized via --nz-w (not zoom) so her speech bubble keeps a readable 14px */
-    '.onb-hero.small .onb-stage{min-height:74px}',
-    '.onb-hero.small .onb-stage .nz{--nz-w:min(150px,40vw)}',
-    '.onb-hero.small .onb-rug{height:36px;width:min(240px,calc(100% - 24px));margin-top:-14px;animation:none}',
-    '.onb-hero .medal{margin-bottom:10px}',
-    '@media (max-height:760px){.onb-hero .onb-star{width:76px;height:76px;margin-bottom:24px}}',
+    '.onb-hero{display:flex;align-items:center;gap:10px}',
+    '.onb-hero b{font-family:var(--f-display);font-size:1.0625rem;font-weight:700;letter-spacing:-.01em}',
+    '.onb-hero small{margin-left:auto;color:var(--faint);font-size:var(--fs-xs);font-variant-numeric:tabular-nums}',
+    '.onb-card{display:grid;gap:20px;padding:24px;border:1px solid var(--line);border-radius:var(--r-xl);background:var(--surface)}',
+    '@media (max-width:479px){.onb-card{padding:20px 16px}}',
     '.onb-host{width:100%}',
-    '.onb-step .eyebrow{justify-content:center}',
-    '.onb-field{width:100%;max-width:380px;text-align:left;justify-self:center}',
-    '.onb-pairs{justify-content:center}',
+    '.onb-field{width:100%;max-width:380px;text-align:left}',
+    '.onb-pairs{justify-content:flex-start}',
     '.onb-err{color:var(--nar);font-size:var(--fs-sm);font-weight:500;min-height:1.4em}',
     '.onb-note{font-size:var(--fs-sm);color:var(--soft)}',
+    '.onb-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}',
+    '.onb-foot .onb-actions{width:auto;padding-top:0}',
     '.shell-fallback .tiles{margin-top:4px}',
     '::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}',
     '::view-transition-new(root){z-index:2}'
@@ -1452,7 +1441,7 @@
     if (!text) feedback.push({ kind: 'info', text: '«shall» öhdəlik kimi düzgün verilib; bir yerdə «İşəgötürən» əvəzinə «Sifarişçi» olmalı idi.' });
     return {
       score: score, grade: gradeOf(score), passed: score >= 70, xp: Math.round(score / 2), rubric: rub, feedback: feedback, errors: errors,
-      verdict: { score: score, text: score >= 70 ? 'İmtahan uğurla verildi. ' + (improve.length ? improve[0] + ' üzərində bir az da çalışın.' : 'Möhtəşəm nəticə!') : 'Bu dəfə alınmadı — səhv kartlarını təkrar edin və yenidən cəhd edin.', seal: score >= 70 ? 'Keçdi' : 'Təkrar', grade: gradeOf(score) }
+      verdict: { score: score, text: score >= 70 ? 'İmtahan uğurla verildi. ' + (improve.length ? improve[0] + ' üzərində bir az da çalışın.' : 'Nəticə çox yaxşıdır.') : 'Bu dəfə alınmadı — səhv kartlarını təkrar edin və yenidən cəhd edin.', seal: score >= 70 ? 'Keçdi' : 'Təkrar', grade: gradeOf(score) }
     };
   }
   function aiAnalyze(inp) {
@@ -1672,11 +1661,15 @@
         '<header class="hdr"><div class="hdr-in">' +
         '<button class="burger" type="button" aria-label="Menyunu aç" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>' +
         '<a class="brand" href="#home" aria-label="Mirzə — ana səhifə">' + logoSvg() + '<b>Mirzə</b><small hidden>Akademiya</small></a>' +
-        '<button class="avatar av-firuze" type="button" aria-label="Profil və ayarlar"></button></div><div class="rugband" aria-hidden="true"></div></header>' +
-        '<nav class="drawer" id="drawer" aria-label="Əsas menyu"><button class="dr-profile" type="button"><span class="avatar lg av-firuze" aria-hidden="true"></span><span class="who"><b></b><small></small><span class="badge"></span></span></button>' +
+        '<div class="hdr-crumb" aria-hidden="true"><span class="c-grp"></span><span class="c-sep">/</span><span class="c-cur"></span></div>' +
+        '<div class="hdr-acts"><button class="icon-btn ghost hdr-search" type="button" aria-label="Axtar və keç" data-icon="search"></button>' +
+        '<button class="avatar av-firuze" type="button" aria-label="Profil və ayarlar"></button></div></div></header>' +
+        '<nav class="drawer" id="drawer" aria-label="Əsas menyu"><div class="dr-head"><a class="brand dr-brand" href="#home" aria-label="Mirzə — ana səhifə">' + logoSvg() + '<b>Mirzə</b><small hidden>Akademiya</small></a></div>' +
+        '<div class="dr-tools"><button class="dr-search" type="button"></button></div>' +
         '<div class="dr-mode"><div class="seg block" role="group" aria-label="Rejim"><button type="button" data-mode="pro" aria-pressed="true">Peşəkar</button><button type="button" data-mode="academy" aria-pressed="false">Akademiya</button></div></div>' +
-        '<div class="dr-tools"><button class="dr-search" type="button"></button></div><div class="dr-nav"></div>' +
-        '<div class="dr-foot"><button class="icon-btn ghost theme-toggle" type="button" aria-label="Rəng rejimini dəyiş"></button><span class="ver">Mirzə ' + VERSION + ' · Bakı</span></div></nav>' +
+        '<div class="dr-nav"></div>' +
+        '<div class="dr-foot"><button class="dr-profile" type="button"><span class="avatar av-firuze" aria-hidden="true"></span><span class="who"><b></b><small></small><span class="badge"></span></span></button>' +
+        '<button class="icon-btn ghost sm theme-toggle" type="button" aria-label="Rəng rejimini dəyiş"></button><span class="ver">Mirzə ' + VERSION + '</span></div></nav>' +
         '<div class="scrim" aria-hidden="true"></div><main class="main" id="main"></main><div class="companion" aria-label="Nuanza"></div>';
       D.body.insertBefore(app, D.body.firstChild);
     }
@@ -1684,9 +1677,17 @@
     els.hdr = $('.hdr', app);
     els.burger = $('.burger', app);
     els.brand = $('.brand', app);
-    els.brandSmall = els.brand ? $('small', els.brand) : null;
-    if (els.brand && !els.brandSmall) { els.brandSmall = h('small', { hidden: true }, 'Akademiya'); els.brand.appendChild(els.brandSmall); }
+    els.brands = $$('.brand', app);
+    els.brandSmalls = els.brands.map(function (b) {
+      var sm = $('small', b);
+      if (!sm) { sm = h('small', { hidden: true }, 'Akademiya'); b.appendChild(sm); }
+      return sm;
+    });
+    els.brandSmall = els.brandSmalls[0] || null;
     els.hdrAvatar = $('.hdr .avatar', app) || $('.hdr-in > .avatar', app);
+    els.hdrSearch = $('.hdr-search', app);
+    els.crumbGrp = $('.hdr-crumb .c-grp', app);
+    els.crumbCur = $('.hdr-crumb .c-cur', app);
     els.drawer = $('.drawer', app);
     els.drProfile = $('.dr-profile', app);
     els.modeSeg = $('.dr-mode .seg', app);
@@ -1707,10 +1708,7 @@
       els.search.setAttribute('aria-label', 'Axtar və keç (' + MOD + ' K)');
     }
     if (els.themeToggle) els.themeToggle.innerHTML = icon('moon', 'i-moon') + icon('sun', 'i-sun');
-    if (els.brand) {
-      var lg = $('.logo', els.brand);
-      if (!lg) els.brand.insertBefore(frag(logoSvg()), els.brand.firstChild);
-    }
+    els.brands.forEach(function (b) { if (!$('.logo', b)) b.insertBefore(frag(logoSvg()), b.firstChild); });
     $$('[data-icon]').forEach(function (n) { n.innerHTML = icon(n.getAttribute('data-icon')); });
   }
   function buildNav(anim) {
@@ -1747,6 +1745,12 @@
     markNav(current && current.id);
   }
   function markNav(id) {
+    var d = id && screens[id];
+    if (els.crumbGrp) {
+      var g = d && d.group && d.group !== 'Peşəkar' && d.group !== 'Akademiya' ? d.group : (curMode === 'academy' ? 'Akademiya' : 'Peşəkar');
+      els.crumbGrp.textContent = g;
+    }
+    if (els.crumbCur) els.crumbCur.textContent = d ? titleOf(d) : '';
     if (!els.nav) return;
     $$('.dr-link', els.nav).forEach(function (a) {
       if (a.getAttribute('data-id') === id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
@@ -1767,11 +1771,11 @@
     }
     if (els.drProfile) {
       var av = $('.avatar', els.drProfile), who = $('.who', els.drProfile);
-      if (av) { av.className = 'avatar lg ' + cls; fillAvatar(av, p); }
+      if (av) { av.className = 'avatar ' + cls; fillAvatar(av, p); }
       els.drProfile.classList.toggle('incomplete', !named);
       if (who) {
         var b = $('b', who), sm = $('small', who), bg = $('.badge', who);
-        if (b) b.textContent = named ? p.name : 'Profilinizi tamamlayın';
+        if (b) b.textContent = named ? p.name : 'Profil';
         if (sm) {
           if (!named) sm.textContent = 'Adınızı əlavə edin';
           else if (curMode === 'academy') sm.textContent = p.rank + ' · ' + fmt.num(p.xp) + ' XP';
@@ -1785,8 +1789,9 @@
   function syncModeUI() {
     R.setAttribute('data-mode', curMode);
     if (els.modeSeg) $$('button', els.modeSeg).forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-mode') === curMode)); });
-    if (els.brandSmall) els.brandSmall.hidden = curMode !== 'academy';
-    if (els.brand) els.brand.setAttribute('aria-label', curMode === 'academy' ? 'Mirzə Akademiya — ana səhifə' : 'Mirzə — ana səhifə');
+    (els.brandSmalls || []).forEach(function (sm) { sm.hidden = curMode !== 'academy'; });
+    (els.brands || []).forEach(function (b) { b.setAttribute('aria-label', curMode === 'academy' ? 'Mirzə Akademiya — ana səhifə' : 'Mirzə — ana səhifə'); });
+    if (current) markNav(current.id);
   }
   function mode() { return curMode; }
   function setMode(m, opts) {
@@ -1804,11 +1809,9 @@
     emit('mode', m);
     if (opts.silent) return;
     if (m === 'academy') {
-      toast('Akademiya rejimi', 'ok', { sub: 'Dərslər, missiyalar, səhv kartları və rütbələr', icon: 'cap' });
-      chatter('celebrate', 'Akademiyaya xoş gəldiniz! Bu gün ' + (profile().dailyGoal || 30) + ' XP qazanaq?');
+      toast('Akademiya rejimi', 'ok', { sub: 'Dərslər, tapşırıqlar, səhv kartları', icon: 'cap' });
     } else {
       toast('Peşəkar rejim', 'ok', { sub: 'Layihələr, lüğət, QA və təhvil', icon: 'folder' });
-      chatter('write', 'Peşəkar masa hazırdır. Layihələrə baxaq?');
     }
   }
   /* theme */
@@ -1845,7 +1848,7 @@
   function toggleTheme(e) {
     var next = effectiveTheme() === 'dark' ? 'light' : 'dark';
     setTheme(next, e && e.currentTarget ? e.currentTarget : null);
-    if (next === 'dark') chatter('surprised', 'Gecə rejimi — gözlərinizi qoruyaq.', 2200);
+
   }
   function normMotion(m) {
     if (m === 'reduce' || m === true || (m && typeof m === 'object' && m.reduce)) return 'reduce';
@@ -1914,7 +1917,9 @@
   /* ------------------------------------------------------------------
      13. COMPANION (Nuanza dock) — guarded proxy
      ------------------------------------------------------------------ */
-  var COMPANION_DEFAULTS = { show: true, size: 'dock', chatty: true, motion: true };
+  /* Quiet by default: talk 'normal' = she speaks only when tapped or when real work finishes
+     (check, QA, Məclis). Greetings and per-screen hints only with talk 'cox'. */
+  var COMPANION_DEFAULTS = { show: true, size: 'dock', chatty: true, talk: 'normal', motion: true };
   var nzInst = null, menuOpen = false;
   function companionCfg() { var c = store.get('companion', null); return assign({}, COMPANION_DEFAULTS, c && typeof c === 'object' ? c : {}); }
   function fallbackDock(slot) {
@@ -1944,6 +1949,10 @@
     var cfg = companionCfg();
     slot.hidden = !cfg.show;
     if (!cfg.show) return;
+    /* dock diameter from Ayarlar → «Köməkçinin ölçüsü» (small by default) */
+    var sz = String(cfg.size || '').toLowerCase();
+    var px = /^(sm|small|s)$/.test(sz) ? 44 : /^(lg|large|l)$/.test(sz) ? 64 : 52;
+    try { slot.style.setProperty('--nz-dock', px + 'px'); slot.style.setProperty('--dock', px + 'px'); } catch (e) { /* ignore */ }
     if (W.Nuanza && typeof W.Nuanza.mount === 'function') {
       try {
         nzInst = W.Nuanza.mount(slot, { size: cfg.size === 'mini' ? 'mini' : 'dock', motion: cfg.motion !== false, chatty: cfg.chatty !== false, onTap: function () { companionMenu(); } });
@@ -1970,8 +1979,10 @@
     get el() { return nzInst && nzInst.el ? nzInst.el : els.companion; }
   };
   function setCompanion(patch) { var c = companionCfg(); assign(c, patch || {}); iset('companion', c); mountCompanion(); return c; }
+  function talkative() { var c = companionCfg(); return c.chatty !== false && c.talk === 'cox'; }
+  /* ambient chatter (greetings, mode/theme remarks) — only in the «Çox» talk setting */
   function chatter(state, text, ms) {
-    if (!companionCfg().chatty || onb) { if (state) companion.set(state, { ms: ms || 1600 }); return; }
+    if (!talkative() || onb) return;
     companion.set(state || 'idle', { say: text, ms: ms || 3200 });
   }
   /* tips */
@@ -1988,7 +1999,7 @@
       'Lüğətə əlavə etdiyiniz termini bütün layihələrdə qoruyuram.'
     ],
     academy: [
-      'Hər gün bir dərs seriyanı qoruyur. Bu gün də bir addım ataq!',
+      'Hər gün bir dərs seriyanı qoruyur.',
       'Səhv kartları: buraxdığınız səhvlər özü kart olur — təkrar edin, unudun getsin.',
       'Rütbələr: Şagird → Katib → Münşi → Mirzə → Dilmanc → Ustad.',
       '«Shall» müqavilədə gələcək zaman deyil — öhdəlikdir: «etməlidir».'
@@ -1996,7 +2007,7 @@
     translate: ['Mətni yapışdırın — üslubu özüm tanıyacağam. Sarı xətli yerlərə bir də baxın.', 'Situasiya kartını doldurun: kimə, nə üçün? Tərcümə ona uyğunlaşır.'],
     projects: ['Yeni layihə yaradın — QA və təhvil paketi bir kliklə hazır olacaq.', 'Nümunə layihəni açıb redaktora baxa bilərsiniz.'],
     settings: ['Burada məni də fərdiləşdirə bilərsiniz: ölçü, danışıqlıq, hərəkət.', 'Rəng rejimini sistemə də bağlaya bilərsiniz.'],
-    home: ['Bu gün nə tərcümə edirik?', 'Son layihənizə qayıtmaq üçün kartına toxunun.']
+    home: ['Layihəyə qayıtmaq üçün «Son layihələr» cədvəlində sətirə toxunun.', 'Yeni layihə — sağ yuxarıdakı mis rəngli düymə.']
   };
   var HINT_IDS = { translate: 1, projects: 1, settings: 1, glossary: 1, qa: 1, academy: 1, lessons: 1, practice: 1, cards: 1, review: 1, memory: 1, tm: 1 };
   var HINT_TEXT = {
@@ -2009,7 +2020,7 @@
   };
   var hinted = {};
   function hintFor(id) {
-    if (hinted[id] || !HINT_IDS[id] || onb || !companionCfg().chatty) return;
+    if (hinted[id] || !HINT_IDS[id] || onb || !talkative()) return;
     hinted[id] = 1;
     later(function () { if (current && current.id === id && !overlays.length) companion.set('point', { say: HINT_TEXT[id], ms: 3400 }); }, 900);
   }
@@ -2026,13 +2037,13 @@
     var art = h('div', { class: 'sheet-nz-art' });
     var mini = null;
     var rows = [
-      { ic: 'sparkle', cls: 'gold', b: 'Növbəti məsləhət', s: 'Hər dəfə yeni bir incəlik', run: function () { ti = (ti + 1) % tips.length; bubble.textContent = tips[ti]; try { if (mini && mini.set) mini.set('point', { ms: 1200 }); } catch (e) { /* ignore */ } return false; } },
+      { ic: 'bulb', b: 'Növbəti məsləhət', s: 'Tərcümə incəlikləri', run: function () { ti = (ti + 1) % tips.length; bubble.textContent = tips[ti]; try { if (mini && mini.set) mini.set('point', { ms: 1200 }); } catch (e) { /* ignore */ } return false; } },
       { ic: 'search', b: 'Axtar və keç', s: MOD + ' + K', run: function () { later(palette, 60); } },
-      { ic: 'shield', cls: 'fir', b: 'Mirzə Məclisi necə işləyir?', s: 'Beş mirzə, beş yoxlama — nümunəyə baxın', run: function () { later(demoCouncil, 60); } },
+      { ic: 'shield', b: 'Mirzə Məclisi necə işləyir?', s: 'Beş yoxlama — nümunəyə baxın', run: function () { later(demoCouncil, 60); } },
       { ic: 'keyboard', b: 'Klaviatura qısayolları', s: 'Tez işləmək üçün', run: function () { later(shortcuts, 60); } },
       { ic: 'eyeoff', b: 'Nuanzanı gizlət', s: 'Ayarlardan yenə qaytara bilərsiniz', run: function () {
         setCompanion({ show: false });
-        toast('Nuanza gizləndi', 'info', { sub: 'İstədiyiniz vaxt qaytarın', action: { label: 'Qaytar', onClick: function () { setCompanion({ show: true }); later(function () { companion.set('wave', { say: 'Yenə buradayam!', ms: 2400 }); }, 200); } } });
+        toast('Nuanza gizləndi', 'info', { sub: 'İstədiyiniz vaxt qaytarın', action: { label: 'Qaytar', onClick: function () { setCompanion({ show: true }); later(function () { companion.set('wave', { say: 'Yenə buradayam.', ms: 2400 }); }, 200); } } });
       } }
     ];
     if (screens.settings) rows.push({ ic: 'settings', b: 'Ayarlar', s: 'Ölçü, danışıqlıq, hərəkət', run: function () { go('settings'); } });
@@ -2049,7 +2060,7 @@
       try { mini = W.Nuanza.mount(art, { size: 'mini' }); if (mini && mini.set) mini.set('wave', {}); } catch (e) { log(e); mini = null; }
     }
     if (!mini) art.appendChild(h('span', { class: 'medal', 'aria-hidden': 'true' }, h('b', { text: 'N' })));
-    companion.react('pet');
+    companion.set('wave', { ms: 1200 });
   }
 
   /* ------------------------------------------------------------------
@@ -2067,7 +2078,7 @@
   function jobFallback(title, v, durations) {
     return new Promise(function (resolve) {
       var closed = false, timers = [];
-      var bar = h('div', { class: 'progress gold', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0' }, h('i', { style: 'width:0%' }));
+      var bar = h('div', { class: 'progress', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0' }, h('i', { style: 'width:0%' }));
       var rows = ELDERS.map(function (e) {
         var st = h('span', { class: 'seg-st', 'aria-hidden': 'true' }), sm = h('small', { text: e.role });
         var row = h('div', { class: 'list-row' }, h('span', { class: 'avatar sm ' + e.av, 'aria-hidden': 'true', text: e.short }), h('span', { class: 'tx' }, h('b', { text: e.name }), sm), st);
@@ -2103,7 +2114,7 @@
     opts = opts || {};
     return Promise.resolve(typeof verdict === 'function' ? verdict() : verdict).then(function (raw) {
       var v = normVerdict(raw);
-      companion.set('point', { say: 'Bu böyük işdir — Mirzə Məclisini çağırıram.', ms: 2000 });
+      companion.set('think', { ms: 2000 });
       var run = null;
       if (W.Meclis && typeof W.Meclis.run === 'function') {
         try { run = Promise.resolve(W.Meclis.run({ title: title || 'Mirzə Məclisi', durations: opts.durations, verdict: v })); }
@@ -2112,8 +2123,8 @@
       if (!run) run = jobFallback(title, v, opts.durations);
       return run.catch(function (e) { log(e); return v; }).then(function () {
         var sc = v.score;
-        var st = sc == null || sc >= 85 ? 'celebrate' : sc >= 70 ? 'success' : 'worried';
-        var say = sc == null ? 'Məclis işini bitirdi!' : sc >= 85 ? 'Məclis razıdır: ' + sc + ' bal!' : sc >= 70 ? sc + ' bal — bir neçə düzəliş qalıb.' : sc + ' bal. Birlikdə düzəldək.';
+        var st = sc == null || sc >= 70 ? 'success' : 'worried';
+        var say = sc == null ? 'Məclis yoxlamanı bitirdi.' : sc >= 85 ? 'Məclisin yekunu: ' + sc + ' bal. Təhvilə hazırdır.' : sc >= 70 ? sc + ' bal — bir neçə düzəliş qalıb.' : sc + ' bal — mətn yenidən işlənməlidir.';
         later(function () { companion.set(st, { say: say, ms: 3000 }); }, 250);
         return v;
       });
@@ -2139,8 +2150,8 @@
       { group: 'Əmrlər', label: curMode === 'pro' ? 'Akademiya rejiminə keç' : 'Peşəkar rejimə keç', sub: 'Alt + M', icon: curMode === 'pro' ? 'cap' : 'folder', run: function () { setMode(curMode === 'pro' ? 'academy' : 'pro'); } },
       { group: 'Əmrlər', label: effectiveTheme() === 'dark' ? 'İşıqlı rejimə keç' : 'Qaranlıq rejimə keç', sub: 'Alt + T', icon: effectiveTheme() === 'dark' ? 'sun' : 'moon', run: function () { setTheme(effectiveTheme() === 'dark' ? 'light' : 'dark', els.themeToggle); } },
       { group: 'Əmrlər', label: 'Mirzə Məclisini çağır', sub: 'Nümunə yoxlama', icon: 'shield', run: demoCouncil },
-      { group: 'Əmrlər', label: cfg.show ? 'Nuanzanı gizlət' : 'Nuanzanı göstər', sub: 'Yoldaş', icon: cfg.show ? 'eyeoff' : 'eye', run: function () { setCompanion({ show: !cfg.show }); if (!cfg.show) later(function () { companion.set('wave', { say: 'Yenə buradayam!', ms: 2400 }); }, 200); } },
-      { group: 'Əmrlər', label: 'Girişi yenidən göstər', sub: 'Tanışlıq ekranı', icon: 'sparkle', run: onboarding },
+      { group: 'Əmrlər', label: cfg.show ? 'Nuanzanı gizlət' : 'Nuanzanı göstər', sub: 'Yoldaş', icon: cfg.show ? 'eyeoff' : 'eye', run: function () { setCompanion({ show: !cfg.show }); if (!cfg.show) later(function () { companion.set('wave', { say: 'Yenə buradayam.', ms: 2400 }); }, 200); } },
+      { group: 'Əmrlər', label: 'Girişi yenidən göstər', sub: 'İlk quraşdırma', icon: 'info', run: onboarding },
       { group: 'Əmrlər', label: 'Klaviatura qısayolları', sub: '?', icon: 'keyboard', run: shortcuts }
     );
     return items;
@@ -2202,57 +2213,46 @@
     closeDrawer(false);
     var p = profile();
     var st = { step: 0, mode: curMode, pairs: (p.pairs || []).slice(), name: p.name };
-    var restore = D.activeElement, done = false, nz = null;
+    var restore = D.activeElement, done = false;
     var el = h('div', { class: 'onb', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Mirzəyə xoş gəldiniz' });
     var skip = h('button', { class: 'btn btn-ghost btn-sm onb-skip', type: 'button', onclick: function () { finish(true); } }, 'Keç');
-    var star = frag('<svg class="onb-star" viewBox="-20 -20 40 40" aria-hidden="true"><path class="l-star" pathLength="1" d="M0 -19 4.22 -14.78 4.22 -11.61 7.39 -11.61 11.61 -7.39 11.61 -4.22 14.78 -4.22 19 0 14.78 4.22 11.61 4.22 11.61 7.39 7.39 11.61 4.22 11.61 4.22 14.78 0 19 -4.22 14.78 -4.22 11.61 -7.39 11.61 -11.61 7.39 -11.61 4.22 -14.78 4.22 -19 0 -14.78 -4.22 -11.61 -4.22 -11.61 -7.39 -7.39 -11.61 -4.22 -11.61 -4.22 -14.78Z"/><polygon class="l-ring" points="0,-10 10,0 0,10 -10,0"/><polygon class="l-dot" points="0,-5 5,0 0,5 -5,0"/></svg>');
-    var stage = h('div', { class: 'onb-stage' });
-    var rug = h('div', { class: 'onb-rug', 'aria-hidden': 'true' });
-    var hero = h('div', { class: 'onb-hero' }, star, stage, rug);
+    var stepLbl = h('small', { text: '1 / 4' });
+    var hero = h('div', { class: 'onb-hero' }, frag(logoSvg('onb-star')), h('b', { text: 'Mirzə' }), stepLbl);
     var host = h('div', { class: 'onb-host' });
     el.appendChild(skip);
-    el.appendChild(h('div', { class: 'onb-in' }, hero, host));
+    el.appendChild(h('div', { class: 'onb-in' }, h('div', { class: 'onb-card' }, hero, host)));
     D.body.appendChild(el);
     var ov = { el: el, close: function () { finish(true); } };
     onb = ov; pushOverlay(ov);
-    if (W.Nuanza && typeof W.Nuanza.mount === 'function') {
-      try { nz = W.Nuanza.mount(stage, { size: 'full' }); } catch (e) { log(e); nz = null; stage.textContent = ''; }
-    }
-    if (!nz) stage.appendChild(h('span', { class: 'medal xl pop', 'aria-hidden': 'true' }, h('b', { text: 'N' })));
-    function nzSet(s, o) { if (nz && typeof nz.set === 'function') { try { nz.set(s, o || {}); } catch (e) { log(e); } } }
-    later(function () { if (!done && st.step === 0) nzSet('wave', { say: 'Salam! Mən Nuanzayam.', ms: 2800 }); }, reducedMotion() ? 200 : 1300);
 
-    function dots(i) { return h('div', { class: 'onb-dots', 'aria-hidden': 'true' }, [0, 1, 2, 3].map(function (k) { return h('i', { class: k === i ? 'on' : null }); })); }
-    function choice(id, ic, icCls, title, sub) {
+    function dots(i) { return h('div', { class: 'onb-dots', 'aria-hidden': 'true' }, [0, 1, 2, 3].map(function (k) { return h('i', { class: k <= i ? 'on' : null }); })); }
+    function foot(i, kids) { return h('div', { class: 'onb-foot' }, h('div', { class: 'onb-actions' }, kids), dots(i)); }
+    function choice(id, ic, title, sub) {
       return h('button', {
         class: 'choice', type: 'button', 'aria-pressed': String(st.mode === id),
         onclick: function (e) {
           st.mode = id;
           $$('.choice', host).forEach(function (b) { b.setAttribute('aria-pressed', String(b === e.currentTarget)); });
-          if (id === 'academy') nzSet('celebrate', { say: 'Şagirddən Ustada qədər — birlikdə!', ms: 2400 });
-          else nzSet('write', { say: 'Əla! Layihələrinizi səliqəyə salaq.', ms: 2400 });
         }
-      }, h('span', { class: 'ic ' + icCls, html: icon(ic) }), h('span', null, h('b', { text: title }), h('small', { text: sub })));
+      }, h('span', { class: 'ic', html: icon(ic) }), h('span', null, h('b', { text: title }), h('small', { text: sub })));
     }
     function step0() {
       return h('div', { class: 'onb-step' },
-        h('span', { class: 'eyebrow' }, 'Bakıdan · tərcümə masası'),
-        h('h1', { class: 'onb-h', id: 'onb-h', html: 'Salam, mən <em>Nuanza</em>yam' }),
-        h('p', { class: 'onb-p', text: 'Tərcümə masanızın yoldaşıyam. Üslubu tanıyıram, terminləri qoruyuram, böyük işlərdə isə Mirzə Məclisini çağırıram.' }),
-        h('div', { class: 'onb-actions' }, h('button', { class: 'btn btn-primary btn-lg', type: 'button', 'data-primary': '1', onclick: function () { show(1); } }, 'Tanış olaq', iconEl('arrow'))),
-        dots(0));
+        h('span', { class: 'eyebrow' }, 'Tərcüməçinin iş masası'),
+        h('h1', { class: 'onb-h', id: 'onb-h', text: 'Mirzəyə xoş gəldiniz' }),
+        h('p', { class: 'onb-p', text: 'Layihələr, seqment redaktoru, terminologiya və keyfiyyət yoxlaması — Azərbaycan dili ilə işləyən tərcüməçilər üçün bir yerdə. Quraşdırma bir dəqiqə çəkir.' }),
+        foot(0, [h('button', { class: 'btn btn-primary', type: 'button', 'data-primary': '1', onclick: function () { show(1); } }, 'Davam et', iconEl('arrow'))]));
     }
     function step1() {
       return h('div', { class: 'onb-step' },
-        h('h1', { class: 'onb-h', id: 'onb-h', html: 'Necə <em>işləyirsiniz</em>?' }),
+        h('h1', { class: 'onb-h', id: 'onb-h', text: 'Necə işləyirsiniz?' }),
         h('p', { class: 'onb-p', text: 'Rejimi istənilən vaxt menyudan dəyişə bilərsiniz.' }),
         h('div', { class: 'onb-choices', role: 'group', 'aria-label': 'Rejim' },
-          choice('pro', 'folder', 'fir', 'Peşəkar tərcüməçi', 'Layihələr, lüğət, tərcümə yaddaşı, QA və təhvil paketi'),
-          choice('academy', 'cap', 'gold', 'Tələbə — Akademiya', 'Dərslər, missiyalar, səhv kartları, XP və rütbələr')),
-        h('div', { class: 'onb-actions' },
-          h('button', { class: 'btn btn-ghost btn-lg', type: 'button', onclick: function () { show(0); } }, iconEl('back'), 'Geri'),
-          h('button', { class: 'btn btn-primary btn-lg', type: 'button', 'data-primary': '1', onclick: function () { show(2); } }, 'Davam et', iconEl('arrow'))),
-        dots(1));
+          choice('pro', 'folder', 'Peşəkar tərcüməçi', 'Layihələr, lüğət, tərcümə yaddaşı, QA və təhvil paketi'),
+          choice('academy', 'cap', 'Tələbə — Akademiya', 'Dərslər, tapşırıqlar, səhv kartları və irəliləyiş')),
+        foot(1, [
+          h('button', { class: 'btn btn-primary', type: 'button', 'data-primary': '1', onclick: function () { show(2); } }, 'Davam et', iconEl('arrow')),
+          h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { show(0); } }, 'Geri')]));
     }
     function step2() {
       var err = h('div', { class: 'onb-err', role: 'alert' });
@@ -2264,50 +2264,44 @@
             if (i >= 0) st.pairs.splice(i, 1); else st.pairs.push(pr.id);
             e.currentTarget.setAttribute('aria-pressed', String(i < 0));
             err.textContent = '';
-            if (i < 0) nzSet('success', { ms: 900 });
           }
         }, pr.label);
       }));
       return h('div', { class: 'onb-step' },
-        h('h1', { class: 'onb-h', id: 'onb-h', html: 'Dil <em>cütləriniz</em>' }),
-        h('p', { class: 'onb-p', text: 'Azərbaycan dilini ingilis, rus və türk dilləri ilə işləyirəm. Birdən çox cüt seçə bilərsiniz.' }),
+        h('h1', { class: 'onb-h', id: 'onb-h', text: 'Dil cütləriniz' }),
+        h('p', { class: 'onb-p', text: 'Mirzə Azərbaycan dilini ingilis, rus və türk dilləri ilə dəstəkləyir. Bir neçə cüt seçə bilərsiniz.' }),
         chips, err,
-        h('div', { class: 'onb-actions' },
-          h('button', { class: 'btn btn-ghost btn-lg', type: 'button', onclick: function () { show(1); } }, iconEl('back'), 'Geri'),
+        foot(2, [
           h('button', {
-            class: 'btn btn-primary btn-lg', type: 'button', 'data-primary': '1',
+            class: 'btn btn-primary', type: 'button', 'data-primary': '1',
             onclick: function () {
-              if (!st.pairs.length) { err.textContent = 'Ən azı bir dil cütü seçin.'; nzSet('worried', { say: 'Bir dil cütü lazımdır.', ms: 2200 }); return; }
+              if (!st.pairs.length) { err.textContent = 'Ən azı bir dil cütü seçin.'; return; }
               show(3);
             }
-          }, 'Davam et', iconEl('arrow'))),
-        dots(2));
+          }, 'Davam et', iconEl('arrow')),
+          h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { show(1); } }, 'Geri')]));
     }
     /* Optional name step: "Keç" finishes without a name. */
     function step3() {
       var nameIn = h('input', {
-        class: 'input', id: 'onb-name', value: st.name, autocomplete: 'name', placeholder: 'Məsələn, Leyla', maxlength: '60',
+        class: 'input', id: 'onb-name', value: st.name, autocomplete: 'name', placeholder: 'Məsələn, Leyla Əliyeva', maxlength: '60',
         oninput: function (e) { st.name = e.target.value; },
         onkeydown: function (e) { if (e.key === 'Enter') { e.preventDefault(); finish(false); } }
       });
       return h('div', { class: 'onb-step' },
-        h('h1', { class: 'onb-h', id: 'onb-h', html: 'Sizə necə <em>müraciət</em> edək?' }),
-        h('p', { class: 'onb-p', text: 'İstəsəniz, adınızı yazın. Sonra ayarlardan dəyişə bilərsiniz.' }),
-        h('div', { class: 'field onb-field' }, h('label', { for: 'onb-name' }, 'Adınız (istəyə bağlı)'), nameIn),
-        h('div', { class: 'onb-actions' },
-          h('button', { class: 'btn btn-ghost btn-lg', type: 'button', onclick: function () { st.name = ''; finish(false); } }, 'Keç'),
-          h('button', { class: 'btn btn-primary btn-lg', type: 'button', 'data-primary': '1', onclick: function () { finish(false); } }, 'Başlayaq', iconEl('sparkle'))),
-        dots(3));
+        h('h1', { class: 'onb-h', id: 'onb-h', text: 'Sizə necə müraciət edək?' }),
+        h('p', { class: 'onb-p', text: 'Adınız profildə görünəcək. Sonra ayarlardan dəyişə bilərsiniz.' }),
+        h('div', { class: 'field onb-field' }, h('label', { for: 'onb-name' }, 'Ad və soyad', h('span', { class: 'opt', text: 'istəyə bağlı' })), nameIn),
+        foot(3, [
+          h('button', { class: 'btn btn-primary', type: 'button', 'data-primary': '1', onclick: function () { finish(false); } }, 'Masaya keç', iconEl('arrow')),
+          h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { st.name = ''; finish(false); } }, 'Keç')]));
     }
     function show(i) {
       st.step = i;
-      hero.classList.toggle('small', i > 0);
+      stepLbl.textContent = (i + 1) + ' / 4';
       host.textContent = '';
       host.appendChild([step0, step1, step2, step3][i]());
       el.setAttribute('aria-labelledby', 'onb-h'); el.removeAttribute('aria-label');
-      if (i === 1) nzSet('point', { say: 'Əvvəlcə bir sual: necə işləyirsiniz?', ms: 2600 });
-      if (i === 2) nzSet('read', { say: 'Hansı dillərlə işləyirik?', ms: 2400 });
-      if (i === 3) nzSet('wave', { say: 'Tanış olaq?', ms: 2000 });
       try { el.scrollTop = 0; } catch (e) { /* ignore */ }
       focusSoon(i === 3 ? $('#onb-name', host) : $('[data-primary]', host));
     }
@@ -2321,21 +2315,12 @@
       }
       if (st.mode !== curMode && !skipped) setMode(st.mode, { silent: true });
       var first = profile().firstName;
-      if (!skipped) {
-        nzSet('celebrate', { say: first ? 'Hazırıq! Xoş gəldiniz, ' + first + '.' : 'Hazırıq! Xoş gəldiniz.', ms: 1600 });
-        if (W.NuanzaFX && typeof W.NuanzaFX.burst === 'function') { try { W.NuanzaFX.burst(W.innerWidth / 2, W.innerHeight * 0.38, 'confetti'); } catch (e) { log(e); } }
-      }
-      later(function () {
-        el.classList.add('out');
-        popOverlay(ov); onb = null;
-        later(function () { try { if (nz && nz.destroy) nz.destroy(); } catch (e) { log(e); } if (el.parentNode) el.parentNode.removeChild(el); }, 380);
-        go('home', {}, { focus: false });
-        restoreFocus(restore && restore !== D.body ? restore : null);
-        if (!skipped) {
-          toast(first ? 'Xoş gəldiniz, ' + first + '!' : 'Xoş gəldiniz!', 'ok', { sub: curMode === 'academy' ? 'Akademiya masanız hazırdır' : 'Peşəkar masanız hazırdır', icon: 'sparkle' });
-          later(function () { companion.set('wave', { say: 'Mən buradayam — lazım olsam, toxunun.', ms: 3200 }); }, 700);
-        }
-      }, skipped ? 0 : 950);
+      el.classList.add('out');
+      popOverlay(ov); onb = null;
+      later(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 320);
+      go('home', {}, { focus: false });
+      restoreFocus(restore && restore !== D.body ? restore : null);
+      if (!skipped) toast(first ? 'Xoş gəldiniz, ' + first + '!' : 'Xoş gəldiniz!', 'ok', { sub: curMode === 'academy' ? 'Akademiya masanız hazırdır' : 'İş masanız hazırdır', icon: 'check' });
     }
     show(0);
   }
@@ -2397,7 +2382,8 @@
 
     if (els.burger) els.burger.addEventListener('click', toggleDrawer);
     if (els.scrim) els.scrim.addEventListener('click', function () { closeDrawer(true); });
-    if (els.brand) els.brand.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); go('home'); });
+    (els.brands || []).forEach(function (b) { b.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); go('home'); }); });
+    if (els.hdrSearch) els.hdrSearch.addEventListener('click', function () { palette(); });
     if (els.hdrAvatar) els.hdrAvatar.addEventListener('click', function () { if (screens.settings) go('settings'); else toast('Ayarlar hələ yüklənməyib', 'info'); });
     if (els.drProfile) els.drProfile.addEventListener('click', function () { if (screens.settings) go('settings'); else toast(profile().name, 'info', { sub: profile().role }); });
     if (els.modeSeg) els.modeSeg.addEventListener('click', function (e) { var b = e.target.closest('button[data-mode]'); if (b) setMode(b.getAttribute('data-mode')); });

@@ -76,10 +76,16 @@
     return { name: R[i].name, index: i, min: R[i].min, xp: xp, next: nx ? nx.min : null, nextName: nx ? nx.name : null, progress: nx ? clamp((xp - R[i].min) / (nx.min - R[i].min), 0, 1) : 1, toNext: nx ? nx.min - xp : 0 };
   }
   function reduced() { try { return App.reducedMotion ? App.reducedMotion() : false; } catch (e) { return false; } }
-  function chatty() { try { return App.companionConfig ? App.companionConfig().chatty !== false : true; } catch (e) { return true; } }
+  /* Speech policy: «Normal» (default) — only outcomes (done, problem found); «Çox» — everything; «Sakit» — nothing. */
+  function chatty(state) {
+    var c = null; try { c = App.companionConfig ? App.companionConfig() : null; } catch (e) { c = null; }
+    if (c && c.chatty === false) return false;
+    var t = (c && c.talk) || 'normal';
+    return t === 'cox' || (t !== 'sakit' && /^(success|worried|sad|celebrate)$/.test(state || ''));
+  }
   function nz(state, text, ms) {
     var c = App.companion; if (!c || typeof c.set !== 'function') return;
-    try { c.set(state || 'idle', text && chatty() ? { say: text, ms: ms || 3000 } : { ms: ms || 1600 }); } catch (e) { /* ignore */ }
+    try { c.set(state || 'idle', text && chatty(state || 'idle') ? { say: text, ms: ms || 3000 } : { ms: ms || 1600 }); } catch (e) { /* ignore */ }
   }
   function pointOf(el) {
     try { if (el && el.isConnected) { var r = el.getBoundingClientRect(); if (r.width || r.height) return { x: r.left + r.width / 2, y: r.top + Math.min(r.height / 2, 24) }; } } catch (e) { /* ignore */ }
@@ -146,6 +152,8 @@
     live = { to: [], iv: [], off: [], minis: [] };
   }
   function mountMini(el, state) {
+    /* the companion lives only in the corner dock — screens keep a quiet icon */
+    if (el) return null;
     if (W.Nuanza && typeof W.Nuanza.mount === 'function') {
       try {
         var m = W.Nuanza.mount(el, { size: 'mini', label: 'Nuanza — toxunun' });
@@ -379,7 +387,7 @@
     });
   }
   var COLS = [
-    { id: 'base', label: 'Nuanza tapşırıqları' },
+    { id: 'base', label: 'Mirzə tapşırıqları' },
     { id: 'news', label: 'Xəbərlər (NTREX)' },
     { id: 'docs', label: 'Məşhur sənədlər' }
   ].filter(function (c) { return TASKS.some(function (t) { return !t.sim && (t.col || 'base') === c.id; }); });
@@ -428,7 +436,7 @@
     var url = /^https?:\/\//i.test(String(c.url || '')) ? String(c.url) : '';
     return { id: 'custom-' + (c.at || Date.now()), level: lv, domain: 'Kitabxana', reg: 'Neytral', client: String(c.source || 'Kitabxana'),
       title: String(c.title || 'Kitabxana mətni'), xp: LV_XP[lv] || 30, minutes: minsOf(n), src: src, model: '', hints: [], draft: '',
-      tip: 'Bu mətn Kitabxanadan gəlir — model tərcümə yoxdur, Nuanza yoxlayacaq.', traps: [], custom: true, srcLang: sl,
+      tip: 'Bu mətn Kitabxanadan gəlir — model tərcümə yoxdur, Mirzə Məclisi yoxlayacaq.', traps: [], custom: true, srcLang: sl,
       source: String(c.source || ''), licence: String(c.licence || ''), url: url };
   }
   function pairOf(task) { var s = task && task.srcLang === 'az' ? 'az' : 'en'; return { from: s, to: s === 'az' ? 'en' : 'az' }; }
@@ -479,7 +487,7 @@
 
   /* games */
   var GAMES = [
-    { id: 'vs', name: 'Sən vs AI', icon: 'users', cls: '', desc: 'Eyni cümlə, iki variant — hansı daha dəqiqdir?', diff: 2, skill: 'Məna' },
+    { id: 'vs', name: 'İnsan, yoxsa maşın?', icon: 'users', cls: '', desc: 'Eyni cümlə, iki variant — hansı daha dəqiqdir?', diff: 2, skill: 'Məna' },
     { id: 'detective', name: 'Detektiv', icon: 'search', cls: 'practice-fir', desc: 'Tərcümədə gizlənən səhvləri tapın.', diff: 2, skill: 'Redaktə', feat: true },
     { id: 'fix', name: 'Düzəlt', icon: 'edit', cls: 'green', desc: 'Səhv hissəni bir toxunuşla düzəldin.', diff: 1, skill: 'Ədəbi norma' },
     { id: 'context', name: 'Kontekst dəyiş', icon: 'layers', cls: 'gold', desc: 'Bir fikir: dosta, banka, məhkəməyə.', diff: 2, skill: 'Üslub' },
@@ -596,7 +604,7 @@
     '@keyframes task-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}',
     '.task-in{animation:task-in .32s var(--ease-out) both}',
     '.card.lacquer .kv dt{color:var(--on-deep-soft)}',
-    '.progress.progress-fir > i{background:linear-gradient(90deg,var(--firuze),color-mix(in srgb,var(--firuze) 72%,var(--on-deep)))}',
+    '.progress.progress-fir > i{background:var(--firuze)}',
 
     /* ---- TASK ---- */
     '.task-get{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 20px}',
@@ -671,7 +679,7 @@
     '@media (max-width:719px){.task-verdict{grid-template-columns:repeat(2,auto);justify-content:center;text-align:center}.task-vtx{grid-column:1 / -1;justify-items:center}.task-vtx .chips{justify-content:center}}',
     '.task-grade{display:grid;justify-items:center;gap:10px}',
     '.medal.task-medal > b{font-size:calc(var(--size) * .44)}',
-    '.task-grade-w{font:600 .6875rem/1 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--soft)}',
+    '.task-grade-w{font:600 .6875rem/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}',
     '.task-vtx{display:grid;gap:8px;min-width:0}',
     '.task-vtx h2{font-size:var(--fs-xl)}',
     '.task-vtx .chips{margin-top:4px}',
@@ -710,7 +718,7 @@
     '.task-self-row{display:flex;gap:8px}',
     '.task-self .input{min-height:38px;padding-block:6px}',
     '.task-self small{color:var(--soft);font-size:var(--fs-xs)}',
-    '.task-err.done{border-color:color-mix(in srgb,var(--ok) 40%,var(--line));background:linear-gradient(180deg,var(--ok-t),transparent 70%),var(--surface)}',
+    '.task-err.done{border-color:color-mix(in srgb,var(--ok) 40%,var(--line));background:var(--surface)}',
     '.task-err.done::before{background:var(--ok)}',
     '.task-err.done .task-err-act,.task-err.done .task-self{display:none}',
     '.task-err.done .task-was{opacity:.6}',
@@ -720,7 +728,7 @@
     '.task-err:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
     '.task-next{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px}',
     '@media (max-width:479px){.task-next .btn{flex:1 1 100%}}',
-    '.task-empty .empty-art{width:auto;height:auto;min-height:96px}',
+    '.task-empty .empty-art{margin-bottom:2px}',
 
     /* ---- PRACTICE ---- */
     '.practice-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(164px,1fr));gap:12px}',
@@ -740,7 +748,7 @@
     '.practice-best svg{width:14px;height:14px;color:var(--zafaran-ink)}',
     '.practice-best b{font-family:var(--f-display);font-size:.9375rem;color:var(--ink)}',
     '.practice-game.feat{border-color:color-mix(in srgb,var(--firuze) 45%,var(--line))}',
-    '.practice-game.feat::after{content:"";position:absolute;left:16px;right:16px;top:0;height:6px;background:var(--firuze);opacity:.7;-webkit-mask:var(--m-band) 0 0/18px 6px repeat-x;mask:var(--m-band) 0 0/18px 6px repeat-x;transform:scaleY(-1);pointer-events:none}',
+    '.practice-game.feat::after{content:none}',
     '.practice-det{display:grid;gap:16px;scroll-margin-top:calc(var(--hdr-h) + var(--band-h) + 16px)}',
     '.practice-det .card-h{margin-bottom:0}',
     '.practice-det-src{display:grid;gap:4px;padding:12px 14px;border-radius:var(--r-md);background:var(--surface2);color:var(--soft);font-size:.9375rem;line-height:1.55}',
@@ -755,7 +763,7 @@
     '.practice-w.miss{background:var(--nar-t);color:var(--nar);text-decoration:line-through;outline:1.5px dashed var(--nar);outline-offset:-1px}',
     '.practice-w.false{background:transparent;color:var(--faint);box-shadow:inset 0 -2px 0 var(--line-2)}',
     '.practice-w[aria-disabled="true"]{cursor:default}',
-    '.practice-fix{display:inline-block;margin:0 6px 0 3px;padding:0 7px;border-radius:7px;background:var(--fir-t);color:var(--firuze);font:600 .875rem/1.7 var(--f-body);text-decoration:none;vertical-align:.12em;animation:pop-in .32s var(--ease-spring) both}',
+    '.practice-fix{display:inline-block;margin:0 6px 0 3px;padding:0 7px;border-radius:7px;background:var(--fir-t);color:var(--firuze);font:600 .875rem/1.7 var(--f-body);text-decoration:none;vertical-align:.12em}',
     '.practice-det-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}',
     '.practice-det-bar .row{gap:8px}',
     '.practice-det-res{display:grid;gap:16px;padding-top:16px;border-top:1px solid var(--line);animation:task-in .32s var(--ease-out) both}',
@@ -782,7 +790,7 @@
     '.practice-opt-k{flex:none;width:28px;height:28px;display:grid;place-items:center;border-radius:8px;background:var(--surface2);color:var(--soft);font:700 var(--fs-sm)/1 var(--f-body)}',
     '.choice.practice-opt b{font-weight:500;line-height:1.45}',
     '.practice-opts.locked .choice{pointer-events:none}',
-    '.choice.practice-opt.right{border-color:var(--ok);background:linear-gradient(var(--ok-t),var(--ok-t)),var(--surface);box-shadow:0 0 0 3px var(--ok-t)}',
+    '.choice.practice-opt.right{border-color:var(--ok);background:linear-gradient(var(--ok-t),var(--ok-t)),var(--surface)}',
     '.choice.practice-opt.right::after{background:var(--ok);border-color:var(--ok)}',
     '.choice.practice-opt.right::before{content:"";position:absolute;top:18px;right:18px;z-index:1;width:12px;height:12px;background:var(--surface);-webkit-mask:var(--m-check) center/contain no-repeat;mask:var(--m-check) center/contain no-repeat}',
     '.choice.practice-opt.wrong{border-color:var(--nar);background:linear-gradient(var(--nar-t),var(--nar-t)),var(--surface);animation:task-shake .4s var(--ease-out)}',
@@ -809,8 +817,8 @@
     '.practice-mic:active{transform:scale(.94)}',
     '.practice-mic:disabled{opacity:.5;cursor:default}',
     '.practice-mic.lac{background:var(--lacquer);color:var(--on-lacquer);box-shadow:0 12px 26px -10px var(--lacquer)}',
-    '.practice-mic.rec{background:var(--nar);color:var(--on-nar);box-shadow:0 12px 26px -10px var(--nar);animation:practice-pulse 1.2s var(--ease-out) infinite}',
-    '@keyframes practice-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--nar) 45%,transparent)}100%{box-shadow:0 0 0 20px transparent}}',
+    '.practice-mic.rec{background:var(--nar);color:var(--on-nar)}',
+    '@keyframes practice-pulse{from{opacity:1}to{opacity:1}}',
     '.practice-oral-tx{max-width:44ch;font-family:var(--f-display);font-size:1.1875rem;line-height:1.5}',
     '.practice-oral-tx.muted{font-family:var(--f-body);font-size:var(--fs-base)}',
     '.practice-fb-list{display:grid;gap:8px;width:100%;text-align:left}',
@@ -837,13 +845,13 @@
     '@keyframes cards-in{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}',
     '.cards-inner{position:relative;display:grid;min-height:inherit;transform-style:preserve-3d;transition:transform .62s var(--ease-out)}',
     '.cards-card.flipped .cards-inner{transform:rotateY(180deg)}',
-    '.cards-face{grid-area:1 / 1;position:relative;display:flex;flex-direction:column;gap:16px;min-width:0;padding:26px 22px 20px;border:1px solid var(--line);border-radius:var(--r-xl);background:var(--surface);box-shadow:var(--sh-2);-webkit-backface-visibility:hidden;backface-visibility:hidden;overflow:hidden}',
-    '.cards-face::before{content:"";position:absolute;left:22px;right:22px;top:0;height:6px;background:var(--firuze);opacity:.55;-webkit-mask:var(--m-band) 0 0/18px 6px repeat-x;mask:var(--m-band) 0 0/18px 6px repeat-x;transform:scaleY(-1);pointer-events:none}',
-    '.cards-face::after{content:"";position:absolute;right:-34px;top:-34px;width:128px;height:128px;background:var(--firuze);opacity:.1;-webkit-mask:var(--m-gul) center/contain no-repeat;mask:var(--m-gul) center/contain no-repeat;pointer-events:none}',
-    '.cards-face.back{transform:rotateY(180deg);background:linear-gradient(180deg,var(--fir-t),transparent 45%),var(--surface)}',
+    '.cards-face{grid-area:1 / 1;position:relative;display:flex;flex-direction:column;gap:16px;min-width:0;padding:26px 22px 20px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);box-shadow:none;-webkit-backface-visibility:hidden;backface-visibility:hidden;overflow:hidden}',
+    '.cards-face::before{content:none}',
+    '.cards-face::after{content:none}',
+    '.cards-face.back{transform:rotateY(180deg);background:var(--surface)}',
     '.cards-face-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 10px;position:relative}',
     '.cards-blk{display:grid;gap:6px;min-width:0}',
-    '.cards-lbl{color:var(--soft);font:600 .6875rem/1.3 var(--f-body);letter-spacing:.12em;text-transform:uppercase}',
+    '.cards-lbl{color:var(--soft);font:600 .6875rem/1.3 var(--f-body);letter-spacing:.06em;text-transform:uppercase}',
     '.cards-src{color:var(--soft);font-size:.9375rem;line-height:1.55}',
     '.cards-sent{font-family:var(--f-display);font-size:1.375rem;line-height:1.45;letter-spacing:-.005em;overflow-wrap:anywhere}',
     '@media (min-width:640px){.cards-sent{font-size:1.5rem}}',
@@ -867,7 +875,7 @@
     '.cards-done .stats{width:100%;max-width:420px}',
     '.cards-done .stat{justify-items:center}',
     '.cards-done .actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}',
-    '.cards-empty .empty-art{width:auto;height:auto;min-height:96px}',
+    '.cards-empty .empty-art{margin-bottom:2px}',
     '.cards-boxes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}',
     '.cards-bx{display:grid;justify-items:center;gap:2px;min-width:0;padding:12px 4px 10px;border-radius:var(--r-md);background:var(--surface2);text-align:center}',
     '.cards-bx b{font-family:var(--f-display);font-size:1.5rem;line-height:1.1}',
@@ -888,7 +896,7 @@
     '.progress-ladder li span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
     '.progress-ladder i{width:9px;height:9px;border:1px solid color-mix(in srgb,var(--on-deep) 40%,transparent);border-radius:2px;transform:rotate(45deg)}',
     '.progress-ladder li.done i{background:color-mix(in srgb,var(--firuze) 72%,var(--on-deep));border-color:transparent}',
-    '.progress-ladder li.cur i{background:color-mix(in srgb,var(--firuze) 72%,var(--on-deep));border-color:transparent;box-shadow:0 0 0 3px color-mix(in srgb,var(--firuze) 32%,transparent)}',
+    '.progress-ladder li.cur i{background:color-mix(in srgb,var(--firuze) 72%,var(--on-deep));border-color:transparent}',
     '.progress-ladder li.cur span{color:color-mix(in srgb,var(--firuze) 72%,var(--on-deep));font-weight:700}',
     '.progress-hero .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}',
     '@media (min-width:480px){.progress-hero .stats{grid-template-columns:repeat(4,minmax(0,1fr))}}',
@@ -977,7 +985,6 @@
 
     page.appendChild(h('div', { class: 'page-h' },
       h('div', null,
-        h('span', { class: 'eyebrow', text: 'Akademiya · Tapşırıq' }),
         h('h1', { html: 'Bugünkü <em>tapşırıq</em>' }),
         h('p', { text: 'Mətni oxuyun, öz variantınızı yazın — Mirzə Məclisi yoxlayıb hər səhvi izah edəcək.' })),
       userCards().length ? h('div', { class: 'actions' },
@@ -1344,7 +1351,7 @@
       h('div', { class: 'task-meta' },
         badge(lv.id + ' · ' + lv.name, 'navy'),
         badge(task.domain, 'gold'),
-        h('span', { class: 'badge', title: 'Üslubu Nuanza avtomatik təyin etdi' }, ie('sparkle'), (T.reg || task.reg) + ' · avtomatik'),
+        h('span', { class: 'badge', title: 'Üslub avtomatik təyin edildi' }, ie('sparkle'), (T.reg || task.reg) + ' · avtomatik'),
         badge(words(task.src) + ' söz'),
         badge('~' + task.minutes + ' dəq', '', 'clock')),
       h('p', { class: 'task-src-tx', lang: pr.from, text: task.src }),
@@ -1367,7 +1374,7 @@
     var err = h('span', { class: 'err', hidden: true, role: 'alert' }, ie('alert'), 'Əvvəlcə tərcüməni yazın — ən azı bir cümlə.');
     var wc = h('span', { class: 'badge tnum', text: '0 söz' });
     var draft = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, ie('file'), 'Nümunə qaralama');
-    var check = h('button', { class: 'btn btn-primary', type: 'button' }, ie('sparkle'), 'Nuanza yoxlasın');
+    var check = h('button', { class: 'btn btn-primary', type: 'button' }, ie('sparkle'), 'Yoxlat');
     T.ta = ta; T.err = err; T.wc = wc; T.check = check; T.draftBtn = draft;
     var wrote = false;
     ta.addEventListener('input', function () {
@@ -1845,7 +1852,7 @@
             e.ex ? h('p', { class: 'task-ex' }, h('span', { class: 'eyebrow plain', text: 'Nümunə' }), h('span', { text: e.ex })) : null);
         })));
         if (item.fixed) res.appendChild(h('div', { class: 'practice-det-src task-hunt-fixed' },
-          h('span', { class: 'eyebrow plain', text: 'Düzəldilmiş tərcümə · Nuanza redaktəsi' }),
+          h('span', { class: 'eyebrow plain', text: 'Düzəldilmiş tərcümə · redaktə' }),
           h('p', { lang: 'az', text: item.fixed })));
         res.appendChild(h('div', { class: 'row task-hunt-next' },
           h('button', { class: 'btn btn-ghost', type: 'button', onclick: build }, ie('refresh'), 'Yenidən'),
@@ -1898,7 +1905,6 @@
     P = { page: page };
     page.appendChild(h('div', { class: 'page-h' },
       h('div', null,
-        h('span', { class: 'eyebrow', text: 'Akademiya · Məşq' }),
         h('h1', { html: 'Məşq <em>meydanı</em>' }),
         h('p', { text: (NUM_WORD[GAMES.length] || GAMES.length) + ' oyun — hər biri bir bacarığı itiləyir. Ən yaxşı nəticələriniz yadda qalır.' })),
       h('div', { class: 'actions' },
@@ -2198,7 +2204,7 @@
       var clock = h('b', { class: 'tnum', text: '0:00' });
       var stopBtn = h('button', { class: 'practice-mic rec', type: 'button', 'aria-label': 'Dayandır' }, ie('pause'));
       body.appendChild(h('span', { class: 'eyebrow', text: 'Addım 2 / 2 · Danışın' }));
-      body.appendChild(h('p', { class: 'muted', text: 'Nuanza dinləyir… Prototipdə mikrofon işə salınmır — nəticə nümunədir.' }));
+      body.appendChild(h('p', { class: 'muted', text: 'Dinlənilir… Prototipdə mikrofon işə salınmır — nəticə nümunədir.' }));
       body.appendChild(wave); body.appendChild(stopBtn); body.appendChild(clock);
       focusSoft(stopBtn);
       var sec = 0, stopped = false;
@@ -2265,7 +2271,6 @@
     C = { page: page, tag: params.tag || null };
     page.appendChild(h('div', { class: 'page-h' },
       h('div', null,
-        h('span', { class: 'eyebrow', text: 'Akademiya · Səhv kartları' }),
         h('h1', { html: 'Səhv <em>kartları</em>' }),
         h('p', { text: 'Tapşırıqlarda buraxdığınız səhvlər kart olur. «Bildim» — kart seyrəkləşir, «Çətin oldu» — tez-tez qayıdır.' }))));
     if (!deck().length) { renderNoCards(page); return; }
@@ -2546,7 +2551,6 @@
 
     page.appendChild(h('div', { class: 'page-h' },
       h('div', null,
-        h('span', { class: 'eyebrow', text: 'Akademiya · İnkişaf' }),
         h('h1', { html: 'Mənim <em>inkişafım</em>' }),
         h('p', { text: sub }))));
 

@@ -50,26 +50,38 @@
         </svg>
         <b>Mirzə</b><small hidden>Akademiya</small>
       </a>
-      <button class="avatar av-firuze" type="button" aria-label="Profil və ayarlar">AM</button>
+      <div class="hdr-crumb" aria-hidden="true"><span class="c-grp">Peşəkar</span><span class="c-sep">/</span><span class="c-cur"></span></div>
+      <div class="hdr-acts">
+        <button class="icon-btn ghost hdr-search" type="button" aria-label="Axtar və keç" data-icon="search"></button>
+        <button class="avatar av-firuze" type="button" aria-label="Profil və ayarlar"></button>
+      </div>
     </div>
-    <div class="rugband" aria-hidden="true"></div>
   </header>
 
   <nav class="drawer" id="drawer" aria-label="Əsas menyu">
-    <button class="dr-profile" type="button" aria-label="Profil və ayarlar">
-      <span class="avatar lg av-firuze" aria-hidden="true">AM</span>
-      <span class="who"><b>Aysel Məmmədova</b><small>Freelance tərcüməçi · EN/RU → AZ</small><span class="badge">Peşəkar</span></span>
-    </button>
+    <div class="dr-head">
+      <a class="brand dr-brand" href="#home" aria-label="Mirzə — ana səhifə">
+        <svg class="logo" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false">
+          <polygon class="l-star" points="0,-19 4.22,-14.78 4.22,-11.61 7.39,-11.61 11.61,-7.39 11.61,-4.22 14.78,-4.22 19,0 14.78,4.22 11.61,4.22 11.61,7.39 7.39,11.61 4.22,11.61 4.22,14.78 0,19 -4.22,14.78 -4.22,11.61 -7.39,11.61 -11.61,7.39 -11.61,4.22 -14.78,4.22 -19,0 -14.78,-4.22 -11.61,-4.22 -11.61,-7.39 -7.39,-11.61 -4.22,-11.61 -4.22,-14.78"/>
+          <polygon class="l-ring" points="0,-10 10,0 0,10 -10,0"/><polygon class="l-dot" points="0,-5 5,0 0,5 -5,0"/>
+        </svg>
+        <b>Mirzə</b><small hidden>Akademiya</small>
+      </a>
+    </div>
+    <div class="dr-tools"><button class="dr-search" type="button" aria-label="Axtar və keç"><span class="lbl">Axtar və keç</span></button></div>
     <div class="dr-mode">
       <div class="seg block" role="group" aria-label="Rejim">
         <button type="button" data-mode="pro" aria-pressed="true">Peşəkar</button><button type="button" data-mode="academy" aria-pressed="false">Akademiya</button>
       </div>
     </div>
-    <div class="dr-tools"><button class="dr-search" type="button" aria-label="Axtar və keç"><span class="lbl">Axtar və keç</span></button></div>
     <div class="dr-nav" id="dr-nav"></div>
     <div class="dr-foot">
-      <button class="icon-btn ghost theme-toggle" type="button" aria-label="Rəng rejimini dəyiş"></button>
-      <span class="ver">Mirzə 3.0 · Bakı</span>
+      <button class="dr-profile" type="button" aria-label="Profil və ayarlar">
+        <span class="avatar av-firuze" aria-hidden="true"></span>
+        <span class="who"><b>Profil</b><small></small><span class="badge"></span></span>
+      </button>
+      <button class="icon-btn ghost sm theme-toggle" type="button" aria-label="Rəng rejimini dəyiş"></button>
+      <span class="ver">Mirzə 3.0</span>
     </div>
   </nav>
   <div class="scrim" aria-hidden="true"></div>

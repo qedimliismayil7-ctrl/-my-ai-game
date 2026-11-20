@@ -46,10 +46,16 @@
   function getMap(k) { var m = sget(k, {}); return m && typeof m === 'object' && !Array.isArray(m) ? m : {}; }
   function setMap(k, id, v) { var m = getMap(k); if (v === undefined) delete m[id]; else m[id] = v; sset(k, m); }
   function reduced() { try { return App.reducedMotion ? App.reducedMotion() : false; } catch (e) { return false; } }
-  function chatty() { try { var c = App.companionConfig ? App.companionConfig() : null; return !c || c.chatty !== false; } catch (e) { return true; } }
+  /* Speech policy: «Normal» (default) — only outcomes (done, problem found); «Çox» — everything; «Sakit» — nothing. */
+  function chatty(state) {
+    var c = null; try { c = App.companionConfig ? App.companionConfig() : null; } catch (e) { c = null; }
+    if (c && c.chatty === false) return false;
+    var t = (c && c.talk) || 'normal';
+    return t === 'cox' || (t !== 'sakit' && /^(success|worried|sad|celebrate)$/.test(state || ''));
+  }
   function nz(state, text, ms) {
     var c = App.companion; if (!c || typeof c.set !== 'function') return;
-    try { c.set(state, text && chatty() ? { say: text, ms: ms || 3000 } : { ms: ms || 1600 }); } catch (e) { /* ignore */ }
+    try { c.set(state, text && chatty(state || 'idle') ? { say: text, ms: ms || 3000 } : { ms: ms || 1600 }); } catch (e) { /* ignore */ }
   }
   function toast(text, kind, o) { try { return App.toast(text, kind, o); } catch (e) { return null; } }
   function burstAt(el, kind) { try { if (App.fx && App.fx.burstAt && el && el.isConnected) App.fx.burstAt(el, kind || 'stars'); } catch (e) { /* ignore */ } }
@@ -109,6 +115,8 @@
     s.every = function (fn, ms) { var t = setInterval(function () { if (s.dead) { clearInterval(t); return; } fn(); }, ms); s.ivs.push(t); return t; };
     s.on = function (tg, ev, fn, opt) { tg.addEventListener(ev, fn, opt); s.offs.push(function () { tg.removeEventListener(ev, fn, opt); }); };
     s.mini = function (host, state, width) {
+      /* the companion lives only in the corner dock — empty states keep their quiet icon */
+      if (host) return null;
       if (!W.Nuanza || typeof W.Nuanza.mount !== 'function' || !host) return null;
       try {
         var m = W.Nuanza.mount(host, { size: 'mini', width: width || 92, label: 'Nuanza' });
@@ -622,7 +630,7 @@
     '@media (min-width:640px){.projects-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}',
     '.projects-stats .stat{padding-left:14px;border-left:2px solid var(--line)}',
     '.projects-stats .stat:first-child{border-left-color:var(--firuze)}',
-    '.projects-stats .stat > b{font-size:1.625rem}',
+    '.projects-stats .stat > b{font-size:1.5rem}',
     '.ic.projects-fir{background:var(--fir-t);color:var(--firuze)}',
     '.projects-tools{display:grid;gap:10px}',
     '.projects-tools-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}',
@@ -630,9 +638,8 @@
     '.projects-tools .input[type=search]::-webkit-search-cancel-button{opacity:.5}',
     '.projects-grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}',
     '@media (min-width:720px){.projects-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}',
-    '.projects-card{display:grid;gap:14px;align-content:start;transition:transform var(--t-base) var(--ease-out),box-shadow var(--t-base),border-color var(--t-base)}',
-    '@media (hover:hover){.projects-card:hover{transform:translateY(-2px);box-shadow:var(--sh-2),inset 0 1px 0 var(--hl);border-color:color-mix(in srgb,var(--firuze) 45%,var(--line))}}',
-    '.projects-card:active{transform:scale(.995)}',
+    '.projects-card{display:grid;gap:14px;align-content:start;transition:border-color var(--t-fast),background var(--t-fast)}',
+    '@media (hover:hover){.projects-card:hover{border-color:var(--line-2)}}',
     '.projects-top{display:flex;align-items:center;gap:12px;min-width:0}',
     '.projects-who{flex:1;min-width:0;display:grid;gap:4px}',
     '.projects-who > span{font-size:var(--fs-sm);font-weight:600;color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
@@ -640,25 +647,24 @@
     '.projects-open{display:block;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;outline:none}',
     '.projects-open::after{content:"";position:absolute;inset:0;z-index:0;border-radius:inherit}',
     '.projects-open:focus-visible::after{box-shadow:0 0 0 2px var(--focus)}',
-    '.projects-card h3{font-size:1.1875rem;line-height:1.28;letter-spacing:-.005em}',
+    '.projects-card h3{font-size:1rem;font-weight:600;line-height:1.3}',
     '.projects-raise{position:relative;z-index:1}',
     '.projects-meta{display:flex;flex-wrap:wrap;gap:6px}',
     '.projects-prog{display:grid;gap:8px}',
     '.projects-prog-l{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:var(--fs-sm);color:var(--soft)}',
-    '.projects-prog-l b{font-family:var(--f-display);font-size:1.125rem;color:var(--ink);font-variant-numeric:tabular-nums}',
+    '.projects-prog-l b{font-family:var(--f-display);font-size:1rem;color:var(--ink);font-variant-numeric:tabular-nums}',
     '.projects-prog-l b small,.editor-bar-prog b small{margin-left:1px;font-family:var(--f-body);font-size:.68em;font-weight:600;color:var(--soft)}',
-    '.projects-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding-top:12px;border-top:1px dashed var(--line)}',
-    '.projects-due{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border-radius:var(--r-pill);background:var(--surface2);color:var(--soft);font:600 var(--fs-xs)/1.2 var(--f-body);font-variant-numeric:tabular-nums}',
+    '.projects-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding-top:12px;border-top:1px solid var(--line)}',
+    '.projects-due{display:inline-flex;align-items:center;gap:6px;min-height:24px;padding:0 8px;border-radius:var(--r-xs);background:var(--surface2);color:var(--soft);font:600 var(--fs-xs)/1.2 var(--f-body);font-variant-numeric:tabular-nums}',
     '.projects-due svg{width:14px;height:14px}',
     '.projects-due.late{background:var(--nar-t);color:var(--nar)}',
-    '.projects-due.late::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;animation:projects-pulse 1.6s var(--ease-out) infinite}',
+    '.projects-due.late::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}',
     '.projects-due.soon{background:var(--zaf-t);color:var(--zafaran-ink)}',
     '.projects-due.ok{background:var(--ok-t);color:var(--ok)}',
-    'button.projects-qa{border:0;cursor:pointer;height:28px;padding:0 10px;transition:transform var(--t-fast) var(--ease-out),box-shadow var(--t-fast)}',
-    'button.projects-qa:hover{box-shadow:0 0 0 1px currentColor}',
-    'button.projects-qa:active{transform:scale(.95)}',
-    '.projects-card.is-new{border-color:var(--firuze);animation:projects-glow 2.4s var(--ease-out) both}',
-    '.projects-card.is-gone{opacity:0;transform:scale(.97);transition:opacity .22s,transform .22s}',
+    'button.projects-qa{border:0;cursor:pointer;height:24px;padding:0 8px}',
+    'button.projects-qa:hover{box-shadow:inset 0 0 0 1px currentColor}',
+    '.projects-card.is-new{border-color:var(--firuze)}',
+    '.projects-card.is-gone{opacity:0;transition:opacity .2s}',
     '.projects-table td .tx{display:grid;gap:2px;min-width:0}',
     '.projects-table td .tx small{color:var(--soft)}',
     '.projects-mini{display:flex;align-items:center;gap:8px;min-width:120px}',
@@ -668,13 +674,12 @@
     '.projects-new{display:grid;gap:18px}',
     '.projects-new .grid-2{gap:14px}',
     '.projects-sec{display:grid;gap:12px;padding-top:16px;border-top:1px solid var(--line)}',
-    '.projects-sec > h3{display:flex;align-items:center;gap:8px;font:600 var(--fs-xs)/1.3 var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--soft)}',
-    '.projects-sec > h3::before{content:"";width:8px;height:8px;background:var(--firuze);-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}',
+    '.projects-sec > h3{display:flex;align-items:center;gap:8px;font:600 var(--fs-xs)/1.3 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}',
     '.projects-dz:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.projects-dz .ic{width:46px;height:46px;border-radius:14px}',
+    '.projects-dz .ic{width:40px;height:40px;border-radius:var(--r-md)}',
     '.projects-files{display:grid;gap:8px}',
-    '.projects-file{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:10px 6px 10px 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);animation:rise .3s var(--ease-out) both}',
-    '.projects-file .ic{width:34px;height:34px;border-radius:10px}',
+    '.projects-file{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:10px 6px 10px 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}',
+    '.projects-file .ic{width:32px;height:32px;border-radius:var(--r-sm)}',
     '.projects-file .ic svg{width:18px;height:18px}',
     '.projects-file-tx{min-width:0;display:grid;gap:5px}',
     '.projects-file-tx b{font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
@@ -686,7 +691,7 @@
     '.editor-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:-8px}',
     '.editor-top .btn{margin-left:-10px}',
     '.editor .page-h h1{font-size:clamp(1.5rem,1.2rem + 1.3vw,2rem)}',
-    '.editor-bar{position:sticky;top:calc(var(--hdr-h) + var(--band-h) + env(safe-area-inset-top,0px) + 8px);z-index:6;display:grid;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-lg);background:color-mix(in srgb,var(--surface) 90%,transparent);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);box-shadow:var(--sh-1)}',
+    '.editor-bar{position:sticky;top:calc(var(--hdr-h) + var(--band-h) + env(safe-area-inset-top,0px) + 8px);z-index:6;display:grid;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh-1)}',
     '.editor-bar-top,.editor-bar-bot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;min-width:0}',
     '.editor-sec{font:600 var(--fs-sm)/1.3 var(--f-body);color:var(--ink);min-width:0}',
     '.editor-bar-prog{display:flex;align-items:center;gap:12px}',
@@ -696,7 +701,7 @@
     '.editor-save{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--soft)}',
     '.editor-save i{width:7px;height:7px;border-radius:50%;background:var(--ok)}',
     '.editor-save.busy i{background:var(--zafaran);animation:editor-blink 1s ease-in-out infinite}',
-    '.editor-filter .editor-fc{min-width:18px;height:18px;padding:0 5px;border-radius:var(--r-pill);background:color-mix(in srgb,var(--ink) 8%,transparent);font-size:.6875rem;line-height:18px;text-align:center}',
+    '.editor-filter .editor-fc{min-width:18px;height:18px;padding:0 5px;border-radius:5px;background:color-mix(in srgb,var(--ink) 8%,transparent);font-size:.6875rem;line-height:18px;text-align:center}',
     '.editor-filter button[aria-pressed="true"] .editor-fc{background:var(--fir-t);color:var(--firuze)}',
     '.editor-ctx{align-items:start}',
     '.editor-sit-h{display:flex;align-items:center;gap:12px;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}',
@@ -706,7 +711,7 @@
     '.editor-sit-h > svg:last-child{width:18px;height:18px;color:var(--faint);transition:transform var(--t-base) var(--ease-out)}',
     '.editor-sit-h[aria-expanded="true"] > svg:last-child{transform:rotate(90deg)}',
     '.editor-sit-h:focus-visible{outline:2px solid var(--focus);outline-offset:4px;border-radius:8px}',
-    '.editor-sit-b{display:grid;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);animation:rise .28s var(--ease-out) both}',
+    '.editor-sit-b{display:grid;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);animation:fade-in .2s var(--ease-out) both}',
     '.editor-sit-row{display:grid;gap:2px}',
     '.editor-sit-row span{font-size:var(--fs-xs);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}',
     '.editor-sit-row p{font-size:var(--fs-sm);line-height:1.5}',
@@ -728,10 +733,10 @@
     '.editor-list textarea.seg-tgt.editor-sk{color:transparent;pointer-events:none;background:linear-gradient(100deg,transparent 30%,var(--shimmer) 50%,transparent 70%) 0 0/250% 100% no-repeat,var(--surface2);animation:shimmer 1.3s linear infinite}',
     '.editor-list .seg-row.is-ok .seg-src{color:var(--soft)}',
     '.editor-list .seg-row.editor-flash{animation:editor-flash 1.6s var(--ease-out)}',
-    '.editor-list .seg-st.ok svg{animation:pop-in .35s var(--ease-spring) both}',
+    '.editor-list .seg-st.ok svg{animation:fade-in .2s var(--ease-out) both}',
     '.editor-list .seg-meta{gap:6px 6px;padding-top:2px}',
     '.editor-pill svg{width:12px;height:12px}',
-    '.editor-conf{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px 0 8px;border-radius:var(--r-pill);background:var(--surface2);color:var(--soft);font:600 .6875rem/1 var(--f-body);cursor:help}',
+    '.editor-conf{display:inline-flex;align-items:center;gap:6px;height:20px;padding:0 7px 0 6px;border-radius:var(--r-xs);background:var(--surface2);color:var(--soft);font:600 .6875rem/1 var(--f-body);cursor:help}',
     '.editor-bars{display:inline-flex;align-items:flex-end;gap:2px;height:11px}',
     '.editor-bars i{display:block;width:3px;border-radius:2px;background:var(--line-2)}',
     '.editor-bars i:nth-child(1){height:5px}.editor-bars i:nth-child(2){height:8px}.editor-bars i:nth-child(3){height:11px}',
@@ -743,10 +748,9 @@
     '.editor-actions{display:inline-flex;align-items:center;gap:4px;margin-left:auto}',
     '.editor-ok{min-height:30px;padding:0 10px}',
     '.editor-ok[aria-pressed="true"]{--btn-bg:var(--ok-t);--btn-bg-h:var(--ok-t);--btn-ink:var(--ok);--btn-bd:transparent;box-shadow:none}',
-    '.editor-nzb .logo{width:18px;height:18px;transition:transform .6s var(--ease-spring)}',
-    '.editor-nzb:hover .logo{transform:rotate(45deg)}',
+    '.editor-nzb .logo{width:16px;height:16px}',
     '.editor-hints{grid-column:3 / 4;display:grid;gap:6px;min-width:0}',
-    '.editor-hint{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:6px 6px 6px 10px;border-radius:var(--r-sm);background:var(--zaf-t);font-size:var(--fs-sm);line-height:1.4;animation:rise .25s var(--ease-out) both}',
+    '.editor-hint{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:6px 6px 6px 10px;border-radius:var(--r-sm);background:var(--zaf-t);font-size:var(--fs-sm);line-height:1.4}',
     '.editor-hint.high{background:var(--nar-t)}',
     '.editor-hint.low{background:var(--lac-t)}',
     '.editor-hint-tx{flex:1;min-width:0}',
@@ -755,24 +759,24 @@
     '.editor-hint ins,.qa-diff ins{color:var(--ok);font-weight:600;text-decoration:none;background:var(--ok-t);border-radius:4px;padding:0 3px}',
     '.editor-hint .btn{min-height:28px;padding:0 10px}',
     '@media (max-width:639px){.editor-hints{grid-column:2 / -1;grid-row:3}.editor-list .seg-meta{grid-row:4}}',
-    '.editor-ask{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;margin:0 14px 14px 60px;padding:14px 16px;border:1px solid color-mix(in srgb,var(--firuze) 55%,var(--line));border-radius:var(--r-lg);background:linear-gradient(var(--fir-t),var(--fir-t)),var(--surface);box-shadow:var(--sh-1);animation:rise .3s var(--ease-out) both}',
-    '.editor-ask::before{content:"";position:absolute;left:28px;top:-7px;width:12px;height:12px;transform:rotate(45deg);background:inherit;border-left:1px solid color-mix(in srgb,var(--firuze) 55%,var(--line));border-top:1px solid color-mix(in srgb,var(--firuze) 55%,var(--line))}',
+    '.editor-ask{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;margin:0 14px 14px 60px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--firuze) 40%,var(--line));border-radius:var(--r-md);background:var(--surface2)}',
+    '.editor-ask::before{content:"";position:absolute;left:28px;top:-6px;width:10px;height:10px;transform:rotate(45deg);background:inherit;border-left:1px solid color-mix(in srgb,var(--firuze) 40%,var(--line));border-top:1px solid color-mix(in srgb,var(--firuze) 40%,var(--line))}',
     '.editor-ask[hidden]{display:none}',
-    '.editor-ask-ic{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:var(--surface);box-shadow:var(--sh-pop)}',
-    '.editor-ask-ic .logo{width:26px;height:26px;animation:editor-spin 9s linear infinite}',
+    '.editor-ask-ic{width:32px;height:32px;display:grid;place-items:center;border-radius:var(--r-sm);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}',
+    '.editor-ask-ic .logo{width:18px;height:18px}',
     '.editor-ask-b{display:grid;gap:8px;min-width:0}',
-    '.editor-ask-b h3{font-size:1.0625rem}',
+    '.editor-ask-b h3{font-size:.9375rem;font-weight:600}',
     '.editor-ask-b p{font-size:var(--fs-sm);color:var(--soft)}',
-    '.editor-ask-q{font-size:var(--fs-sm);padding:8px 10px;border-radius:var(--r-sm);background:var(--surface);border-left:3px solid var(--firuze)}',
+    '.editor-ask-q{font-size:var(--fs-sm);padding:8px 10px;border-radius:var(--r-xs);background:var(--surface);border-left:2px solid var(--firuze)}',
     '.editor-ask-opts{display:flex;flex-wrap:wrap;align-items:center;gap:8px}',
-    '.editor-ask.done{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;background:linear-gradient(var(--ok-t),var(--ok-t)),var(--surface);border-color:color-mix(in srgb,var(--ok) 40%,var(--line))}',
+    '.editor-ask.done{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;background:var(--surface2);border-color:color-mix(in srgb,var(--ok) 40%,var(--line))}',
     '.editor-ask.done .editor-ask-ic{color:var(--ok)}',
     '.editor-ask.mini{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:8px 12px}',
-    '.editor-ask.mini .editor-ask-ic{width:30px;height:30px}',
-    '.editor-ask.mini .editor-ask-ic .logo{width:20px;height:20px}',
+    '.editor-ask.mini .editor-ask-ic{width:28px;height:28px}',
+    '.editor-ask.mini .editor-ask-ic .logo{width:16px;height:16px}',
     '@media (max-width:639px){.editor-ask{margin:0 12px 12px 12px}.editor-ask::before{left:20px}}',
     '.editor-empty{padding:16px}',
-    '.editor-empty .empty{border:0;background:radial-gradient(60% 80% at 50% 0%,var(--fir-t),transparent 70%)}',
+    '.editor-empty .empty{border:0;background:transparent}',
     '.editor-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px;padding:12px 14px;border-top:1px solid var(--line);background:var(--surface2)}',
     '.editor-keys{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;color:var(--soft);font-size:var(--fs-xs)}',
     '.editor-keys > span{display:inline-flex;align-items:center;gap:4px}',
@@ -782,9 +786,8 @@
     '.editor-nz .list-row.is-on::before{opacity:1}',
     '.editor-nz-out{display:grid;gap:10px}',
     '.editor-nz-out:empty{display:none}',
-    '.editor-alt{display:grid;gap:4px;width:100%;padding:12px 14px;border:1.5px solid var(--line-2);border-radius:var(--r-md);background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:border-color var(--t-base),background var(--t-base),transform var(--t-fast)}',
+    '.editor-alt{display:grid;gap:4px;width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:var(--r-md);background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:border-color var(--t-fast),background var(--t-fast)}',
     '.editor-alt:hover{border-color:var(--firuze);background:linear-gradient(var(--fir-t),var(--fir-t)),var(--surface)}',
-    '.editor-alt:active{transform:scale(.99)}',
     '.editor-alt small{color:var(--soft);font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em}',
     '.editor-alt span{font-size:var(--fs-sm);line-height:1.55}',
     '.editor-check{display:flex;align-items:center;gap:16px}',
@@ -795,14 +798,14 @@
     '.qa-score{display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px;align-items:center}',
     '@media (max-width:479px){.qa-score{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}.qa-score .qa-sev{justify-content:center}}',
     '.qa-score-tx{display:grid;gap:10px;min-width:0}',
-    '.qa-score-tx h2 em{font-style:normal;color:var(--firuze)}',
+    '.qa-score-tx h2 em{font-style:normal;color:inherit}',
     '.qa-sev{display:flex;flex-wrap:wrap;gap:8px}',
-    '.qa-sevbox{flex:1 1 0;min-width:76px;display:grid;gap:2px;padding:10px 12px;border-radius:var(--r-md);background:var(--surface2);text-align:left}',
-    '.qa-sevbox b{font-family:var(--f-display);font-size:1.5rem;line-height:1.1;font-variant-numeric:tabular-nums}',
+    '.qa-sevbox{flex:1 1 0;min-width:76px;display:grid;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface2);text-align:left}',
+    '.qa-sevbox b{font-family:var(--f-display);font-size:1.375rem;line-height:1.1;font-variant-numeric:tabular-nums}',
     '.qa-sevbox span{font-size:var(--fs-xs);color:var(--soft)}',
     '.qa-sevbox.high b{color:var(--nar)}.qa-sevbox.mid b{color:var(--zafaran-ink)}.qa-sevbox.low b{color:var(--lacquer)}',
-    '.qa-seal{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:6px 12px 6px 6px;border-radius:var(--r-pill);background:var(--fir-t);color:var(--firuze);font-size:var(--fs-sm);font-weight:600;animation:pop-in .5s var(--ease-spring) both}',
-    '.qa-seal .medal{--size:30px;filter:none}',
+    '.qa-seal{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:4px 10px 4px 4px;border-radius:var(--r-sm);background:var(--fir-t);color:var(--firuze);font-size:var(--fs-sm);font-weight:600;animation:fade-in .3s var(--ease-out) both}',
+    '.qa-seal .medal{--size:24px}',
     '.qa-cats{display:grid;gap:4px}',
     '.qa-cat{display:grid;grid-template-columns:minmax(0,8.5rem) minmax(0,1fr) 3.6rem;align-items:center;gap:12px;min-height:34px;padding:2px 0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:8px}',
     '.qa-cat:hover .qa-cat-l{color:var(--firuze)}',
@@ -814,7 +817,7 @@
     '.qa-issues-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}',
     '.qa-issue{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 14px;align-items:start;padding:14px 0;border-top:1px solid var(--line);transition:opacity .22s var(--ease-out),transform .22s var(--ease-out)}',
     '.qa-issue:first-child{border-top:0}',
-    '.qa-issue.is-done{opacity:0;transform:translateX(14px)}',
+    '.qa-issue.is-done{opacity:0}',
     '.qa-issue.is-ign{opacity:.5}',
     '.qa-issue.is-ign .qa-diff{text-decoration:line-through}',
     '@media (max-width:639px){.qa-issue{grid-template-columns:auto minmax(0,1fr)}.qa-issue-act{grid-column:2}}',
@@ -829,7 +832,7 @@
     '.qa-issue-b p{font-size:var(--fs-sm);color:var(--soft)}',
     '.qa-issue-act{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}',
     '.qa-turk{display:grid;gap:8px}',
-    '.qa-turk-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 8px 8px 12px;border-radius:var(--r-md);background:var(--surface2);animation:rise .25s var(--ease-out) both}',
+    '.qa-turk-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 8px 8px 12px;border-radius:var(--r-md);background:var(--surface2)}',
     '.qa-turk-row .qa-diff{flex:1;min-width:0}',
     '.qa-term{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px;padding:10px 0;border-top:1px solid var(--line)}',
     '.qa-term:first-child{border-top:0}',
@@ -846,7 +849,7 @@
     '.qa-box{flex:none;width:22px;height:22px;display:grid;place-items:center;border:1.5px solid var(--line-2);border-radius:7px;background:var(--surface);transition:background var(--t-base),border-color var(--t-base)}',
     '.qa-box svg{width:14px;height:14px}',
     '.qa-req.ok .qa-box{background:var(--ok);border-color:var(--ok);color:var(--surface)}',
-    '.qa-req.ok .qa-box svg{animation:pop-in .3s var(--ease-spring) both}',
+    '.qa-req.ok .qa-box svg{animation:fade-in .2s var(--ease-out) both}',
     '.qa-req.fail .qa-box{background:var(--zaf-t);border-color:var(--zafaran);color:var(--zafaran-ink)}',
     '.qa-req-t{flex:1;min-width:0;font-size:var(--fs-sm);line-height:1.4}',
     '.qa-req.ok .qa-req-t{color:var(--soft)}',
@@ -863,8 +866,8 @@
     ':is(.projects,.projects-new,.editor,.editor-nz,.qa) .link.small{font-size:var(--fs-sm)}',
     '@media (max-width:639px){.editor-bar{gap:8px;padding:10px 12px}.editor-prog-tx{display:none}.editor-bar-bot{display:block}.editor-filter{display:flex;width:100%;gap:1px;padding:2px}.editor-filter button{flex:1 1 auto;padding:4px 4px;gap:3px}.editor-filter .editor-fc{min-width:16px;padding:0 4px}}',
     /* keyframes */
-    '@keyframes projects-glow{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--firuze) 60%,transparent),var(--sh-2)}60%{box-shadow:0 0 0 12px transparent,var(--sh-2)}100%{box-shadow:0 0 0 3px var(--fir-t),var(--sh-1)}}',
-    '@keyframes projects-pulse{0%{box-shadow:0 0 0 0 currentColor}70%,100%{box-shadow:0 0 0 6px transparent}}',
+    '@keyframes projects-glow{from{opacity:1}to{opacity:1}}',
+    '@keyframes projects-pulse{from{opacity:1}to{opacity:1}}',
     '@keyframes editor-flash{0%,30%{background:var(--fir-t)}100%{background:transparent}}',
     '@keyframes editor-blink{0%,100%{opacity:1}50%{opacity:.35}}',
     '@keyframes editor-spin{to{transform:rotate(360deg)}}'
@@ -942,7 +945,7 @@
     var newBtn = h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { newProjectSheet(function (p) { hl = p.id; st.tab = 'all'; st.q = ''; search.value = ''; draw(); }); } }, ie('plus'), 'Yeni layihə');
     var subP = h('p');
     page.appendChild(h('div', { class: 'page-h' },
-      h('div', null, h('span', { class: 'eyebrow', text: 'Peşəkar' }), h('h1', { html: 'Layihələr' }), subP),
+      h('div', null, h('h1', { html: 'Layihələr' }), subP),
       h('div', { class: 'actions' }, newBtn)));
 
     var stats = h('div', { class: 'stats projects-stats' });
@@ -1002,7 +1005,7 @@
       var queue = 0; active.forEach(function (p) { queue += Math.round((p.words || 0) * (100 - p.done) / 100); });
       var qs = R.filter(function (p) { return p.qa != null; }), avg = qs.length ? Math.round(qs.reduce(function (s, p) { return s + p.qa; }, 0) / qs.length) : 0;
       var late = active.filter(function (p) { return p.due && p.due.getTime() - Date.now() < DAY; }).length;
-      subP.textContent = !R.length ? 'Sənədi yükləyin — terminləri və üslubu Nuanza özü tapacaq.'
+      subP.textContent = !R.length ? 'Sənədi yükləyin — terminlər və üslub avtomatik müəyyənləşir.'
         : R.length + ' layihə' + (active.length && active.length !== R.length ? ' · ' + active.length + ' aktiv' : '') + (late ? ' · ' + late + ' təhvil 24 saat ərzində' : '');
       newBtn.hidden = !P.length;
       /* stats: only from real projects, only non-zero values */
@@ -1140,7 +1143,7 @@
     var regHint = h('span', { class: 'hint' });
     function syncReg() {
       Object.keys(regBtns).forEach(function (k) { regBtns[k].setAttribute('aria-pressed', k === reg ? 'true' : 'false'); regBtns[k].classList.toggle('detected', k === detected); });
-      regHint.textContent = reg === 'auto' ? 'Nuanza üslubu sənəddən özü tanıyacaq. Hazırda ehtimal: ' + REG[detected] + '.' : 'Üslub əl ilə seçildi: ' + REG[reg] + '.';
+      regHint.textContent = reg === 'auto' ? 'Üslub sənəddən avtomatik tanınacaq. Ehtimal: ' + REG[detected] + '.' : 'Üslub əl ilə seçildi: ' + REG[reg] + '.';
     }
     var sitTa = h('textarea', { class: 'textarea', id: 'pj-new-sit', rows: '3', placeholder: 'Sənəd nə üçündür, kim oxuyacaq?' });
     var sitChips = h('div', { class: 'chips' }, SIT_CHIPS.map(function (c) {
@@ -1248,7 +1251,7 @@
       var list = sget('pj:created', []); if (!Array.isArray(list)) list = [];
       list.unshift(p); sset('pj:created', list);
       toast('Layihə yaradıldı', 'ok', { sub: p.client + ' — ' + n + ' · ' + REG[p.reg], action: { label: 'Redaktorda aç', onClick: function () { App.go('editor', { project: p.id }); } } });
-      nz('celebrate', 'Yeni layihə! Redaktorda «AI ilkin tərcümə» ilə başlayaq.', 3000);
+      nz('success', 'Layihə yaradıldı. Redaktorda «İlkin tərcümə» ilə başlaya bilərsiniz.', 3000);
       if (typeof onDone === 'function') setTimeout(function () { onDone(p); }, 120);
       else setTimeout(function () { App.go('projects', { highlight: p.id }); }, 200);
       return true;
@@ -1289,7 +1292,7 @@
     el.appendChild(page);
 
     /* header */
-    var aiBtn = h('button', { class: 'btn btn-secondary', type: 'button' }, ie('sparkle'), 'AI ilkin tərcümə');
+    var aiBtn = h('button', { class: 'btn btn-secondary', type: 'button' }, ie('sparkle'), 'İlkin tərcümə');
     aiBtn.addEventListener('click', runAI);
     var qaBtn = h('button', { class: 'btn', type: 'button', onclick: function () { flushSave(); App.go('qa', { project: p.id }); } }, ie('shield'), 'QA');
     var dueTxt = p.status === 'delivered' ? 'təhvil verilib' : p.due ? 'təhvil ' + lcFirst(dueLabel(p.due)) : 'nümunə layihə';
@@ -1324,7 +1327,7 @@
       h('div', { class: 'editor-start-row' },
         h('div', { class: 'stack-sm', style: 'max-width:46ch' }, h('h2', { html: 'Sənəd hazırdır — <em>' + set.segs.length + ' seqment</em> gözləyir' }),
           h('p', { class: 'muted', text: 'Mirzə Məclisi ilkin tərcüməni hazırlasın: lüğət, tərcümə yaddaşı və üslub nəzərə alınacaq. Sonra hər seqmenti siz təsdiqləyirsiniz.' })),
-        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: runAI }, ie('sparkle'), 'AI ilkin tərcümə')));
+        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: runAI }, ie('sparkle'), 'İlkin tərcümə')));
     page.appendChild(startCard);
 
     /* context: situation + glossary */
@@ -1349,7 +1352,7 @@
       regNow = r; sset('pj:reg:' + p.id, r);
       Object.keys(regBtns).forEach(function (k) { regBtns[k].setAttribute('aria-pressed', k === r ? 'true' : 'false'); });
       drawSit();
-      toast('Üslub: ' + REG[r], 'info', { sub: r === p.reg ? 'Avtomatik tanınan üsluba qayıtdınız' : 'Növbəti AI qaralamaları bu üsluba uyğunlaşacaq', icon: 'sliders' });
+      toast('Üslub: ' + REG[r], 'info', { sub: r === p.reg ? 'Avtomatik tanınan üsluba qayıtdınız' : 'Növbəti qaralamalar bu üsluba uyğunlaşacaq', icon: 'sliders' });
       nz('write', r === 'danisiq' && p.reg === 'huquqi' ? 'Müqavilədə danışıq üslubu? Əminsiniz?' : 'Üslubu ' + REG[r] + ' etdim.', 2400);
     }
     function drawSit() {
@@ -1368,7 +1371,7 @@
       var au = h('input', { class: 'input', id: 'editor-sit-au', value: sit.audience || '' });
       App.sheet({ title: 'Situasiya', body: h('div', { class: 'stack' },
         h('div', { class: 'field' }, h('label', { for: 'editor-sit-pu' }, 'Sənəd nə üçündür?'), pu),
-        h('div', { class: 'field' }, h('label', { for: 'editor-sit-au' }, 'Kim oxuyacaq?'), au, h('span', { class: 'hint', text: 'Nuanza bu məlumatla termin və üslub seçir.' }))),
+        h('div', { class: 'field' }, h('label', { for: 'editor-sit-au' }, 'Kim oxuyacaq?'), au, h('span', { class: 'hint', text: 'Termin və üslub bu məlumata görə seçilir.' }))),
         actions: [{ label: 'Ləğv et', kind: 'ghost' }, { label: 'Saxla', kind: 'primary', onClick: function () {
           var v = { purpose: pu.value.trim() || 'Göstərilməyib', audience: au.value.trim(), note: sit.note || '' };
           sset('pj:sit:' + p.id, v); p.sit = null; drawSit();
@@ -1450,7 +1453,7 @@
       if (!list.length) return s;
       var re = new RegExp('(^|[^\\p{L}])(' + list.map(reEsc).join('|') + ')(\\p{L}*)', 'giu');
       return s.replace(re, function (m, pre, w, suf) {
-        if (qw && !suf && lower(w) === lower(qw)) return pre + '<span class="conf-low editor-they" title="Kimə aiddir? Nuanza soruşur">' + w + '</span>';
+        if (qw && !suf && lower(w) === lower(qw)) return pre + '<span class="conf-low editor-they" title="Kimə aiddir? Dəqiqləşdirin">' + w + '</span>';
         return pre + '<mark class="editor-mark">' + w + suf + '</mark>';
       });
     }
@@ -1469,7 +1472,7 @@
       r.note = h('span', { class: 'badge gold', hidden: !st.note, title: st.note || '' }, ie('message'), 'Qeyd');
       r.okTx = h('span', { text: 'Təsdiqlə' });
       r.okBtn = h('button', { class: 'btn btn-sm editor-ok', type: 'button', 'aria-pressed': 'false' }, ie('check'), r.okTx);
-      r.nzBtn = h('button', { class: 'icon-btn sm ghost editor-nzb', type: 'button', title: 'Nuanza', 'aria-label': 'Nuanza menyusu — seqment ' + n, html: App.logo ? App.logo('logo') : App.icon('sparkle') });
+      r.nzBtn = h('button', { class: 'icon-btn sm ghost editor-nzb', type: 'button', title: 'Seqment menyusu', 'aria-label': 'Seqment menyusu — #' + n, html: App.icon('more') });
       r.meta = h('div', { class: 'seg-meta' }, r.pill, r.conf, r.tm, r.note, h('span', { class: 'editor-actions' }, r.okBtn, r.nzBtn));
       r.row = h('div', { class: 'seg-row', role: 'listitem', 'data-n': String(n) }, h('span', { class: 'seg-n', text: String(n) }), r.src, r.ta, r.stEl, r.hints, r.meta);
       r.okBtn.addEventListener('click', function () { if (r.st.ok) unapprove(r); else approve(r); });
@@ -1496,7 +1499,7 @@
       if (st.ok) return ['Təsdiq', 'badge green', 'check'];
       if (st.ed) return ['Redaktə', 'badge', 'edit'];
       if (st.o === 'tm') return ['Yaddaşdan', 'badge gold', 'copy'];
-      return ['AI', 'badge navy', 'sparkle'];
+      return ['MT', 'badge', 'sparkle'];
     }
     function updateRow(r) {
       var st = r.st, t = String(st.t || '').trim();
@@ -1554,14 +1557,14 @@
       if (nt == null) { toast('Düzəliş tətbiq olunmadı', 'warn', { sub: 'Mətn artıq dəyişib' }); return; }
       burstAt(btn, iss.type === 'Türk forması' ? 'ink' : 'stars');
       setText(r, nt, { ed: true });
-      var elder = ELDER[iss.type] || 'Nuanza';
+      var elder = ELDER[iss.type] || 'Yoxlama';
       toast('Düzəldildi', 'ok', { sub: '#' + r.n + ' · ' + iss.was + ' → ' + iss.now + ' · ' + elder, ms: 2600 });
       if (!r.issues.length) nz('success', iss.type === 'Türk forması' ? 'Dilçi Nənə razıdır!' : 'Bu seqment artıq təmizdir.', 1800);
     }
     function approve(r, viaKey) {
       var st = r.st;
       if (!String(st.t || '').trim()) {
-        toast('Boş seqment təsdiqlənmir', 'warn', { sub: 'Tərcüməni yazın və ya «AI ilkin tərcümə»ni işə salın' });
+        toast('Boş seqment təsdiqlənmir', 'warn', { sub: 'Tərcüməni yazın və ya «İlkin tərcümə»ni işə salın' });
         try { r.ta.focus(); } catch (e) { /* ignore */ }
         return Promise.resolve(false);
       }
@@ -1587,7 +1590,7 @@
     /* --- clarifying question card --- */
     function buildAsk(r) {
       var q = r.d.q;
-      var box = h('div', { class: 'editor-ask', role: 'group', 'aria-label': 'Nuanzanın sualı — seqment ' + r.n });
+      var box = h('div', { class: 'editor-ask', role: 'group', 'aria-label': 'Dəqiqləşdirmə sualı — seqment ' + r.n });
       box._hide = false; box._mini = false;
       box._draw = function () {
         box.textContent = '';
@@ -1614,7 +1617,7 @@
           return h('button', { class: 'btn btn-sm' + (o[0] === q.likely ? ' btn-secondary' : ''), type: 'button', onclick: function (e) { answer(r, o, e.currentTarget); } }, o[0]);
         }), h('button', { class: 'link small', type: 'button', onclick: function () { box._mini = true; box._draw(); nz('idle', 'Yaxşı, sonra soruşaram.', 1600); } }, 'Sonra'));
         box.appendChild(h('div', { class: 'editor-ask-b' },
-          h('span', { class: 'eyebrow', text: 'Nuanza soruşur · #' + r.n }), h('h3', { text: q.title }), srcQ, h('p', { text: q.text }), opts));
+          h('span', { class: 'eyebrow', text: 'Sual · seqment #' + r.n }), h('h3', { text: q.title }), srcQ, h('p', { text: q.text }), opts));
       };
       box._draw();
       return box;
@@ -1759,7 +1762,7 @@
       if (aiBtn.getAttribute('aria-busy') === 'true') return;
       var todo = rows.filter(function (r) { return !String(r.st.t || '').trim(); });
       if (!todo.length) {
-        toast('Boş seqment yoxdur', 'info', { sub: 'AI ilkin tərcümə yalnız boş seqmentləri doldurur' });
+        toast('Boş seqment yoxdur', 'info', { sub: 'İlkin tərcümə yalnız boş seqmentləri doldurur' });
         nz('point', 'Hamısı doludur. Riskli seqmentlərə baxaq?', 2600);
         if (rows.some(isRisk)) setFilter('risk');
         return;
@@ -1777,7 +1780,7 @@
       var txt = todo.length + ' seqment tərcümə edildi: ' + (todo.length - flagged) + ' əmin, ' + flagged + ' yoxlanmalı. Lüğətdən ' + gl.length + ' termin qorundu' +
         (tmN ? ', ' + tmN + ' TM uyğunluğu tətbiq olundu' : '') + '. Üslub: ' + REG[regNow] + '.' + (turk ? ' Dilçi Nənə ' + turk + ' türk formasını qeyd etdi — redaktorda göstərilir.' : '');
       var job;
-      try { job = App.bigJob('AI ilkin tərcümə — ' + p.name, { score: score, text: txt, seal: 'Qaralama hazırdır' }); } catch (e) { job = null; }
+      try { job = App.bigJob('İlkin tərcümə — ' + p.name, { score: score, text: txt, seal: 'Qaralama hazırdır' }); } catch (e) { job = null; }
       Promise.resolve(job).then(function () {
         if (S.dead) return;
         aiBtn.removeAttribute('aria-busy');
@@ -1797,7 +1800,7 @@
       });
       function finish() {
         updateAll(); flushSave();
-        toast('AI qaralaması hazırdır', 'ok', { sub: todo.length + ' seqment dolduruldu' + (flagged ? ' · ' + flagged + ' seqmentə baxın' : ' · riskli yer yoxdur'),
+        toast('Qaralama hazırdır', 'ok', { sub: todo.length + ' seqment dolduruldu' + (flagged ? ' · ' + flagged + ' seqmentə baxın' : ' · riskli yer yoxdur'),
           action: flagged ? { label: 'Riskliləri göstər', onClick: function () { if (!S.dead) setFilter('risk'); } } : null });
         var first = rows.filter(function (r) { return !r.st.ok; })[0];
         if (first) S.later(function () { focusRow(first, true); }, 300);
@@ -1864,9 +1867,9 @@
         var txt = got.length + ' seqment tərcümə edildi: ' + (got.length - flagged) + ' əmin, ' + flagged + ' yoxlanmalı.' +
           (terms.length ? ' Layihə lüğəti (' + terms.length + ' termin) mühərrikə verildi.' : '') + ' Üslub: ' + REG[regNow] + '.' +
           (turk ? ' Dilçi Nənə ' + turk + ' türk formasını qeyd etdi — redaktorda göstərilir.' : '') +
-          (left ? ' ' + left + ' seqment boş qaldı — «AI ilkin tərcümə»ni yenidən işə salın.' : '');
+          (left ? ' ' + left + ' seqment boş qaldı — «İlkin tərcümə»ni yenidən işə salın.' : '');
         var job;
-        try { job = App.bigJob('AI ilkin tərcümə — ' + p.name, { score: score, text: txt, seal: left ? 'Qismən hazırdır' : 'Qaralama hazırdır' }); } catch (e) { job = null; }
+        try { job = App.bigJob('İlkin tərcümə — ' + p.name, { score: score, text: txt, seal: left ? 'Qismən hazırdır' : 'Qaralama hazırdır' }); } catch (e) { job = null; }
         Promise.resolve(job).then(null, function () { return null; }).then(function () {
           if (S.dead) return;
           aiBtn.removeAttribute('aria-busy');
@@ -1885,7 +1888,7 @@
         });
         function finish() {
           updateAll(); flushSave();
-          toast('AI qaralaması hazırdır', left ? 'warn' : 'ok', { sub: got.length + ' seqment dolduruldu' + (left ? ' · ' + left + ' seqment boş qaldı' : '') + (flagged ? ' · ' + flagged + ' seqmentə baxın' : ''),
+          toast('Qaralama hazırdır', left ? 'warn' : 'ok', { sub: got.length + ' seqment dolduruldu' + (left ? ' · ' + left + ' seqment boş qaldı' : '') + (flagged ? ' · ' + flagged + ' seqmentə baxın' : ''),
             action: flagged ? { label: 'Riskliləri göstər', onClick: function () { if (!S.dead) setFilter('risk'); } } : null });
           var first = rows.filter(function (r) { return !r.st.ok; })[0];
           if (first) S.later(function () { focusRow(first, true); }, 300);
@@ -1974,12 +1977,12 @@
               var b = (x.fix === 'word' || x.fix === 'raw' || x.fix === 'fill') ? h('button', { class: 'btn btn-sm', type: 'button', onclick: function () {
                 var nt = applyFix(d, r.st, x); if (nt == null) return;
                 setText(r, nt, { ed: x.fix !== 'fill', o: x.fix === 'fill' ? 'ai' : null });
-                done('Düzəldildi', '#' + r.n + ' · ' + (ELDER[x.type] || 'Nuanza'));
+                done('Düzəldildi', '#' + r.n + ' · ' + (ELDER[x.type] || 'Yoxlama'));
               } }, ie('wand'), 'Düzəlt') : null;
-              out.appendChild(h('div', { class: 'editor-hint ' + x.sev }, h('span', { class: 'editor-hint-tx' }, h('b', { text: (ELDER[x.type] || 'Nuanza') + ':' }), x.text), b));
+              out.appendChild(h('div', { class: 'editor-hint ' + x.sev }, h('span', { class: 'editor-hint-tx' }, h('b', { text: (ELDER[x.type] || 'Yoxlama') + ':' }), x.text), b));
             });
             if (liveFail) nz('sad', null, 1600);
-            else nz(iss.length ? 'point' : 'success', iss.length ? 'Bax, bunları tapdıq.' : 'Təmizdir!', 1800);
+            else nz(iss.length ? 'point' : 'success', iss.length ? 'Bax, bunları tapdıq.' : 'Qeyd yoxdur.', 1800);
           });
         } },
         { ic: 'book', b: 'Lüğəti tətbiq et', s: 'Layihə terminlərini qoru', run: function () {
@@ -2004,7 +2007,7 @@
         b.addEventListener('click', function () { Array.prototype.forEach.call(list.children, function (x) { x.classList.toggle('is-on', x === b); }); a.run(); });
         return b;
       }));
-      sh = App.sheet({ title: 'Nuanza · seqment #' + r.n, body: h('div', { class: 'editor-nz' },
+      sh = App.sheet({ title: 'Seqment #' + r.n, body: h('div', { class: 'editor-nz' },
         h('div', { class: 'stack-sm' }, h('span', { class: 'eyebrow plain', text: 'Mənbə · ' + upper(set.src) }), h('p', { class: 'editor-quote', lang: set.src, text: d.s }),
           h('span', { class: 'eyebrow plain', text: 'Tərcümə · AZ' }), tgtQ),
         list, out) });
@@ -2024,7 +2027,7 @@
       greeted[p.id] = 1;
       S.later(function () {
         var c = { empty: 0, risk: 0 }; rows.forEach(function (r) { if (!String(r.st.t).trim()) c.empty++; if (isRisk(r)) c.risk++; });
-        if (c.empty === rows.length) nz('wave', 'Sənəd hazırdır! «AI ilkin tərcümə» ilə başlayaq?', 3200);
+        if (c.empty === rows.length) nz('point', 'Sənəd hazırdır. «İlkin tərcümə» ilə başlaya bilərsiniz.', 3200);
         else if (c.risk || c.empty) nz('read', set.title.split(' · ')[0] + ': ' + (c.empty ? c.empty + ' boş, ' : '') + c.risk + ' riskli seqment. Qeydlərdən başlayaq?', 3400);
         else nz('success', 'Bu bölmə qaydasındadır. QA-ya baxa bilərsiniz.', 2600);
       }, 900);
@@ -2082,7 +2085,7 @@
         var mine = analyze(set.segs[i], st, ctx);
         aiIss.forEach(function (q) { var x = q.seg === i + 1 ? liveIssue(q, st, mine) : null; if (x) mine.push(x); });
         mine.forEach(function (iss) {
-          iss.n = i + 1; iss.key = issKey(iss.n, iss); iss.ign = !!ignored[iss.key]; iss.elder = ELDER[iss.type] || iss.elder || 'Nuanza';
+          iss.n = i + 1; iss.key = issKey(iss.n, iss); iss.ign = !!ignored[iss.key]; iss.elder = ELDER[iss.type] || iss.elder || 'Yoxlama';
           issues.push(iss);
         });
       });
@@ -2108,7 +2111,7 @@
         if (note) host.insertBefore(h('div', { class: 'callout', role: 'note' }, ie('alert'), h('div', { text: note })), host.firstChild);
         /* an untranslated project has nothing to score — keep it out of «orta QA balı» */
         if (segs.some(function (x) { return x && String(x.t || '').trim(); })) setMap('pj:qa', p.id, M.score);
-        nz(M.score >= 85 ? 'success' : 'worried', M.score >= 85 ? M.score + ' bal — təhvilə az qalıb!' : M.score + ' bal. Kritik qeydlərdən başlayaq.', 2800);
+        nz(M.score >= 85 ? 'success' : 'worried', M.score >= 85 ? M.score + ' bal — təhvilə az qalıb.' : M.score + ' bal. Kritik qeydlərdən başlayaq.', 2800);
       });
     }
 
@@ -2194,7 +2197,7 @@
         if (btn) burstAt(btn, iss.type === 'Türk forması' ? 'ink' : 'stars');
         var go = function () { drawAll(); celebrateMaybe(); };
         if (row && !reduced()) { row.classList.add('is-done'); S.later(go, 220); } else go();
-        toast('Düzəldildi', 'ok', { sub: '#' + iss.n + ' · ' + (iss.was ? iss.was + ' → ' : '') + (iss.fix === 'fill' ? 'AI qaralaması' : iss.now) + ' · ' + iss.elder, ms: 2600 });
+        toast('Düzəldildi', 'ok', { sub: '#' + iss.n + ' · ' + (iss.was ? iss.was + ' → ' : '') + (iss.fix === 'fill' ? 'avtomatik qaralama' : iss.now) + ' · ' + iss.elder, ms: 2600 });
       }
       return true;
     }
@@ -2237,7 +2240,7 @@
         if (x.ign) acts.appendChild(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: function () { delete ignored[x.key]; sset('pj:qaign:' + p.id, ignored); drawAll(); } }, ie('refresh'), 'Qaytar'));
         else {
           if (x.fix === 'word' || x.fix === 'raw' || x.fix === 'fill') {
-            var fb = h('button', { class: 'btn btn-sm', type: 'button' }, ie('wand'), x.fix === 'fill' ? 'AI ilə doldur' : 'Düzəlt');
+            var fb = h('button', { class: 'btn btn-sm', type: 'button' }, ie('wand'), x.fix === 'fill' ? 'Avtomatik doldur' : 'Düzəlt');
             fb.addEventListener('click', function () { fixIssue(x, row, fb); });
             acts.appendChild(fb);
           } else if (x.fix === 'ask') acts.appendChild(h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: function () { goSeg(x.n); } }, ie('help'), 'Cavabla'));
@@ -2351,7 +2354,7 @@
     function buildDeliv() {
       secDeliv.textContent = '';
       secDeliv.appendChild(h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow', text: 'Təhvil' }), h('h2', { text: 'Təhvil faylları' }))));
-      secDeliv.appendChild(h('p', { class: 'small muted', style: 'margin-bottom:12px', text: 'Fayl seçin — Nuanza formatı və tərcümə yaddaşını qoruyaraq hazırlayır.' }));
+      secDeliv.appendChild(h('p', { class: 'small muted', style: 'margin-bottom:12px', text: 'Fayl seçin — format və tərcümə yaddaşı qorunur.' }));
       secDeliv.appendChild(h('div', { class: 'tiles' }, DELIV.map(function (dv) {
         var bd = h('span', { class: 'badge green', hidden: true }, ie('check'), 'Hazır');
         var t = h('button', { class: 'tile qa-tile', type: 'button' }, icTile(dv.ic, dv.cls), h('span', null, h('b', { text: dv.b }), h('small', { text: dv.s })), bd);
@@ -2375,7 +2378,7 @@
         var warn = M.sev.high ? ' · ' + M.sev.high + ' kritik qeyd açıqdır' : '';
         toast('Hazırdır', M.sev.high ? 'warn' : 'ok', { sub: fname + warn, icon: dv.ic, action: { label: 'Önizlə', onClick: function () { preview(dv, fname); } } });
         burstAt(t, 'stars');
-        nz(M.sev.high ? 'worried' : 'success', M.sev.high ? 'Hazırdır, amma kritik qeydləri bağlamağı unutmayın.' : 'Təhvil faylı hazırdır!', 2400);
+        nz(M.sev.high ? 'worried' : 'success', M.sev.high ? 'Hazırdır, amma kritik qeydləri bağlamağı unutmayın.' : 'Təhvil faylı hazırdır.', 2400);
       }, 1100 + Math.round(Math.random() * 500));
     }
     function preview(dv, fname) {
