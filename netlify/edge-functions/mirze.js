@@ -1,4 +1,4 @@
-// Loquela on Netlify: runs the same Worker bundle (dist/worker.js) as a Netlify Edge Function.
+// Mirzə on Netlify: runs the same Worker bundle (dist/worker.js) as a Netlify Edge Function.
 // Secrets come from Netlify → Site configuration → Environment variables
 // (GEMINI_KEY, ACCESS_CODE, TG_TOKEN, TG_ALLOWED, MODEL, API_LIMIT, GRAMMAR_LIMIT, LIB_LIMIT, SETUP_KEY).
 import worker from "../../dist/worker.js";

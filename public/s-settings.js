@@ -1547,7 +1547,7 @@
         var test = h('button', { class: 'btn btn-sm', type: 'button' }, ie('send'), 'Test mesajı');
         test.addEventListener('click', function () {
           busy(test, true);
-          later(function () { busy(test, false); toast('Test mesajı göndərildi', 'ok', { sub: '@NuanzaBot: «Salam' + (Dr.first ? ', ' + Dr.first : '') + '! Bildirişlər işləyir.»', icon: 'telegram' }); }, 900);
+          later(function () { busy(test, false); toast('Test mesajı göndərildi', 'ok', { sub: '@MirzeBot: «Salam' + (Dr.first ? ', ' + Dr.first : '') + '! Bildirişlər işləyir.»', icon: 'telegram' }); }, 900);
         });
         var off = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, 'Ayır');
         off.addEventListener('click', function () {
@@ -1560,7 +1560,7 @@
         });
         tgBody.appendChild(h('div', { class: 'list' }, h('div', { class: 'list-row' }, icTile('telegram', 'green'),
           h('span', { class: 'tx' }, h('b', null, t.handle || 'Telegram', ' ', h('span', { class: 'badge green dot', text: 'Qoşulub' })),
-            h('small', { text: 'Bildirişlər @NuanzaBot vasitəsilə gəlir' + (t.since ? ' · ' + fmtDate(t.since) + ' tarixindən' : '') })))));
+            h('small', { text: 'Bildirişlər @MirzeBot vasitəsilə gəlir' + (t.since ? ' · ' + fmtDate(t.since) + ' tarixindən' : '') })))));
         tgBody.appendChild(h('div', { class: 'settings-row2' }, test, off));
         return;
       }
@@ -1597,12 +1597,12 @@
           if (!V) return;
           burstAt(verify, 'confetti');
           drawTg(); syncSummaries();
-          toast('Telegram bot qoşuldu', 'ok', { sub: '@NuanzaBot artıq sizə yazacaq', icon: 'telegram' });
+          toast('Telegram bot qoşuldu', 'ok', { sub: '@MirzeBot artıq sizə yazacaq', icon: 'telegram' });
           nz('celebrate', 'Artıq Telegramda da yanınızdayam!', 2800);
         }, 1600);
       });
       tgBody.appendChild(h('ol', { class: 'settings-steps' },
-        h('li', null, 'Telegramda ', h('b', { text: '@NuanzaBot' }), ' botunu açın və ', h('b', { text: 'Start' }), ' düyməsinə basın.'),
+        h('li', null, 'Telegramda ', h('b', { text: '@MirzeBot' }), ' botunu açın və ', h('b', { text: 'Start' }), ' düyməsinə basın.'),
         h('li', null, 'Aşağıdakı kodu bota mesaj kimi göndərin.'),
         h('li', null, '«Bağlantını yoxla» düyməsinə basın.')));
       tgBody.appendChild(h('div', { class: 'settings-code' }, h('div', null, codeB, left), h('div', { class: 'settings-row2' }, renew, copy)));
@@ -1672,7 +1672,7 @@
       } catch (e) { /* storage blocked */ }
       var file = 'nuanza-' + isoToday() + '.json';
       try {
-        var blob = new Blob([JSON.stringify({ app: 'Nuanza', exported: new Date().toISOString(), data: data }, null, 2)], { type: 'application/json' });
+        var blob = new Blob([JSON.stringify({ app: 'Mirzə', exported: new Date().toISOString(), data: data }, null, 2)], { type: 'application/json' });
         var url = URL.createObjectURL(blob), a = h('a', { href: url, download: file });
         D.body.appendChild(a); a.click(); a.remove();
         later(function () { URL.revokeObjectURL(url); }, 4000);
@@ -1725,7 +1725,7 @@
         R.style.removeProperty('font-size'); R.removeAttribute('data-density');
         tgCode = null;
         if (V) { S0 = loadSaved(); Dr = clone(S0); }
-        toast('Bütün məlumatlar silindi', 'ok', { sub: 'Nuanza ilk günkü kimi təmizdir' });
+        toast('Bütün məlumatlar silindi', 'ok', { sub: 'Mirzə ilk günkü kimi təmizdir' });
         later(function () {
           if (App.go) App.go('home');
           later(function () { if (App.onboarding) App.onboarding(); }, 350);
@@ -1803,18 +1803,18 @@
      ------------------------------------------------------------------ */
   var LEGAL = {
     privacy: { title: 'Məxfilik siyasəti', paras: [
-      'Nuanza mətnlərinizi yalnız tərcümə və yoxlama üçün emal edir. Mətnləriniz süni intellekt modellərini öyrətmək üçün istifadə olunmur.',
+      'Mirzə mətnlərinizi yalnız tərcümə və yoxlama üçün emal edir. Mətnləriniz süni intellekt modellərini öyrətmək üçün istifadə olunmur.',
       'Bulud rejimində məlumatlar şifrələnmiş şəkildə Bakıdakı məlumat mərkəzində saxlanılır. Lokal rejimdə isə cihazınızdan çıxmır.',
       'Maskalama aktiv olanda şəxs adları, məbləğlər, tarixlər və hesab nömrələri AI-a göndərilməzdən əvvəl yer tutucularla əvəz olunur.',
       'İstənilən vaxt bütün məlumatlarınızı JSON, TMX və TBX formatında ixrac edə və ya həmişəlik silə bilərsiniz.'] },
     terms: { title: 'İstifadə şərtləri', paras: [
-      'Tərcümələrin müəllif hüquqları sizə və ya sifarişçinizə məxsusdur. Nuanza alət rolunu oynayır və tərcümə üzərində hüquq iddia etmir.',
+      'Tərcümələrin müəllif hüquqları sizə və ya sifarişçinizə məxsusdur. Mirzə alət rolunu oynayır və tərcümə üzərində hüquq iddia etmir.',
       'Notarial və hüquqi sənədlərdə yekun məsuliyyət imzalayan tərcüməçinin üzərindədir. Mirzə Məclisinin hökmü tövsiyə xarakterlidir.'] },
     licenses: { title: 'Açıq mənbə lisenziyaları', paras: [
       'Unbounded və Plus Jakarta Sans şriftləri — SIL Open Font License 1.1.',
-      'Xalça naxışları və göl motivi Nuanza komandası tərəfindən çəkilib.',
-      'Nuanza və Mirzə Məclisi personajları — © 2026 Nuanza, Bakı.',
-      'Akademiyadakı real xəbər mətnləri — NTREX-128 (Microsoft), CC BY-SA 4.0; səhv annotasiyaları və düzəldilmiş tərcümələr Nuanzanındır və eyni lisenziya (CC BY-SA 4.0) ilə paylaşılır.',
+      'Xalça naxışları və göl motivi Mirzə komandası tərəfindən çəkilib.',
+      'Nuanza və Mirzə Məclisi personajları — © 2026 Mirzə, Bakı.',
+      'Akademiyadakı real xəbər mətnləri — NTREX-128 (Microsoft), CC BY-SA 4.0; səhv annotasiyaları və düzəldilmiş tərcümələr Mirzənindir və eyni lisenziya (CC BY-SA 4.0) ilə paylaşılır.',
       'İnsan Hüquqları haqqında Ümumi Bəyannamə (BMT, 1948) — rəsmi ingilis mətni və rəsmi Azərbaycan tərcüməsi.'] }
   };
   function legalSheet(id) {
@@ -1829,14 +1829,14 @@
     var PH = {
       idea: 'Məsələn: hüquqi üslubda «shall» həmişə «-məlidir» kimi verilsin.',
       bug: 'Nə etdiniz, nə gözləyirdiniz və nə baş verdi?',
-      thanks: 'Nuanzada ən çox nəyi bəyənirsiniz?'
+      thanks: 'Mirzədə ən çox nəyi bəyənirsiniz?'
     };
     var taId = uid('fb');
     var ta = h('textarea', { class: 'textarea', id: taId, placeholder: PH.idea, maxlength: '1000', 'aria-describedby': taId + '-c ' + taId + '-e' });
     var cnt = h('span', { class: 'hint', id: taId + '-c', text: '0 / 1000' });
     var err = h('span', { class: 'err', id: taId + '-e', role: 'alert', hidden: true });
     ta.addEventListener('input', function () { cnt.textContent = ta.value.length + ' / 1000'; if (ta.value.trim().length >= 10) { err.hidden = true; ta.removeAttribute('aria-invalid'); } });
-    var stars = h('div', { class: 'settings-stars', role: 'radiogroup', 'aria-label': 'Nuanzanı qiymətləndirin' });
+    var stars = h('div', { class: 'settings-stars', role: 'radiogroup', 'aria-label': 'Mirzəni qiymətləndirin' });
     var STAR_TX = ['', 'Pis', 'Orta', 'Yaxşı', 'Çox yaxşı', 'Əla!'];
     var starTx = h('span', { class: 'small muted', 'aria-live': 'polite' });
     [1, 2, 3, 4, 5].forEach(function (i) {
@@ -1880,11 +1880,11 @@
     var upd = h('button', { class: 'btn btn-sm', type: 'button' }, ie('refresh'), 'Yenilikləri yoxla');
     upd.addEventListener('click', function () {
       busy(upd, true);
-      later(function () { busy(upd, false); toast('Ən son versiyadasınız', 'ok', { sub: 'Nuanza ' + ver + ' · 7 oktyabr 2026' }); }, 1200);
+      later(function () { busy(upd, false); toast('Ən son versiyadasınız', 'ok', { sub: 'Mirzə ' + ver + ' · 7 oktyabr 2026' }); }, 1200);
     });
     var hero = h('section', { class: 'card framed settings-about carpet', 'data-opt': 'version' },
       h('span', { html: App.logo ? App.logo('logo') : '' }),
-      h('h2', { text: 'Nuanza' }),
+      h('h2', { text: 'Mirzə' }),
       h('p', { class: 'muted', text: 'Versiya ' + ver + ' · buraxılış 2026.10 · Bakı' }),
       h('div', { class: 'row' }, upd,
         h('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-opt': 'feedback', onclick: feedbackSheet }, ie('message'), 'Rəy göndər')),
@@ -1895,17 +1895,18 @@
     var info = card('Texniki məlumat', null, [h('dl', { class: 'kv' },
       h('dt', { text: 'Mühərrik' }), h('dd', { text: 'Mirzə Məclisi 2.0 · 5 mirzə' }),
       h('dt', { text: 'Dillər' }), h('dd', { text: 'AZ · EN · RU · TR' }),
-      h('dt', { text: 'Telegram bot' }), h('dd', { text: '@NuanzaBot' }),
+      h('dt', { text: 'Telegram bot' }), h('dd', { text: '@MirzeBot' }),
       h('dt', { text: 'Məlumat mərkəzi' }), h('dd', { text: 'Bakı, Azərbaycan' }),
       h('dt', { text: 'Cihaz' }), h('dd', { text: detectDevice() }))]);
     var CHANGES = [
+      ['3.0', 'Noyabr 2026', 'Yeni ad — Mirzə. Yeni rəng palitrası, yalnız tərcümə: Kitabxana, 7 peşəkar sahə, «Səhvi tap».'],
       ['2.0', 'Oktyabr 2026', 'Mirzə Məclisi, Akademiya rejimi və köməkçi Nuanza.'],
       ['1.6', 'İyul 2026', 'Telegram bot, TMX/TBX ixracı və lokal rejim.'],
       ['1.4', 'Aprel 2026', 'Türk formalarının aşkarlanması və üslubun avtomatik tanınması.']
     ];
     var news = card('Yeniliklər', null, [h('div', { class: 'list' }, CHANGES.map(function (c, i) {
       return h('div', { class: 'list-row' }, h('span', { class: 'medal sm' + (i ? ' locked' : ''), 'aria-hidden': 'true' }, h('b', { text: c[0].split('.')[0] })),
-        h('span', { class: 'tx' }, h('b', null, 'Nuanza ' + c[0], ' ', i === 0 ? h('span', { class: 'badge gold', text: 'Yeni' }) : null), h('small', { text: c[1] + ' · ' + c[2] })));
+        h('span', { class: 'tx' }, h('b', null, 'Mirzə ' + c[0], ' ', i === 0 ? h('span', { class: 'badge gold', text: 'Yeni' }) : null), h('small', { text: c[1] + ' · ' + c[2] })));
     }))]);
     return h('div', { class: 'stack-lg' }, hero, info, news,
       h('p', { class: 'small muted', style: 'text-align:center', text: 'Bakıda, çay və səbirlə hazırlanıb.' }));
@@ -1929,7 +1930,7 @@
       if (id === 'notifications') return tgLink().linked ? 'Telegram qoşulub' : 'Telegram qoşulmayıb';
       if (id === 'privacy') return Dr.local ? 'Lokal rejim' : (Dr.mask ? 'Bulud · maskalama aktiv' : 'Bulud rejimi');
       if (id === 'shortcuts') { var n = 0; SHORTCUTS.forEach(function (g) { n += g.rows.length; }); return n + ' qısayol'; }
-      if (id === 'about') return 'Nuanza ' + (App.version || '2.0');
+      if (id === 'about') return 'Mirzə ' + (App.version || '3.0');
     } catch (e) { /* ignore */ }
     return '';
   }
@@ -2259,7 +2260,7 @@
     /* header */
     var head = h('div', { class: 'page-h' },
       h('div', null, h('span', { class: 'eyebrow', text: 'Hesab' }), h('h1', { html: 'Profil və <em>ayarlar</em>' }),
-        h('p', { text: 'Nuanzanı iş üslubunuza uyğunlaşdırın. Formlar qaralama kimi saxlanılır — «Yadda saxla» basana qədər heç nə dəyişmir.' })));
+        h('p', { text: 'Mirzəni iş üslubunuza uyğunlaşdırın. Formlar qaralama kimi saxlanılır — «Yadda saxla» basana qədər heç nə dəyişmir.' })));
 
     /* side: search + nav + results */
     V.search = h('input', { class: 'input', type: 'search', id: 'st-search', placeholder: 'Ayarlarda axtar…', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Ayarlarda axtar', 'aria-controls': 'st-results', enterkeyhint: 'search' });

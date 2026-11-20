@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Loquela: Nuanza — tərcüməçilər üçün iş masası (layihələr, redaktor, QA, Mirzə Məclisi, Akademiya) və Tenso — ingilis dilini öyrənənlər üçün qrammatika yoxlaması və kursu.">
-<meta name="theme-color" content="#0A0B0E">
+<meta name="description" content="Mirzə — Azərbaycan dili ilə işləyən tərcüməçilər üçün iş masası: layihələr, redaktor, keyfiyyət yoxlaması, Mirzə Məclisi və Akademiya.">
+<meta name="theme-color" content="#0A0F14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Loquela">
+<meta name="apple-mobile-web-app-title" content="Mirzə">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon.png">
 <script>window.NUANZA_LIVE = true;</script>
 <script src="https://telegram.org/js/telegram-web-app.js" async onload="try{Telegram.WebApp.ready();Telegram.WebApp.expand();}catch(e){}"></script>
-<title>Loquela — Nuanza tərcümə və Tenso qrammatika</title>
+<title>Mirzə — tərcüməçinin iş masası</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Unbounded:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="app.css">
 <script>
   /* Apply saved theme + mode before first paint (no flash). */
@@ -28,9 +28,7 @@
       var t = JSON.parse(localStorage.getItem('nuanza2:theme'));
       if (t !== 'system') r.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
       var m = JSON.parse(localStorage.getItem('nuanza2:mode'));
-      var pr = JSON.parse(localStorage.getItem('nuanza2:product'));
-      if (m === 'grammar' && pr === 'translate') m = JSON.parse(localStorage.getItem('nuanza2:tmode'));
-      r.setAttribute('data-mode', m === 'academy' || m === 'grammar' ? m : 'pro');
+      r.setAttribute('data-mode', m === 'academy' ? 'academy' : 'pro');
       var mo = JSON.parse(localStorage.getItem('nuanza2:motion'));
       r.setAttribute('data-motion', (mo === 'reduce' || mo === true) ? 'reduce' : mo === 'system' ? 'system' : 'full');
     } catch (e) { r.setAttribute('data-mode', 'pro'); r.setAttribute('data-theme', 'dark'); }
@@ -45,12 +43,12 @@
   <header class="hdr">
     <div class="hdr-in">
       <button class="burger" type="button" aria-label="Menyunu aç" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>
-      <a class="brand" href="#home" aria-label="Nuanza — ana səhifə">
+      <a class="brand" href="#home" aria-label="Mirzə — ana səhifə">
         <svg class="logo" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false">
           <polygon class="l-star" points="0,-19 4.22,-14.78 4.22,-11.61 7.39,-11.61 11.61,-7.39 11.61,-4.22 14.78,-4.22 19,0 14.78,4.22 11.61,4.22 11.61,7.39 7.39,11.61 4.22,11.61 4.22,14.78 0,19 -4.22,14.78 -4.22,11.61 -7.39,11.61 -11.61,7.39 -11.61,4.22 -14.78,4.22 -19,0 -14.78,-4.22 -11.61,-4.22 -11.61,-7.39 -7.39,-11.61 -4.22,-11.61 -4.22,-14.78"/>
           <polygon class="l-ring" points="0,-10 10,0 0,10 -10,0"/><polygon class="l-dot" points="0,-5 5,0 0,5 -5,0"/>
         </svg>
-        <b>Nuanza</b><small hidden>Akademiya</small>
+        <b>Mirzə</b><small hidden>Akademiya</small>
       </a>
       <button class="avatar av-firuze" type="button" aria-label="Profil və ayarlar">AM</button>
     </div>
@@ -71,7 +69,7 @@
     <div class="dr-nav" id="dr-nav"></div>
     <div class="dr-foot">
       <button class="icon-btn ghost theme-toggle" type="button" aria-label="Rəng rejimini dəyiş"></button>
-      <span class="ver">Nuanza 2.0 · Bakı</span>
+      <span class="ver">Mirzə 3.0 · Bakı</span>
     </div>
   </nav>
   <div class="scrim" aria-hidden="true"></div>
@@ -100,15 +98,6 @@
 <script src="ai/qa.js"></script>
 <script src="ai/lesson.js"></script>
 <script src="app.js"></script>
-<script src="data-grammar-1.js"></script>
-<script src="data-grammar-2.js"></script>
-<script src="data-prompts.js"></script>
-<script src="data-placement.js"></script>
-<script src="ai/grammar-rules.js"></script>
-<script src="ai/grammar.js"></script>
-<script src="s-grammar.js"></script>
-<script src="s-tenso-learn.js"></script>
-<script src="s-tenso-extra.js"></script>
 <script src="s-home.js"></script>
 <script src="s-translate.js"></script>
 <script src="s-projects.js"></script>
@@ -124,7 +113,7 @@
     App.start();
   } else {
     var m = document.getElementById('main');
-    if (m) m.innerHTML = '<div class="page"><div class="empty"><div class="empty-art"></div><h3>Nuanza yüklənmədi</h3><p>Səhifəni yeniləyin. Problem davam edərsə, bir az sonra yenidən cəhd edin.</p></div></div>';
+    if (m) m.innerHTML = '<div class="page"><div class="empty"><div class="empty-art"></div><h3>Mirzə yüklənmədi</h3><p>Səhifəni yeniləyin. Problem davam edərsə, bir az sonra yenidən cəhd edin.</p></div></div>';
   }
 </script>
 </body>

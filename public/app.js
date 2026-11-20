@@ -9,7 +9,7 @@
   'use strict';
 
   var W = window, D = document, R = D.documentElement;
-  var VERSION = '2.0';
+  var VERSION = '3.0';
   var App = W.App = W.App || {};
 
   /* ------------------------------------------------------------------
@@ -47,7 +47,7 @@
   var IS_MAC = /Mac|iPhone|iPad|iPod/.test((navigator.platform || '') + ' ' + (navigator.userAgent || ''));
   var MOD = IS_MAC ? '⌘' : 'Ctrl';
   function later(fn, ms) { return setTimeout(fn, ms || 0); }
-  function log(e) { try { if (W.console) console.error('[Nuanza]', e); } catch (x) { /* ignore */ } }
+  function log(e) { try { if (W.console) console.error('[Mirzə]', e); } catch (x) { /* ignore */ } }
   function emit(name, detail) { try { D.dispatchEvent(new CustomEvent('nuanza:' + name, { detail: detail })); } catch (e) { /* ignore */ } }
   function on(name, fn) { var w = function (e) { fn(e.detail); }; D.addEventListener('nuanza:' + name, w); return function () { D.removeEventListener('nuanza:' + name, w); }; }
   function wordsOf(s) { return (String(s || '').match(/[\p{L}\p{N}]+(?:[-'’][\p{L}\p{N}]+)*/gu) || []); }
@@ -567,7 +567,7 @@
     var b = opts.body;
     if (typeof b === 'string') body.appendChild(h('p', { class: 'muted', text: b }));
     else if (b) appendKids(body, [b]);
-    var titleEl = h('h2', { id: id }, opts.title || 'Nuanza');
+    var titleEl = h('h2', { id: id }, opts.title || 'Mirzə');
     var el = h('div', {
       class: 'sheet' + (opts.wide ? ' wide' : '') + (opts.cls ? ' ' + opts.cls : ''),
       role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': id
@@ -1573,7 +1573,7 @@
     if (started) buildNav();
   }
   function titleOf(d) {
-    if (!d) return 'Nuanza';
+    if (!d) return 'Mirzə';
     if (typeof d.title === 'function') { try { return d.title(curMode); } catch (e) { return d.id; } }
     if (curMode === 'academy' && d.titleAcademy) return d.titleAcademy;
     return d.title || d.id;
@@ -1581,15 +1581,8 @@
   function badgeOf(d) { try { return typeof d.badge === 'function' ? d.badge() : d.badge; } catch (e) { return null; } }
   function isAvail(d, m) {
     if (!d) return false;
-    if (d.group === 'Ümumi' || d.group === 'Hesab' || d.mode === 'any') return true;
-    /* Tenso (qrammatika) ayrıca məhsuldur: orada yalnız öz ekranları + ümumi ekranlar */
-    if (m === 'grammar') return d.mode === 'grammar';
-    return !d.mode || d.mode === 'both' || d.mode === m;
+    return !d.mode || d.mode === 'both' || d.mode === m || d.group === 'Ümumi' || d.group === 'Hesab';
   }
-  function normMode(m) { return m === 'academy' || m === 'grammar' ? m : 'pro'; }
-  /* tərcümə məhsulunda sonuncu rejim (pro/academy) — qrammatikadan qayıdanda bərpa olunur */
-  function transMode() { var t = store.get('tmode', 'pro'); return t === 'academy' ? 'academy' : 'pro'; }
-  function homeId(m) { return (m || curMode) === 'grammar' && screens.grammar ? 'grammar' : 'home'; }
   function hashId() {
     var hs = String(W.location.hash || '').replace(/^#\/?/, '');
     return decodeURIComponent(hs.split(/[?/]/)[0] || '');
@@ -1604,7 +1597,6 @@
   function go(id, params, opts) {
     id = String(id == null ? 'home' : id).replace(/^#\/?/, '');
     if (id === 'onboarding' || id === 'intro') { onboarding(); return; }
-    if (id === 'home' && curMode === 'grammar' && screens.grammar) id = 'grammar';
     if (!screens[id]) id = screens.home ? 'home' : (order[0] || 'home');
     renderScreen(id, params || {}, opts || {});
     var target = '#' + id;
@@ -1616,9 +1608,8 @@
   function onHash() {
     var id = hashId();
     if (id === 'onboarding' || id === 'intro') { onboarding(); return; }
-    if (!id) id = homeId();
-    if (id === 'home' && curMode === 'grammar' && screens.grammar) id = 'grammar';
-    if (!screens[id]) { if (D.getElementById(id)) return; id = homeId(); }
+    if (!id) id = 'home';
+    if (!screens[id]) { if (D.getElementById(id)) return; id = 'home'; }
     if (current && current.id === id) return;
     renderScreen(id, hashParams(), {});
   }
@@ -1627,7 +1618,7 @@
       h('div', { class: 'empty' },
         h('div', { class: 'empty-art' }),
         h('h3', { text: 'Bu ekran açılmadı' }),
-        h('p', { text: 'Nuanza «' + id + '» ekranını yükləyə bilmədi. Ana səhifəyə qayıdın və ya bir az sonra yenidən cəhd edin.' }),
+        h('p', { text: 'Mirzə «' + id + '» ekranını yükləyə bilmədi. Ana səhifəyə qayıdın və ya bir az sonra yenidən cəhd edin.' }),
         h('div', { class: 'actions' },
           h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { go('home'); } }, 'Ana səhifə'),
           h('button', { class: 'btn', type: 'button', onclick: function () { go(id); } }, iconEl('refresh'), 'Yenidən cəhd et')),
@@ -1646,17 +1637,12 @@
   function renderScreen(id, params, opts) {
     opts = opts || {};
     var def = screens[id];
-    if (def && !isAvail(def, curMode)) {
-      var nm = def.mode === 'pro' || def.mode === 'academy' || def.mode === 'grammar' ? def.mode : (curMode === 'grammar' ? transMode() : null);
-      if (nm && nm !== curMode) {
-        curMode = nm; iset('mode', curMode); rememberProduct(); syncModeUI(); buildNav(); renderProfile();
-        try { if (W.Nuanza && typeof W.Nuanza.applyConfig === 'function') W.Nuanza.applyConfig(); } catch (e) { log(e); }
-        emit('mode', curMode);
-      }
+    if (def && !isAvail(def, curMode) && (def.mode === 'pro' || def.mode === 'academy')) {
+      curMode = def.mode; iset('mode', curMode); syncModeUI(); buildNav(); renderProfile();
     }
     if (current && current.def && typeof current.def.leave === 'function') { try { current.def.leave(); } catch (e) { log(e); } }
     var main = els.main;
-    var sec = h('section', { class: 'screen enter', 'data-screen': id, tabindex: '-1', 'aria-label': def ? titleOf(def) : 'Nuanza' });
+    var sec = h('section', { class: 'screen enter', 'data-screen': id, tabindex: '-1', 'aria-label': def ? titleOf(def) : 'Mirzə' });
     main.textContent = '';
     main.appendChild(sec);
     current = { id: id, def: def, el: sec, params: params };
@@ -1685,12 +1671,12 @@
       app.innerHTML =
         '<header class="hdr"><div class="hdr-in">' +
         '<button class="burger" type="button" aria-label="Menyunu aç" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>' +
-        '<a class="brand" href="#home" aria-label="Nuanza — ana səhifə">' + logoSvg() + '<b>Nuanza</b><small hidden>Akademiya</small></a>' +
+        '<a class="brand" href="#home" aria-label="Mirzə — ana səhifə">' + logoSvg() + '<b>Mirzə</b><small hidden>Akademiya</small></a>' +
         '<button class="avatar av-firuze" type="button" aria-label="Profil və ayarlar"></button></div><div class="rugband" aria-hidden="true"></div></header>' +
         '<nav class="drawer" id="drawer" aria-label="Əsas menyu"><button class="dr-profile" type="button"><span class="avatar lg av-firuze" aria-hidden="true"></span><span class="who"><b></b><small></small><span class="badge"></span></span></button>' +
         '<div class="dr-mode"><div class="seg block" role="group" aria-label="Rejim"><button type="button" data-mode="pro" aria-pressed="true">Peşəkar</button><button type="button" data-mode="academy" aria-pressed="false">Akademiya</button></div></div>' +
         '<div class="dr-tools"><button class="dr-search" type="button"></button></div><div class="dr-nav"></div>' +
-        '<div class="dr-foot"><button class="icon-btn ghost theme-toggle" type="button" aria-label="Rəng rejimini dəyiş"></button><span class="ver">Nuanza ' + VERSION + ' · Bakı</span></div></nav>' +
+        '<div class="dr-foot"><button class="icon-btn ghost theme-toggle" type="button" aria-label="Rəng rejimini dəyiş"></button><span class="ver">Mirzə ' + VERSION + ' · Bakı</span></div></nav>' +
         '<div class="scrim" aria-hidden="true"></div><main class="main" id="main"></main><div class="companion" aria-label="Nuanza"></div>';
       D.body.insertBefore(app, D.body.firstChild);
     }
@@ -1700,22 +1686,10 @@
     els.brand = $('.brand', app);
     els.brandSmall = els.brand ? $('small', els.brand) : null;
     if (els.brand && !els.brandSmall) { els.brandSmall = h('small', { hidden: true }, 'Akademiya'); els.brand.appendChild(els.brandSmall); }
-    els.brandName = els.brand ? $('b', els.brand) : null;
     els.hdrAvatar = $('.hdr .avatar', app) || $('.hdr-in > .avatar', app);
     els.drawer = $('.drawer', app);
     els.drProfile = $('.dr-profile', app);
     els.modeSeg = $('.dr-mode .seg', app);
-    els.modeBox = $('.dr-mode', app);
-    if (els.drawer && !$('.dr-prod', app)) {
-      var prodBox = h('div', { class: 'dr-prod' },
-        h('span', { class: 'dr-prod-l', text: 'Məhsullar' }),
-        h('div', { class: 'seg block', role: 'group', 'aria-label': 'Məhsul' },
-          h('button', { type: 'button', 'data-prod': 'translate', 'aria-pressed': 'true' }, 'Tərcümə'),
-          h('button', { type: 'button', 'data-prod': 'grammar', 'aria-pressed': 'false' }, 'Qrammatika')));
-      var anchor = els.modeBox || $('.dr-tools', app) || $('.dr-nav', app);
-      if (anchor) els.drawer.insertBefore(prodBox, anchor); else els.drawer.appendChild(prodBox);
-    }
-    els.prodSeg = $('.dr-prod .seg', app);
     els.nav = $('.dr-nav', app);
     els.scrim = $('.scrim:not(.top)', app);
     els.main = $('.main', app) || $('#main');
@@ -1742,12 +1716,12 @@
   function buildNav(anim) {
     var nav = els.nav; if (!nav) return;
     nav.textContent = '';
-    var primary = curMode === 'academy' ? 'Akademiya' : curMode === 'grammar' ? 'Tenso' : 'Peşəkar';
+    var primary = curMode === 'academy' ? 'Akademiya' : 'Peşəkar';
     var groups = {}, gOrder = [];
     order.forEach(function (id) {
       var d = screens[id];
       if (!d || d.hidden || d.nav === false || !isAvail(d, curMode)) return;
-      var g = (!d.group || d.group === 'Peşəkar' || d.group === 'Akademiya' || d.group === 'Tenso' || d.group === 'Qrammatika') ? primary : d.group;
+      var g = (!d.group || d.group === 'Peşəkar' || d.group === 'Akademiya') ? primary : d.group;
       if (!groups[g]) { groups[g] = []; gOrder.push(g); }
       groups[g].push(d);
     });
@@ -1755,7 +1729,7 @@
     var i = 0;
     final.forEach(function (g) {
       var list = groups[g]; if (!list || !list.length) return;
-      list.sort(function (a, b) { var ha = a.id === 'home' || a.id === 'grammar', hb = b.id === 'home' || b.id === 'grammar'; return (ha ? -1 : hb ? 1 : 0) || ((a.order || 0) - (b.order || 0)) || (a._i - b._i); });
+      list.sort(function (a, b) { return (a.id === 'home' ? -1 : b.id === 'home' ? 1 : 0) || ((a.order || 0) - (b.order || 0)) || (a._i - b._i); });
       nav.appendChild(h('div', { class: 'dr-grp', style: '--i:' + (i++), text: g }));
       list.forEach(function (d) {
         var bd = badgeOf(d);
@@ -1801,7 +1775,6 @@
         if (sm) {
           if (!named) sm.textContent = 'Adınızı əlavə edin';
           else if (curMode === 'academy') sm.textContent = p.rank + ' · ' + fmt.num(p.xp) + ' XP';
-          else if (curMode === 'grammar') { var tl = store.get('tenso:level', ''); sm.textContent = 'İngilis dili' + (typeof tl === 'string' && tl ? ' · ' + tl + ' səviyyə' : ' öyrənir'); }
           else sm.textContent = [p.role, p.pairsLabel].filter(Boolean).join(' · ');
         }
         if (bg) { bg.textContent = curMode === 'academy' && p.streak > 0 ? (p.streak + ' günlük seriya') : ''; bg.className = 'badge'; }
@@ -1812,54 +1785,25 @@
   function syncModeUI() {
     R.setAttribute('data-mode', curMode);
     if (els.modeSeg) $$('button', els.modeSeg).forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-mode') === curMode)); });
-    var gr = curMode === 'grammar';
-    var onHub = /^#hub\b/.test(W.location.hash || '');
-    /* the umbrella brand always leads; the small label names the product you are in */
-    if (els.brandName) els.brandName.textContent = 'Loquela';
-    if (els.brandSmall) { els.brandSmall.hidden = onHub; els.brandSmall.textContent = gr ? 'Tenso' : curMode === 'academy' ? 'Akademiya' : 'Nuanza'; }
-    if (els.brand) {
-      els.brand.setAttribute('aria-label', gr ? 'Tenso · Qrammatika — məhsullar' : curMode === 'academy' ? 'Nuanza Akademiya — məhsullar' : 'Nuanza — məhsullar');
-      els.brand.setAttribute('href', '#hub');
-    }
-    if (els.prodSeg) $$('button', els.prodSeg).forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-prod') === (gr ? 'grammar' : 'translate'))); });
-    if (els.modeBox) els.modeBox.hidden = gr;
-    if (els.companion) els.companion.setAttribute('aria-label', gr ? 'Tenso' : 'Nuanza');
-  }
-  function rememberProduct() {
-    iset('product', curMode === 'grammar' ? 'grammar' : 'translate');
-    if (curMode !== 'grammar') iset('tmode', curMode);
-  }
-  /* Məhsul seçimi: 'translate' (Nuanza) | 'grammar' (Tenso). Hub, drawer və palitra istifadə edir. */
-  function setProduct(prod, opts) {
-    opts = opts || {};
-    var m = prod === 'grammar' ? 'grammar' : (curMode !== 'grammar' ? curMode : transMode());
-    if (m !== curMode) setMode(m, { silent: true, noRoute: true });
-    else rememberProduct();
-    if (opts.route !== false) go(homeId(m));
-    if (!opts.silent) {
-      later(function () { chatter('wave', m === 'grammar' ? 'Salam! Mən Tensoyam. Bir cümlə yaz — birlikdə yoxlayaq.' : 'Tərcümə masası hazırdır. Nə tərcümə edirik?'); }, 500);
-    }
+    if (els.brandSmall) els.brandSmall.hidden = curMode !== 'academy';
+    if (els.brand) els.brand.setAttribute('aria-label', curMode === 'academy' ? 'Mirzə Akademiya — ana səhifə' : 'Mirzə — ana səhifə');
   }
   function mode() { return curMode; }
   function setMode(m, opts) {
     opts = opts || {};
-    m = normMode(m);
+    m = m === 'academy' ? 'academy' : 'pro';
     var prev = curMode;
-    curMode = m; iset('mode', m); rememberProduct();
+    curMode = m; iset('mode', m);
     syncModeUI(); renderProfile(); buildNav(prev !== m);
     if (prev === m || !started) return;
-    try { if (W.Nuanza && typeof W.Nuanza.applyConfig === 'function') W.Nuanza.applyConfig(); } catch (e) { log(e); }
     var cur = current && current.id, d = cur && screens[cur];
-    if (!onb && !opts.noRoute) {
-      var hid = homeId(m);
-      if (d && isAvail(d, m) && cur !== 'home' && cur !== 'grammar') renderScreen(cur, current.params, { keepDrawer: true, keepScroll: true, focus: false });
-      else { renderScreen(hid, {}, { keepDrawer: true, focus: false }); try { if (W.location.hash !== '#' + hid) W.history.replaceState(null, '', '#' + hid); } catch (e) { /* sandboxed */ } }
+    if (!onb) {
+      if (d && isAvail(d, m) && cur !== 'home') renderScreen(cur, current.params, { keepDrawer: true, keepScroll: true, focus: false });
+      else { renderScreen('home', {}, { keepDrawer: true, focus: false }); try { if (W.location.hash !== '#home') W.history.replaceState(null, '', '#home'); } catch (e) { /* sandboxed */ } }
     }
     emit('mode', m);
     if (opts.silent) return;
-    if (m === 'grammar') {
-      toast('Tenso · Qrammatika', 'ok', { sub: 'İngilis dili: yaz, yoxla, səhvdən öyrən', icon: 'check' });
-    } else if (m === 'academy') {
+    if (m === 'academy') {
       toast('Akademiya rejimi', 'ok', { sub: 'Dərslər, missiyalar, səhv kartları və rütbələr', icon: 'cap' });
       chatter('celebrate', 'Akademiyaya xoş gəldiniz! Bu gün ' + (profile().dailyGoal || 30) + ' XP qazanaq?');
     } else {
@@ -2049,15 +1993,6 @@
       'Rütbələr: Şagird → Katib → Münşi → Mirzə → Dilmanc → Ustad.',
       '«Shall» müqavilədə gələcək zaman deyil — öhdəlikdir: «etməlidir».'
     ],
-    grammar: [
-      'Mən Tensoyam. «I am agree» yox — «I agree». agree özü feldir!',
-      '«married with him» deyil — «married to him» və ya «I married him».',
-      '«in the last year» — «keçən il» deməkdir? Onda sadəcə «last year».',
-      '«make a photo» yox — «take a photo». Kalkalardan qorunaq.',
-      'Rəqəmdən sonra isim cəmdə olur: two books, three children.',
-      '«actual» = həqiqi, «aktual» deyil. «magazine» = jurnal, mağaza deyil.',
-      'Hər gün bir mövzu yaz — «Gündəlik yazı» səviyyənə uyğun mövzu verir.'
-    ],
     translate: ['Mətni yapışdırın — üslubu özüm tanıyacağam. Sarı xətli yerlərə bir də baxın.', 'Situasiya kartını doldurun: kimə, nə üçün? Tərcümə ona uyğunlaşır.'],
     projects: ['Yeni layihə yaradın — QA və təhvil paketi bir kliklə hazır olacaq.', 'Nümunə layihəni açıb redaktora baxa bilərsiniz.'],
     settings: ['Burada məni də fərdiləşdirə bilərsiniz: ölçü, danışıqlıq, hərəkət.', 'Rəng rejimini sistemə də bağlaya bilərsiniz.'],
@@ -2080,7 +2015,6 @@
   }
   function tipsFor(id) {
     var list = (TIPS[id] || []).slice();
-    if (curMode === 'grammar') return list.concat(TIPS.grammar);
     if (curMode === 'academy') list = list.concat(TIPS.academy);
     return list.concat(TIPS.general);
   }
@@ -2094,13 +2028,11 @@
     var rows = [
       { ic: 'sparkle', cls: 'gold', b: 'Növbəti məsləhət', s: 'Hər dəfə yeni bir incəlik', run: function () { ti = (ti + 1) % tips.length; bubble.textContent = tips[ti]; try { if (mini && mini.set) mini.set('point', { ms: 1200 }); } catch (e) { /* ignore */ } return false; } },
       { ic: 'search', b: 'Axtar və keç', s: MOD + ' + K', run: function () { later(palette, 60); } },
-      curMode === 'grammar'
-        ? { ic: 'grid', cls: 'fir', b: 'Məhsullar', s: 'Tərcümə və ya Qrammatika', run: function () { go('hub'); } }
-        : { ic: 'shield', cls: 'fir', b: 'Mirzə Məclisi necə işləyir?', s: 'Beş mirzə, beş yoxlama — nümunəyə baxın', run: function () { later(demoCouncil, 60); } },
+      { ic: 'shield', cls: 'fir', b: 'Mirzə Məclisi necə işləyir?', s: 'Beş mirzə, beş yoxlama — nümunəyə baxın', run: function () { later(demoCouncil, 60); } },
       { ic: 'keyboard', b: 'Klaviatura qısayolları', s: 'Tez işləmək üçün', run: function () { later(shortcuts, 60); } },
-      { ic: 'eyeoff', b: curMode === 'grammar' ? 'Tensonu gizlət' : 'Nuanzanı gizlət', s: 'Ayarlardan yenə qaytara bilərsiniz', run: function () {
+      { ic: 'eyeoff', b: 'Nuanzanı gizlət', s: 'Ayarlardan yenə qaytara bilərsiniz', run: function () {
         setCompanion({ show: false });
-        toast(curMode === 'grammar' ? 'Tenso gizləndi' : 'Nuanza gizləndi', 'info', { sub: 'İstədiyiniz vaxt qaytarın', action: { label: 'Qaytar', onClick: function () { setCompanion({ show: true }); later(function () { companion.set('wave', { say: 'Yenə buradayam!', ms: 2400 }); }, 200); } } });
+        toast('Nuanza gizləndi', 'info', { sub: 'İstədiyiniz vaxt qaytarın', action: { label: 'Qaytar', onClick: function () { setCompanion({ show: true }); later(function () { companion.set('wave', { say: 'Yenə buradayam!', ms: 2400 }); }, 200); } } });
       } }
     ];
     if (screens.settings) rows.push({ ic: 'settings', b: 'Ayarlar', s: 'Ölçü, danışıqlıq, hərəkət', run: function () { go('settings'); } });
@@ -2112,7 +2044,7 @@
       }, h('span', { class: 'ic' + (r.cls ? ' ' + r.cls : ''), html: icon(r.ic) }), h('span', { class: 'tx' }, h('b', { text: r.b }), h('small', { text: r.s })), h('span', { class: 'end', html: icon('chevron') }));
     }));
     var body = h('div', null, h('div', { class: 'sheet-nz' }, art, bubble), list);
-    s = sheet({ title: curMode === 'grammar' ? 'Tenso' : 'Nuanza', body: body, onClose: function () { menuOpen = false; try { if (mini && mini.destroy) mini.destroy(); } catch (e) { /* ignore */ } } });
+    s = sheet({ title: 'Nuanza', body: body, onClose: function () { menuOpen = false; try { if (mini && mini.destroy) mini.destroy(); } catch (e) { /* ignore */ } } });
     if (W.Nuanza && typeof W.Nuanza.mount === 'function') {
       try { mini = W.Nuanza.mount(art, { size: 'mini' }); if (mini && mini.set) mini.set('wave', {}); } catch (e) { log(e); mini = null; }
     }
@@ -2200,11 +2132,10 @@
     order.forEach(function (id) {
       var d = screens[id]; if (!d || d.hidden || d.nav === false) return;
       var other = !isAvail(d, curMode);
-      items.push({ group: 'Ekranlar', label: titleOf(d), sub: other ? (d.mode === 'grammar' ? 'Qrammatika (Tenso)' : d.mode === 'academy' ? 'Akademiya' : curMode === 'grammar' ? 'Tərcümə' : 'Peşəkar') + ' rejiminə keçir' : (d.group || ''), icon: d.icon || 'star', run: function () { go(id); } });
+      items.push({ group: 'Ekranlar', label: titleOf(d), sub: other ? (d.mode === 'academy' ? 'Akademiya' : 'Peşəkar') + ' rejiminə keçir' : (d.group || ''), icon: d.icon || 'star', run: function () { go(id); } });
     });
     var cfg = companionCfg();
     items.push(
-      { group: 'Əmrlər', label: curMode === 'grammar' ? 'Tərcüməyə keç (Nuanza)' : 'Qrammatikaya keç (Tenso)', sub: 'Məhsulu dəyiş', icon: curMode === 'grammar' ? 'translate' : 'check', run: function () { setProduct(curMode === 'grammar' ? 'translate' : 'grammar'); } },
       { group: 'Əmrlər', label: curMode === 'pro' ? 'Akademiya rejiminə keç' : 'Peşəkar rejimə keç', sub: 'Alt + M', icon: curMode === 'pro' ? 'cap' : 'folder', run: function () { setMode(curMode === 'pro' ? 'academy' : 'pro'); } },
       { group: 'Əmrlər', label: effectiveTheme() === 'dark' ? 'İşıqlı rejimə keç' : 'Qaranlıq rejimə keç', sub: 'Alt + T', icon: effectiveTheme() === 'dark' ? 'sun' : 'moon', run: function () { setTheme(effectiveTheme() === 'dark' ? 'light' : 'dark', els.themeToggle); } },
       { group: 'Əmrlər', label: 'Mirzə Məclisini çağır', sub: 'Nümunə yoxlama', icon: 'shield', run: demoCouncil },
@@ -2272,7 +2203,7 @@
     var p = profile();
     var st = { step: 0, mode: curMode, pairs: (p.pairs || []).slice(), name: p.name };
     var restore = D.activeElement, done = false, nz = null;
-    var el = h('div', { class: 'onb', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Nuanza-ya xoş gəldiniz' });
+    var el = h('div', { class: 'onb', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Mirzəyə xoş gəldiniz' });
     var skip = h('button', { class: 'btn btn-ghost btn-sm onb-skip', type: 'button', onclick: function () { finish(true); } }, 'Keç');
     var star = frag('<svg class="onb-star" viewBox="-20 -20 40 40" aria-hidden="true"><path class="l-star" pathLength="1" d="M0 -19 4.22 -14.78 4.22 -11.61 7.39 -11.61 11.61 -7.39 11.61 -4.22 14.78 -4.22 19 0 14.78 4.22 11.61 4.22 11.61 7.39 7.39 11.61 4.22 11.61 4.22 14.78 0 19 -4.22 14.78 -4.22 11.61 -7.39 11.61 -11.61 7.39 -11.61 4.22 -14.78 4.22 -19 0 -14.78 -4.22 -11.61 -4.22 -11.61 -7.39 -7.39 -11.61 -4.22 -11.61 -4.22 -14.78Z"/><polygon class="l-ring" points="0,-10 10,0 0,10 -10,0"/><polygon class="l-dot" points="0,-5 5,0 0,5 -5,0"/></svg>');
     var stage = h('div', { class: 'onb-stage' });
@@ -2398,11 +2329,11 @@
         el.classList.add('out');
         popOverlay(ov); onb = null;
         later(function () { try { if (nz && nz.destroy) nz.destroy(); } catch (e) { log(e); } if (el.parentNode) el.parentNode.removeChild(el); }, 380);
-        go('hub', {}, { focus: false });
+        go('home', {}, { focus: false });
         restoreFocus(restore && restore !== D.body ? restore : null);
         if (!skipped) {
-          toast(first ? 'Xoş gəldiniz, ' + first + '!' : 'Xoş gəldiniz!', 'ok', { sub: 'Məhsulu seçin: Tərcümə və ya Qrammatika', icon: 'sparkle' });
-          later(function () { if (current && current.id === 'hub') return; companion.set('wave', { say: 'Mən buradayam — lazım olsam, toxunun.', ms: 3200 }); }, 700);
+          toast(first ? 'Xoş gəldiniz, ' + first + '!' : 'Xoş gəldiniz!', 'ok', { sub: curMode === 'academy' ? 'Akademiya masanız hazırdır' : 'Peşəkar masanız hazırdır', icon: 'sparkle' });
+          later(function () { companion.set('wave', { say: 'Mən buradayam — lazım olsam, toxunun.', ms: 3200 }); }, 700);
         }
       }, skipped ? 0 : 950);
     }
@@ -2446,7 +2377,7 @@
     else if (hr >= 12 && hr < 18) g = 'Gününüz xeyir' + nm + '!';
     else if (hr >= 18 && hr < 23) g = 'Axşamınız xeyir' + nm + '!';
     else g = 'Gecə növbəsi? Çay dəmləyin, mən buradayam.';
-    var tail = curMode === 'grammar' ? ' Bu gün nə yazırıq? Birlikdə yoxlayaq.' : curMode === 'academy' ? (p.streak > 0 ? ' Seriyanı qoruyaq — bu gün bir dərs?' : ' Bu gün bir dərslə başlayaq?') : ' Bu gün nə tərcümə edirik?';
+    var tail = curMode === 'academy' ? (p.streak > 0 ? ' Seriyanı qoruyaq — bu gün bir dərs?' : ' Bu gün bir dərslə başlayaq?') : ' Bu gün nə tərcümə edirik?';
     chatter('wave', hr >= 23 || hr < 5 ? g : g + tail, 3600);
   }
   function start() {
@@ -2454,8 +2385,7 @@
     R.lang = 'az';
     try { W.history.scrollRestoration = 'manual'; } catch (e) { /* ignore */ }
     css('shell', SHELL_CSS);
-    curMode = normMode(store.get('mode', 'pro'));
-    if (curMode === 'grammar' && store.get('product', '') === 'translate') curMode = transMode();
+    var m = store.get('mode', 'pro'); curMode = m === 'academy' ? 'academy' : 'pro';
     applyTheme(store.get('theme', 'dark'));
     applyMotion();
     buildShell();
@@ -2467,8 +2397,7 @@
 
     if (els.burger) els.burger.addEventListener('click', toggleDrawer);
     if (els.scrim) els.scrim.addEventListener('click', function () { closeDrawer(true); });
-    if (els.brand) els.brand.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); go(screens.hub ? 'hub' : 'home'); });
-    if (els.prodSeg) els.prodSeg.addEventListener('click', function (e) { var b = e.target.closest('button[data-prod]'); if (b) setProduct(b.getAttribute('data-prod')); });
+    if (els.brand) els.brand.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); go('home'); });
     if (els.hdrAvatar) els.hdrAvatar.addEventListener('click', function () { if (screens.settings) go('settings'); else toast('Ayarlar hələ yüklənməyib', 'info'); });
     if (els.drProfile) els.drProfile.addEventListener('click', function () { if (screens.settings) go('settings'); else toast(profile().name, 'info', { sub: profile().role }); });
     if (els.modeSeg) els.modeSeg.addEventListener('click', function (e) { var b = e.target.closest('button[data-mode]'); if (b) setMode(b.getAttribute('data-mode')); });
@@ -2506,10 +2435,7 @@
     started = true;
 
     var id = hashId();
-    if (id === 'home' && curMode === 'grammar' && screens.grammar) id = 'grammar';
-    var prod = store.get('product', '');
-    var firstId = !store.get('onboarded', false) || !prod ? (screens.hub ? 'hub' : 'home') : homeId();
-    var startId = screens[id] ? id : (screens[firstId] ? firstId : (screens.home ? 'home' : (order[0] || 'home')));
+    var startId = screens[id] ? id : (screens.home ? 'home' : (order[0] || 'home'));
     renderScreen(startId, hashParams(), { focus: false });
     if (W.location.hash && id && id !== startId && id !== 'onboarding' && id !== 'intro') { try { W.history.replaceState(null, '', '#' + startId); } catch (e) { /* sandboxed */ } }
 
@@ -2518,46 +2444,6 @@
     onScroll();
     emit('ready', { version: VERSION });
   }
-
-  /* ------------------------------------------------------------------
-     17b. HUB — məhsul seçimi: Tərcümə (Nuanza) · Qrammatika (Tenso)
-     ------------------------------------------------------------------ */
-  var hubMounts = [];
-  function hubLeave() { hubMounts.forEach(function (m) { try { if (m && m.destroy) m.destroy(); } catch (e) { log(e); } }); hubMounts = []; syncModeUI(); }
-  function renderHub(sec) {
-    /* the hub belongs to the umbrella brand, not to one product */
-    W.setTimeout(syncModeUI, 0);
-    hubLeave();
-    var p = profile(), last = store.get('product', '');
-    function card(prod, who, cls, eyebrow, title, text, feats, cta) {
-      var art = h('span', { class: 'hub-art', 'aria-hidden': 'true' });
-      var b = h('button', { class: 'hub-card ' + cls, type: 'button', 'data-prod': prod, 'aria-label': title + ' — ' + text, onclick: function () { setProduct(prod); } },
-        h('span', { class: 'hub-top' }, art, last === prod ? h('span', { class: 'badge hub-last', text: 'Son seçim' }) : null),
-        h('span', { class: 'hub-tx' },
-          h('span', { class: 'hub-eb', text: eyebrow }),
-          h('b', { class: 'hub-h', text: title }),
-          h('span', { class: 'hub-p', text: text }),
-          h('span', { class: 'hub-feats' }, feats.map(function (f) { return h('span', { class: 'hub-f', text: f }); }))),
-        h('span', { class: 'hub-go' }, cta, iconEl('arrow')));
-      var inst = null;
-      if (W.Nuanza && typeof W.Nuanza.mount === 'function') {
-        try { inst = W.Nuanza.mount(art, { size: 'mini', who: who }); if (inst && inst.set) inst.set('wave', {}); } catch (e) { log(e); inst = null; }
-      }
-      if (inst) hubMounts.push(inst);
-      else art.appendChild(h('span', { class: 'medal', 'aria-hidden': 'true' }, h('b', { text: who === 'tenso' ? 'T' : 'N' })));
-      return b;
-    }
-    sec.appendChild(h('div', { class: 'page hub' },
-      h('div', { class: 'page-h' }, h('div', null,
-        h('span', { class: 'eyebrow', text: 'Loquela · məhsullar' }),
-        h('h1', { html: p.firstName ? 'Salam, <em>' + esc(p.firstName) + '</em>. Nə edirik?' : 'Bu gün <em>nə</em> edirik?' }),
-        h('p', { text: 'Loquela — iki məhsul, bir hesab: Nuanza tərcümə edir, Tenso ingilis dilini öyrədir. Başlıqdakı loqoya toxunub istənilən vaxt buraya qayıdın.' }))),
-      h('div', { class: 'hub-grid' },
-        card('translate', 'nuanza', 'hub-tr', 'Nuanza', 'Tərcümə', 'Tərcümə masası: layihələr, redaktor, QA və Akademiya.', ['EN/RU/TR ↔ AZ', 'Mirzə Məclisi', 'Akademiya'], 'Tərcüməyə keç'),
-        card('grammar', 'tenso', 'hub-gr', 'Tenso', 'Qrammatika · Tenso', 'İngilis dili · yazdığını yoxla, səhvdən öyrən', ['Yoxla və düzəlt', 'A1–C1 kursu', 'Gündəlik yazı'], 'Qrammatikaya keç')),
-      h('p', { class: 'small muted hub-note', text: 'Tenso əsasən ingilis dilini öyrənən azərbaycanlılar üçündür; Azərbaycan dilində mətn yoxlaması da var.' })));
-  }
-  register('hub', { title: 'Məhsullar', icon: 'grid', group: 'Ümumi', mode: 'any', nav: false, render: renderHub, leave: hubLeave });
 
   /* ------------------------------------------------------------------
      18. PUBLIC API
@@ -2575,8 +2461,6 @@
     refreshNav: function () { buildNav(false); },
     mode: mode,
     setMode: setMode,
-    setProduct: setProduct,
-    product: function () { return curMode === 'grammar' ? 'grammar' : 'translate'; },
     store: store,
     profile: profile,
     setProfile: setProfile,
