@@ -1,23 +1,26 @@
 /* =====================================================================
    NUANZA — s-academy.js
-   Akademiya ekranları:
-     • 'task'      Tapşırıq — səviyyəyə görə mətn al, mənbə + ipucu, tərcümə,
-                   «Nuanza yoxlasın» → Mirzə Məclisi → böyük qiymət hərfi, bal
-                   halqası, bacarıqlar, səhv kartları, XP (+ rütbə medalı).
-                   Mətn topluları: Nuanza tapşırıqları · Xəbərlər (NTREX-128) ·
+   Akademiya ekranları (Mirzə workstation: sakit, tipoqrafik, bir aksent):
+     • 'task'      Tapşırıq — rejim · toplu · sahə · səviyyə alət zolağı; mənbə və
+                   tərcümə yan-yana panellərdə; «Yoxlat» → Mirzə Məclisi → bal,
+                   meyarlar, peşəkar rəy sətirləri (Kritik/Əsas/Kiçik · Mənbə ·
+                   Tərcümədə · Düzəliş · Problem · Rəyçi), nümunə tərcümə, XP.
+                   Mətn topluları: Mirzə tapşırıqları · Xəbərlər (NTREX-128) ·
                    Məşhur sənədlər (BMT Ümumi Bəyannaməsi) — data-real.js.
                    «Səhvi tap» rejimi: dərc olunmuş real tərcümədə səhvləri tapmaq
                    (oflayn; buraxılan səhvlər səhv kartlarına düşür).
-     • 'practice'  Məşq — 7 oyun kartı; «Detektiv» səhifədə oynanılır, digərləri
-                   vərəqdə (Sən vs AI, Düzəlt, Kontekst dəyiş, Sürət, Şifahi,
-                   Simulyator).
+     • 'practice'  Məşq — məşqlərin siyahısı; «Detektiv» səhifədə oynanılır,
+                   digərləri vərəqdə (Sən vs maşın, Düzəlt, Kontekst, Sürət,
+                   Şifahi, Simulyator, Real səhv ovu).
      • 'cards'     Səhv kartları — yalnız istifadəçinin öz səhvlərindən (academy:mycards);
                    aralıqlı təkrar (Leitner), çevrilən kart.
-     • 'progress'  Mənim inkişafım — yalnız real nəticələr: rütbə, bacarıq radarı,
-                   bal xətti, səhv xəritəsi, missiyalar, həftəlik çağırış.
-                   Yeni istifadəçi üçün boş vəziyyət + bir addım («İlk tapşırığa başla»).
+     • 'progress'  Mənim inkişafım — yalnız real nəticələr: rütbə, KPI, bacarıqlar,
+                   bal dinamikası, zəif tərəflər, tarixçə, missiyalar, həftəlik çağırış.
+     • 'lessons'   Dərslər — nəzəri dərslər (App.data.LESSONS) və bütün tapşırıqlar
+                   sahə/səviyyə üzrə, statusla; { lesson } → dərs səhifəsi.
+     • 'glossary'  Lüğət — sahə lüğətləri səhifə kimi (App.academyGlossary vərəqi də qalır).
    Plain browser JS. Uses App.* (app.js) and app.css components.
-   Screen CSS classes: task-*, practice-*, cards-*, progress-*.
+   Screen CSS classes: acad-*, task-*, practice-*, cards-*, progress-*, lessons-*, glossary-*.
    ===================================================================== */
 (function () {
   'use strict';
@@ -40,11 +43,8 @@
     if (typeof App.iconEl === 'function') return App.iconEl(name);
     var t = D.createElement('template'); t.innerHTML = App.icon(name); return t.content.firstChild;
   }
-  function icTile(name, cls) { return h('span', { class: 'ic' + (cls ? ' ' + cls : ''), html: App.icon(name), 'aria-hidden': 'true' }); }
   function lower(s) { s = String(s == null ? '' : s); try { return s.toLocaleLowerCase('az'); } catch (e) { return s.toLowerCase(); } }
   function upper(s) { s = String(s == null ? '' : s); try { return s.toLocaleUpperCase('az'); } catch (e) { return s.toUpperCase(); } }
-  function cap(s) { s = String(s || ''); return s ? upper(s.charAt(0)) + s.slice(1) : s; }
-  function esc(s) { return App.esc ? App.esc(s) : String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function fold(s) { return App.fold ? App.fold(s) : lower(s); }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function num(n) { return App.fmt && App.fmt.num ? App.fmt.num(n) : String(n); }
@@ -91,28 +91,21 @@
     try { if (el && el.isConnected) { var r = el.getBoundingClientRect(); if (r.width || r.height) return { x: r.left + r.width / 2, y: r.top + Math.min(r.height / 2, 24) }; } } catch (e) { /* ignore */ }
     return { x: W.innerWidth / 2, y: W.innerHeight * 0.4 };
   }
-  function burstAt(el, kind) {
-    var p = pointOf(el);
-    try {
-      if (W.NuanzaFX && typeof W.NuanzaFX.burst === 'function') W.NuanzaFX.burst(p.x, p.y, kind || 'stars');
-      else if (App.fx && App.fx.burst) App.fx.burst(p.x, p.y, kind || 'stars');
-    } catch (e) { /* ignore */ }
-  }
+  /* Workstation tone: no confetti / star bursts on academy screens — results speak for themselves.
+     (Kept as a function so every call site stays as it was.) */
+  function burstAt() { return null; }
   function fxXP(pt, text) {
     try {
       if (W.NuanzaFX && typeof W.NuanzaFX.xp === 'function') W.NuanzaFX.xp(pt.x, pt.y, text);
       else if (App.fx && App.fx.xp) App.fx.xp(pt.x, pt.y, text);
     } catch (e) { /* ignore */ }
   }
+  /* a new rank is announced with a calm toast instead of the full-screen medal */
   function fxMedal(name) {
-    try {
-      if (W.NuanzaFX && typeof W.NuanzaFX.medal === 'function') W.NuanzaFX.medal(name);
-      else if (App.fx && App.fx.medal) App.fx.medal(name);
-    } catch (e) { /* ignore */ }
+    try { App.toast('Yeni rütbə: ' + name, 'ok', { sub: 'Bal və XP tarixçəsi «İnkişaf» bölməsindədir', icon: 'medal' }); } catch (e) { /* ignore */ }
   }
   function busy(btn, on) { if (!btn) return; if (on) btn.setAttribute('aria-busy', 'true'); else btn.removeAttribute('aria-busy'); }
   function isBusy(btn) { return !!btn && btn.getAttribute('aria-busy') === 'true'; }
-  function badge(text, cls, iconName) { return h('span', { class: 'badge' + (cls ? ' ' + cls : '') }, iconName ? ie(iconName) : null, text); }
   function shake(el) { if (!el) return; el.classList.remove('task-shake'); void el.offsetWidth; el.classList.add('task-shake'); }
   function flash(el) { if (!el) return; el.classList.remove('task-flash'); void el.offsetWidth; el.classList.add('task-flash'); }
   function focusSoft(el) { if (!el) return; try { el.focus({ preventScroll: true }); } catch (e) { try { el.focus(); } catch (e2) { /* ignore */ } } }
@@ -150,19 +143,6 @@
     live.off.forEach(function (f) { try { f(); } catch (e) { /* ignore */ } });
     live.minis.forEach(function (m) { try { if (m && m.destroy) m.destroy(); } catch (e) { /* ignore */ } });
     live = { to: [], iv: [], off: [], minis: [] };
-  }
-  function mountMini(el, state) {
-    /* the companion lives only in the corner dock — screens keep a quiet icon */
-    if (el) return null;
-    if (W.Nuanza && typeof W.Nuanza.mount === 'function') {
-      try {
-        var m = W.Nuanza.mount(el, { size: 'mini', label: 'Nuanza — toxunun' });
-        if (m) { live.minis.push(m); if (state && m.set) m.set(state, {}); return m; }
-      } catch (e) { /* fall through */ }
-    }
-    el.textContent = '';
-    el.appendChild(h('span', { class: 'medal sm', 'aria-hidden': 'true' }, h('b', { text: 'N' })));
-    return null;
   }
 
   /* ------------------------------------------------------------------
@@ -452,8 +432,7 @@
   }
 
   var SEV = { 'Türk forması': 'mid', 'Rəqəm': 'high', 'Termin': 'mid', 'Məna': 'high', 'Orfoqrafiya': 'mid', 'Üslub': 'low', 'Durğu': 'low', 'Ad': 'mid', 'Tarix': 'high', 'Söz sırası': 'low', 'Ardıcıllıq': 'mid', 'Boş seqment': 'high', 'Buraxma': 'high', 'Əlavə': 'mid' };
-  var SEV_LABEL = { high: 'Kritik', mid: 'Vacib', low: 'Kiçik' };
-  var SEV_BADGE = { high: 'red', mid: 'gold', low: 'navy' };
+  var SEV_LABEL = { high: 'Kritik', mid: 'Əsas', low: 'Kiçik' };
   var SEV_ORDER = { high: 0, mid: 1, low: 2 };
   var TYPE_ELDER = {
     'Termin': 'Lüğətçi Mirzə', 'Məna': 'Mənaçı Mirzə', 'Boş seqment': 'Mənaçı Mirzə', 'Üslub': 'Üslubçu Mirzə', 'Söz sırası': 'Üslubçu Mirzə',
@@ -475,12 +454,12 @@
   };
   var TAG_OF = { 'Türk forması': 'Türk forması', 'Termin': 'Termin', 'Rəqəm': 'Rəqəm', 'Tarix': 'Rəqəm', 'Durğu': 'Orfoqrafiya', 'Orfoqrafiya': 'Orfoqrafiya', 'Ad': 'Orfoqrafiya', 'Üslub': 'Üslub', 'Söz sırası': 'Üslub', 'Ardıcıllıq': 'Üslub', 'Məna': 'Məna', 'Buraxma': 'Məna', 'Əlavə': 'Məna' };
   var GRADES = [
-    { min: 91, l: 'A', w: 'Əla', head: 'Ustad işi!' },
+    { min: 91, l: 'A', w: 'Əla', head: 'Peşəkar səviyyə' },
     { min: 81, l: 'B', w: 'Çox yaxşı', head: 'Möhkəm tərcümə' },
     { min: 71, l: 'C', w: 'Yaxşı', head: 'Yaxşı əsas var' },
     { min: 61, l: 'D', w: 'Kafi', head: 'Bir neçə düzəliş lazımdır' },
-    { min: 51, l: 'E', w: 'Qənaətbəxş', head: 'Bir də cəhd edək' },
-    { min: 0, l: 'F', w: 'Qeyri-kafi', head: 'Yenidən yazaq — birlikdə' }
+    { min: 51, l: 'E', w: 'Qənaətbəxş', head: 'Əsaslı redaktə lazımdır' },
+    { min: 0, l: 'F', w: 'Qeyri-kafi', head: 'Tərcümə yenidən yazılmalıdır' }
   ];
   function gradeOf(s) { for (var i = 0; i < GRADES.length; i++) if (s >= GRADES[i].min) return GRADES[i]; return GRADES[GRADES.length - 1]; }
   var DEFAULT_RUB = [{ name: 'Məna dəqiqliyi', max: 40, score: 32 }, { name: 'Terminologiya', max: 20, score: 16 }, { name: 'Üslub və axıcılıq', max: 20, score: 16 }, { name: 'Ədəbi norma', max: 10, score: 8 }, { name: 'Format (rəqəm, tarix, ad)', max: 10, score: 8 }];
@@ -544,7 +523,7 @@
     ]
   };
   var ASK = { vs: 'Hansı variant daha dəqiqdir?', fix: 'Seçilmiş hissəni düzəldin:', context: 'Bu situasiyaya hansı variant uyğundur?', speed: 'Azərbaycan dilində qarşılığı:' };
-  var OK_MSG = ['Düzdür!', 'Əla!', 'Məhz belə!', 'Bəli, doğrudur!'];
+  var OK_MSG = ['Düzdür.', 'Doğrudur.', 'Məhz belə.'];
 
   var DET = [
     { title: 'Təchizat müqaviləsi, 4.2-ci bənd',
@@ -578,7 +557,6 @@
       ] }
   ];
 
-  var TAG_BADGE = { 'Yalançı dost': 'red', 'Türk forması': 'gold', 'Rəqəm': 'navy', 'Termin': 'navy', 'Hüquqi': 'red', 'Orfoqrafiya': 'gold', 'Üslub': '', 'Məna': 'red' };
   var INTERVAL = [0, 0, 1, 3, 7, 16];
   var INT_LABEL = { 1: 'hər gün', 2: '1 gündən bir', 3: '3 gündən bir', 4: 'həftədə bir', 5: '16 gündən bir' };
 
@@ -590,373 +568,632 @@
     return deck().filter(function (c) { return !s[c.id] || s[c.id].due <= now; }).length;
   }
 
+
   /* ------------------------------------------------------------------
-     4. CSS (tokens only)
+     4. CSS (tokens only) — workstation tone: hairlines, one accent, no gradients
      ------------------------------------------------------------------ */
   var CSS = [
-    /* shared */
-    '@keyframes task-shake{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}',
-    '.task-shake{animation:task-shake .42s var(--ease-out)}',
-    /* firuzə accent modifiers for shared components (icon tiles, badges) */
-    ':is(.ic,.badge):is(.task-fir,.practice-fir,.progress-fir){background:var(--fir-t);color:var(--firuze)}',
-    '@keyframes task-flash{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--firuze) 38%,transparent)}100%{box-shadow:0 0 0 12px transparent}}',
-    '.task-flash{animation:task-flash .8s var(--ease-out)}',
-    '@keyframes task-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}',
-    '.task-in{animation:task-in .32s var(--ease-out) both}',
-    '.card.lacquer .kv dt{color:var(--on-deep-soft)}',
-    '.progress.progress-fir > i{background:var(--firuze)}',
-
+    /* shared — academy workstation pieces (acad-) */
+    '@keyframes acad-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}',
+    '.task-in{animation:acad-in 160ms ease both}',
+    '@keyframes task-shake{0%{box-shadow:0 0 0 3px var(--danger-t)}100%{box-shadow:0 0 0 0 transparent}}',
+    '.task-shake{animation:task-shake 180ms ease}',
+    '@keyframes task-flash{0%{background-color:var(--accent-t)}100%{background-color:transparent}}',
+    '.task-flash{animation:task-flash 600ms ease}',
+    '.acad-page .page-h h1{font-size:var(--t-h1);line-height:28px;font-weight:600;letter-spacing:-.01em}',
+    '.acad-page .page-h p{font-size:var(--t-body);line-height:21px;color:var(--text-2)}',
+    '.acad-nav{display:flex;align-items:stretch;gap:2px;min-width:0;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}',
+    '.acad-nav::-webkit-scrollbar{display:none}',
+    '.acad-nav a{position:relative;flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 10px 9px;border-radius:var(--r-xs) var(--r-xs) 0 0;color:var(--text-2);font:500 var(--t-small)/18px var(--f-body);text-decoration:none;white-space:nowrap;transition:color var(--t-fast) ease,background-color var(--t-fast) ease}',
+    '.acad-nav a:hover{color:var(--text);background:var(--hover)}',
+    '.acad-nav a[aria-current="page"]{color:var(--text);font-weight:600}',
+    '.acad-nav a[aria-current="page"]::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;border-radius:1px;background:var(--accent)}',
+    '.acad-nav a:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    '.acad-nav-n{font:500 var(--t-micro)/14px var(--f-mono);color:var(--text-3)}',
+    '.acad-cap{display:block;color:var(--text-2);font:600 var(--t-caption)/16px var(--f-body);letter-spacing:.04em;text-transform:uppercase}',
+    '.acad-meta{display:flex;flex-wrap:wrap;align-items:center;row-gap:2px;min-width:0;color:var(--text-2);font-size:var(--t-small);line-height:18px}',
+    '.acad-meta > *{display:inline-flex;align-items:center;min-width:0}',
+    '.acad-meta > * + *::before{content:"·";margin:0 7px;color:var(--text-3)}',
+    '.acad-lv{display:inline-flex;align-items:center;justify-content:center;flex:none;height:18px;min-width:26px;padding:0 4px;border:1px solid var(--border-2);border-radius:4px;color:var(--text);font:500 var(--t-micro)/1 var(--f-mono);letter-spacing:.02em}',
+    '.acad-meta > .acad-lv + *::before{margin-left:7px}',
+    '.acad-count{color:var(--text-2);font:500 var(--t-caption)/16px var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}',
+    '.acad-mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}',
+    '.acad-panel{min-width:0;padding:16px 20px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel)}',
+    '.acad-panel-h{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:6px 12px;margin-bottom:12px}',
+    '.acad-panel-h > div{display:grid;gap:2px;min-width:0}',
+    '.acad-panel-h h2,.acad-panel-h h3{font-size:var(--t-h3);line-height:20px;font-weight:600}',
+    '.acad-sec{display:grid;gap:10px;min-width:0}',
+    '.acad-sec-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;min-width:0}',
+    '.acad-sec-h h2{font-size:var(--t-h2);line-height:24px;font-weight:600}',
+    '.acad-sec-h small{color:var(--text-2);font-size:var(--t-small)}',
+    '.acad-act{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0}',
+    '.acad-act.end{justify-content:flex-end}',
+    '.acad-field{display:grid;gap:4px;min-width:0}',
+    '.acad-field > span{color:var(--text-2);font:500 var(--t-caption)/16px var(--f-body)}',
+    '.acad-field .select{width:100%;min-width:0}',
+    '.acad-empty{display:grid;justify-items:start;gap:4px;padding:20px;border:1px dashed var(--border-2);border-radius:var(--r-sm);background:transparent}',
+    '.acad-empty b{font-size:var(--t-h3);line-height:20px;font-weight:600}',
+    '.acad-empty p{max-width:62ch;color:var(--text-2);font-size:var(--t-body);line-height:21px}',
+    '.acad-empty .acad-act{margin-top:8px}',
+    '.acad-status{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;background:var(--sunken);color:var(--text-2);font:500 var(--t-caption)/1 var(--f-body);white-space:nowrap}',
+    '.acad-status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}',
+    '.acad-status.ok{background:var(--success-t);color:var(--success)}',
+    '.acad-status.warn{background:var(--warning-t);color:var(--warning)}',
+    '.acad-status.err{background:var(--danger-t);color:var(--danger)}',
+    '.acad-status.acc{background:var(--accent-t);color:var(--accent)}',
+    '.acad-bar{position:relative;height:4px;min-width:0;border-radius:2px;background:var(--sunken);overflow:hidden}',
+    '.acad-bar > i{display:block;height:100%;width:0;border-radius:inherit;background:var(--accent);transition:width 180ms ease}',
+    '.acad-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));min-width:0;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);overflow:hidden}',
+    '.acad-stat{display:grid;gap:2px;min-width:0;padding:10px 14px;box-shadow:-1px 0 0 var(--border)}',
+    '.acad-stat span{color:var(--text-2);font-size:var(--t-caption);line-height:16px}',
+    '.acad-stat b{font-size:var(--t-h2);line-height:24px;font-weight:600;font-variant-numeric:tabular-nums}',
+    '.acad-who{display:inline-flex;align-items:center;gap:6px;min-width:0;color:var(--text-2);font-size:var(--t-caption);line-height:16px;white-space:nowrap}',
+    '.acad-av{flex:none;width:20px;height:20px;display:inline-grid;place-items:center;border:1px solid var(--border-2);border-radius:50%;color:var(--text-2);font:600 8.5px/1 var(--f-body);letter-spacing:.03em}',
+    '.acad-sev{display:inline-flex;align-items:center;gap:6px;color:var(--text-2);font:600 var(--t-caption)/16px var(--f-body);white-space:nowrap}',
+    '.acad-sev i{flex:none;width:7px;height:7px;border-radius:2px;background:var(--border-2)}',
+    '.acad-sev[data-sev="high"]{color:var(--danger)}',
+    '.acad-sev[data-sev="high"] i{background:var(--danger)}',
+    '.acad-sev[data-sev="mid"]{color:var(--warning)}',
+    '.acad-sev[data-sev="mid"] i{background:var(--warning)}',
+    '.acad-srcblk{display:grid;gap:4px;min-width:0;padding:10px 14px;border-left:2px solid var(--border-2);border-radius:0 var(--r-xs) var(--r-xs) 0;background:var(--sunken);color:var(--text-2);font-size:var(--t-body);line-height:21px}',
+    '.acad-srcblk b{color:var(--text);font-weight:600}',
+    '.acad-credit{color:var(--text-3);font-size:var(--t-caption);line-height:16px;overflow-wrap:anywhere}',
+    '.acad-credit a{color:var(--text-2)}',
+    '.acad-note{color:var(--text-2);font-size:var(--t-small);line-height:18px}',
+    '.acad-note b{color:var(--text);font-weight:600}',
+    /* review rows — severity · (source) · translation · correction · issue · reviewer */
+    '.acad-rv{min-width:0;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel)}',
+    '.acad-rv-h{display:none}',
+    '.acad-rv-l{margin:0;padding:0;list-style:none}',
+    '.acad-rv-row{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"sev who" "was now" "why why" "act act" "ext ext";gap:8px 16px;align-items:start;padding:14px 16px;border-bottom:1px solid var(--border);transition:background-color var(--t-fast) ease}',
+    '.acad-rv.with-src .acad-rv-row{grid-template-areas:"sev who" "src src" "was now" "why why" "act act" "ext ext"}',
+    '.acad-rv-row:last-child{border-bottom:0}',
+    '.acad-rv-row:focus{outline:none}',
+    '.acad-rv-row:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    '.acad-rv-sev{grid-area:sev;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;min-width:0}',
+    '.acad-rv-type{color:var(--text-2);font-size:var(--t-small);line-height:18px}',
+    '.acad-rv-who{grid-area:who;justify-self:end;min-width:0}',
+    '.acad-rv-c{display:grid;gap:2px;min-width:0;font-size:var(--t-body);line-height:21px;overflow-wrap:anywhere}',
+    '.acad-rv-src{grid-area:src;color:var(--text-2)}',
+    '.acad-rv-src > span:last-child{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}',
+    '.acad-rv-was{grid-area:was}',
+    '.acad-rv-now{grid-area:now}',
+    '.acad-rv-why{grid-area:why;color:var(--text)}',
+    '.acad-rv-lbl{color:var(--text-3);font:500 var(--t-micro)/14px var(--f-body);letter-spacing:.04em;text-transform:uppercase}',
+    '.acad-was{color:var(--danger);text-decoration:line-through;text-decoration-thickness:1px}',
+    '.acad-miss{color:var(--danger);font-style:italic}',
+    '.acad-now{color:var(--accent);font-weight:600}',
+    '.acad-rv-act{grid-area:act;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-width:0}',
+    '.acad-rv-act:empty{display:none}',
+    '.acad-rv-ext{grid-area:ext;display:grid;gap:8px;min-width:0}',
+    '.acad-rv-ext:empty{display:none}',
+    '.acad-rv-ex{display:grid;gap:2px;padding:8px 12px;border-left:2px solid var(--border-2);border-radius:0 var(--r-xs) var(--r-xs) 0;background:var(--sunken);font-size:var(--t-small);line-height:18px}',
+    '.acad-rv-self{display:grid;gap:6px;max-width:520px}',
+    '.acad-rv-self-row{display:flex;gap:8px}',
+    '.acad-rv-self-row .input{flex:1;min-width:0;height:32px;min-height:32px;padding-block:4px}',
+    '.acad-rv-self small{color:var(--text-2);font-size:var(--t-caption)}',
+    '.acad-rv-state{display:inline-flex;align-items:center;gap:6px;color:var(--success);font-size:var(--t-small);line-height:18px}',
+    '.acad-rv-state:empty{display:none}',
+    '.acad-rv-state svg{width:14px;height:14px}',
+    '.acad-rv-state.miss{color:var(--danger)}',
+    '.acad-rv-row.done{background:var(--sunken)}',
+    '.acad-rv-row.done .acad-was{opacity:.7}',
+    '@media (min-width:1200px){',
+    '.acad-rv-h,.acad-rv-row{grid-template-columns:104px minmax(0,1fr) minmax(0,1fr) minmax(0,1.9fr) 148px;column-gap:16px}',
+    '.acad-rv-h{display:grid;padding:8px 16px;border-bottom:1px solid var(--border);border-radius:var(--r-sm) var(--r-sm) 0 0;background:var(--sunken);color:var(--text-2);font:600 var(--t-micro)/14px var(--f-body);letter-spacing:.04em;text-transform:uppercase}',
+    '.acad-rv-row{grid-template-areas:"sev was now why who" ". act act act act" ". ext ext ext ext";row-gap:10px}',
+    '.acad-rv.with-src .acad-rv-h,.acad-rv.with-src .acad-rv-row{grid-template-columns:104px minmax(0,1.2fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.6fr) 148px}',
+    '.acad-rv.with-src .acad-rv-row{grid-template-areas:"sev src was now why who" ". act act act act act" ". ext ext ext ext ext"}',
+    '.acad-rv-h > :last-child{text-align:right}',
+    '.acad-rv-sev{flex-direction:column;align-items:flex-start}',
+    '.acad-rv-lbl{display:none}',
+    '}',
+    /* token tapping (Səhvi tap, Detektiv) */
+    '.acad-tap{color:var(--text);font-size:1.0625rem;line-height:2;overflow-wrap:anywhere}',
+    '.practice-w{display:inline;margin:0;padding:2px 1px;border:0;border-radius:3px;background:transparent;color:inherit;font:inherit;line-height:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background-color var(--t-fast) ease,box-shadow var(--t-fast) ease,color var(--t-fast) ease}',
+    '@media (hover:hover){.practice-w:not([aria-disabled="true"]):hover{background:var(--hover);box-shadow:inset 0 -1px 0 var(--border-2)}}',
+    '.practice-w:focus-visible{outline:2px solid var(--focus);outline-offset:1px}',
+    '.practice-w[aria-pressed="true"]{background:var(--accent-t);box-shadow:inset 0 -2px 0 var(--accent)}',
+    '.practice-w.hit{background:var(--danger-t);color:var(--danger);text-decoration:line-through;text-decoration-thickness:1px;box-shadow:inset 0 -2px 0 var(--danger)}',
+    '.practice-w.miss{color:var(--danger);text-decoration:line-through;text-decoration-thickness:1px;box-shadow:none;border-bottom:1px dashed var(--danger);border-radius:0}',
+    '.practice-w.false{color:var(--text-3);box-shadow:inset 0 -1px 0 var(--border-2)}',
+    '.practice-w[aria-disabled="true"]{cursor:default}',
+    '.practice-fix{display:inline;margin:0 4px;padding:1px 5px;border-radius:3px;background:var(--accent-t);color:var(--accent);font-size:.9375rem;font-weight:600;text-decoration:none}',
+    '.acad-tapbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding-top:12px;border-top:1px solid var(--border)}',
+    '.acad-legend{display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--text-2);font-size:var(--t-caption);line-height:16px}',
+    '.acad-legend span{display:inline-flex;align-items:center;gap:6px}',
+    '.acad-legend i{width:14px;height:0;border-bottom:2px solid var(--danger)}',
+    '.acad-legend i.miss{border-bottom:1px dashed var(--danger)}',
+    '.acad-legend i.false{border-bottom:1px solid var(--text-3)}',
+    '.acad-tapres{display:grid;gap:14px;padding-top:14px;border-top:1px solid var(--border);animation:acad-in 160ms ease both}',
+    '.acad-fixed{display:grid;gap:4px}',
+    '.acad-fixed p{font-size:var(--t-body);line-height:21px}',
     /* ---- TASK ---- */
-    '.task-get{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 20px}',
-    '.task-lv{display:grid;gap:10px;min-width:0}',
-    '.task-lv-meter{display:flex;gap:3px;width:max-content;max-width:100%;padding:3px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface2)}',
-    '.task-lv-meter button{position:relative;min-width:56px;height:36px;padding:0 10px 4px;border:0;border-radius:9px;background:transparent;color:var(--soft);font:600 var(--fs-sm)/1 var(--f-body);letter-spacing:.03em;cursor:pointer;transition:background var(--t-base),color var(--t-base),box-shadow var(--t-base)}',
-    '.task-lv-meter button::after{content:"";position:absolute;left:50%;bottom:5px;width:5px;height:5px;margin-left:-2.5px;background:currentColor;opacity:0;-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat;transition:opacity var(--t-base)}',
-    '.task-lv-meter button:hover{color:var(--ink)}',
-    '.task-lv-meter button.on{color:var(--firuze)}',
-    '.task-lv-meter button.on::after{opacity:.5}',
-    '.task-lv-meter button[aria-pressed="true"]{background:var(--surface3);color:var(--firuze);box-shadow:var(--sh-pop)}',
-    '.task-lv-meter button[aria-pressed="true"]::after{opacity:1}',
-    '.task-lv-meter button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
-    '.task-lv-tx{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px}',
-    '.task-lv-tx b{font-family:var(--f-display);font-size:var(--fs-md)}',
-    '.task-lv-tx small{color:var(--soft)}',
-    '@media (max-width:479px){.task-get > .btn{width:100%}}',
-    '.task-slot{display:grid;gap:20px;min-width:0}',
-    '.task-mode{display:grid;gap:12px;min-width:0}',
-    '.task-mode-row{display:grid;gap:6px;min-width:0}',
-    '.task-mode .seg.wrap button{white-space:normal;text-align:center}',
-    '.task-dom-chips{display:flex;gap:6px;min-width:0;margin:0 -4px;padding:2px 4px 4px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch;-webkit-mask:linear-gradient(90deg,transparent,#000 6px,#000 calc(100% - 18px),transparent);mask:linear-gradient(90deg,transparent,#000 6px,#000 calc(100% - 18px),transparent)}',
-    '.task-dom-chips::-webkit-scrollbar{display:none}',
-    '.task-dom-chips .chip{flex:none;scroll-snap-align:start;white-space:nowrap;font-size:var(--fs-sm)}',
-    '.task-dom-chips .chip[aria-pressed="true"] svg{display:none}',
-    '.task-dom-info{display:flex;align-items:flex-start;gap:8px 12px;min-width:0}',
-    '.task-dom-why{flex:1 1 auto;min-width:0;margin:0;color:var(--soft);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}',
-    '.task-dom-why.open{display:block;-webkit-line-clamp:unset}',
-    '.task-dom-gl{flex:none}',
-    '.task-gl{display:grid;gap:6px;min-width:0}',
-    '.task-gl-h{display:flex;align-items:center;gap:8px;margin:12px 0 2px;font-size:var(--fs-sm);color:var(--firuze)}',
-    '.task-gl-h svg{width:16px;height:16px}',
-    '.task-gl-h small{margin-left:auto;color:var(--faint);font-weight:500}',
-    '.task-gl-l{display:grid;gap:0;margin:0;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}',
-    '.task-gl-r{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:4px 12px;padding:9px 12px;border-top:1px solid var(--line)}',
-    '.task-gl-r:first-child{border-top:0}',
-    '.task-gl-r dt{margin:0;color:var(--soft);overflow-wrap:anywhere}',
-    '.task-gl-r dd{margin:0;display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}',
-    '.task-gl-r dd small{color:var(--faint);font-size:var(--fs-xs);line-height:1.4}',
-    '@media (max-width:420px){.task-gl-r{grid-template-columns:1fr}}',
-    '.task-credit{margin-top:10px;color:var(--faint);font-size:var(--fs-xs);line-height:1.45;overflow-wrap:anywhere}',
-    '.task-hunt{min-width:0}',
-    '.task-hunt .task-meta{margin-bottom:0}',
-    '.task-hunt-why{color:var(--soft);font-size:.9rem;line-height:1.55}',
-    '.task-hunt-fixed p{color:var(--ink);font-family:var(--f-display);font-size:1.0625rem;line-height:1.6}',
-    '.task-hunt-next{justify-content:flex-end;flex-wrap:wrap;gap:8px}',
-    '.task-hunt-sheet{display:grid;gap:16px;min-width:0}',
-    '.task-hunt-sheet .task-hunt{padding:0;border:0;background:none;box-shadow:none}',
-    '.task-src .card-h{margin-bottom:12px}',
-    '.task-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}',
-    '.task-src-tx{font-family:var(--f-display);font-size:1.1875rem;line-height:1.6;letter-spacing:-.003em}',
-    '@media (min-width:640px){.task-src-tx{font-size:1.3125rem}}',
-    '.task-src-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}',
-    '.task-hints{margin-top:12px}',
-    '.task-hints ul{display:grid;gap:4px;margin:4px 0 0;padding-left:1.1em}',
-    '.task-hints li{animation:task-in .3s var(--ease-out) both}',
-    '.task-brief{display:grid;gap:14px}',
-    '.task-brief-top{display:flex;align-items:center;gap:12px;min-width:0}',
-    '.task-brief .kv{font-size:var(--fs-sm)}',
-    '.task-brief .badges{display:flex;flex-wrap:wrap;gap:6px}',
-    '.task-ta{min-height:156px;font-size:1.0625rem;line-height:1.65}',
-    '.task-tr .card-h{margin-bottom:12px}',
-    '.task-tr-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px;margin-top:14px}',
-    '.task-tr-foot > .row{gap:10px}',
-    '.task-keys{display:inline-flex;align-items:center;gap:4px}',
+    '.task-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 16px;min-width:0}',
+    '.task-bar .seg button{min-height:28px;padding:3px 10px;font-size:var(--t-small)}',
+    '.task-f-col{flex:1 1 180px;max-width:240px}',
+    '.task-f-dom{flex:1 1 200px;max-width:280px}',
+    '.task-bar-new{margin-left:auto}',
+    '@media (max-width:639px){.task-f-mode,.task-f-mode .seg{width:100%}.task-f-mode .seg button{flex:1 1 0}.task-f-col,.task-f-dom{flex:1 1 140px;max-width:none}.task-bar-new{margin-left:0;flex:1 1 auto}}',
+    '.task-note{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;min-width:0;margin-top:-6px;padding-bottom:16px;border-bottom:1px solid var(--border)}',
+    '.task-note p{flex:1 1 320px;min-width:0;margin:0;color:var(--text-2);font-size:var(--t-small);line-height:18px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:default}',
+    '.task-note p.clamp{cursor:pointer}',
+    '.task-note p.open{display:block}',
+    '.task-slot{display:grid;gap:16px;min-width:0}',
+    '.task-brief{display:grid;gap:12px}',
+    '.task-brief .kv{font-size:var(--t-small)}',
+    '.task-brief ul{display:grid;gap:4px;margin:0;padding-left:1.1em;color:var(--text);font-size:var(--t-small);line-height:18px}',
+    '.task-work{display:grid;min-width:0;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel)}',
+    '.task-work > *{min-width:0}',
+    '.task-work > div{display:flex}',
+    '.task-work > div > *{flex:1 1 auto}',
+    '@media (min-width:1200px){.task-work{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.task-work > * + *{border-left:1px solid var(--border)}}',
+    '@media (max-width:1199px){.task-work > * + *{border-top:1px solid var(--border)}}',
+    '.task-pane{display:flex;flex-direction:column;gap:12px;min-width:0;padding:14px 20px 16px}',
+    '@media (max-width:639px){.task-pane{padding:12px 16px 14px}}',
+    '.task-pane-h{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px}',
+    '.task-pane h2{font-size:var(--t-h2);line-height:24px;font-weight:600}',
+    '.task-src-head{display:grid;gap:6px;min-width:0}',
+    '.task-src-tx{color:var(--text);font-size:1rem;line-height:1.65;overflow-wrap:anywhere}',
+    '.task-pane-f{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border)}',
+    '.task-hints{display:grid;gap:6px}',
+    '.task-hints ol{display:grid;gap:6px;margin:0;padding:0;list-style:none;counter-reset:hint}',
+    '.task-hints li{position:relative;padding-left:22px;color:var(--text);font-size:var(--t-small);line-height:18px;animation:acad-in 160ms ease both}',
+    '.task-hints li::before{counter-increment:hint;content:counter(hint);position:absolute;left:0;top:0;color:var(--text-3);font:500 var(--t-micro)/18px var(--f-mono)}',
+    '.task-cost{margin-left:2px;color:var(--text-3);font:500 var(--t-micro)/1 var(--f-mono)}',
+    '.task-tr-h{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}',
+    '.task-field{display:grid;gap:6px;flex:1 1 auto;min-width:0}',
+    '.task-ta{min-height:176px;height:100%;font-size:1rem;line-height:1.65;resize:vertical}',
+    '.task-keys{display:inline-flex;align-items:center;gap:4px;color:var(--text-3);font-size:var(--t-caption)}',
     '@media (hover:none){.task-keys{display:none}}',
-    '@media (max-width:479px){.task-tr-foot > .btn{width:100%}}',
+    '@media (max-width:479px){.task-pane-f > .btn-primary{flex:1 1 100%}}',
     '.task-res-slot:empty{display:none}',
     '.task-res,.task-res-sk{display:grid;gap:20px;min-width:0}',
+    '.task-res-sk .acad-panel{display:grid;gap:10px}',
+    '.task-verdict{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px 32px;align-items:start;padding:16px 20px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel)}',
     '.task-verdict:focus{outline:none}',
-    '.task-verdict{display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:center;gap:20px 28px;overflow:hidden}',
-    '@media (max-width:719px){.task-verdict{grid-template-columns:repeat(2,auto);justify-content:center;text-align:center}.task-vtx{grid-column:1 / -1;justify-items:center}.task-vtx .chips{justify-content:center}}',
-    '.task-grade{display:grid;justify-items:center;gap:10px}',
-    '.medal.task-medal > b{font-size:calc(var(--size) * .44)}',
-    '.task-grade-w{font:600 .6875rem/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}',
-    '.task-vtx{display:grid;gap:8px;min-width:0}',
-    '.task-vtx h2{font-size:var(--fs-xl)}',
-    '.task-vtx .chips{margin-top:4px}',
-    '.task-skills{display:grid;gap:14px}',
-    '.task-skill{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:6px 12px}',
-    '.task-skill .progress{grid-column:1 / -1}',
-    '.task-skill-n{font-size:var(--fs-sm);font-weight:500}',
-    '.task-skill-v{font-size:var(--fs-sm);color:var(--soft);font-variant-numeric:tabular-nums}',
-    '.task-skill-v b{font-family:var(--f-display);font-size:1rem;color:var(--ink)}',
-    '.task-model-tx{font-family:var(--f-display);font-size:1.0625rem;line-height:1.65}',
-    '.task-model .muted{margin-top:10px;font-size:var(--fs-sm)}',
-    '.task-errs{display:grid;gap:12px}',
-    '@media (min-width:860px){.task-errs{grid-template-columns:repeat(2,minmax(0,1fr))}}',
-    '.task-err{position:relative;display:grid;align-content:start;gap:10px;min-width:0;padding:16px 16px 16px 20px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh-1);animation:task-in .36s var(--ease-out) both;transition:border-color var(--t-base),background var(--t-base)}',
-    '.task-err::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:0 3px 3px 0;background:var(--nar);transition:background var(--t-base)}',
-    '.task-err[data-sev="mid"]::before{background:var(--zafaran)}',
-    '.task-err[data-sev="low"]::before{background:var(--lacquer)}',
-    '.task-err-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}',
-    '.task-err-top small{color:var(--soft);font-size:var(--fs-xs)}',
-    '.task-err-fix{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-family:var(--f-display);font-size:1.1875rem;line-height:1.35;overflow-wrap:anywhere}',
-    '.task-was{color:var(--nar);text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:color-mix(in srgb,var(--nar) 75%,transparent)}',
-    '.task-miss{color:var(--nar);font-style:normal;font-size:1rem}',
-    '.task-arrow{display:inline-flex;color:var(--faint)}',
-    '.task-arrow svg{width:18px;height:18px}',
-    '.task-now{padding:1px 8px;border-radius:8px;background:var(--fir-t);color:var(--firuze);font-weight:600}',
-    '.task-why-btn{justify-self:start;display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:4px 12px 4px 8px;border:0;border-radius:var(--r-pill);background:var(--surface2);color:var(--ink);font:600 var(--fs-sm)/1.2 var(--f-body);cursor:pointer;transition:background var(--t-fast)}',
-    '.task-why-btn svg{width:16px;height:16px;color:var(--zafaran-ink)}',
-    '@media (hover:hover){.task-why-btn:hover{background:color-mix(in srgb,var(--surface2) 70%,var(--line))}}',
-    '.task-why-btn[aria-expanded="true"]{background:var(--zaf-t)}',
-    '.task-why-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.task-why{display:grid;gap:8px;font-size:.9rem;line-height:1.55;animation:task-in .26s var(--ease-out) both}',
-    '.task-ex{display:grid;gap:3px;padding:8px 12px;border-left:2px solid var(--firuze);border-radius:0 8px 8px 0;background:var(--fir-t);font-family:var(--f-display);font-style:normal}',
-    '.task-ex .eyebrow{font-family:var(--f-body);font-style:normal}',
-    '.task-err-act{display:flex;flex-wrap:wrap;gap:8px}',
-    '.task-self{display:grid;gap:6px}',
-    '.task-self-row{display:flex;gap:8px}',
-    '.task-self .input{min-height:38px;padding-block:6px}',
-    '.task-self small{color:var(--soft);font-size:var(--fs-xs)}',
-    '.task-err.done{border-color:color-mix(in srgb,var(--ok) 40%,var(--line));background:var(--surface)}',
-    '.task-err.done::before{background:var(--ok)}',
-    '.task-err.done .task-err-act,.task-err.done .task-self{display:none}',
-    '.task-err.done .task-was{opacity:.6}',
-    '.task-err-state:empty{display:none}',
-    '.task-err-state{display:flex;flex-wrap:wrap;gap:6px}',
-    '.task-err:focus{outline:none}',
-    '.task-err:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.task-next{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px}',
+    '.task-verdict:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
+    '.task-vtx{display:grid;gap:6px;min-width:0}',
+    '.task-vtx h2{font-size:var(--t-h2);line-height:24px;font-weight:600}',
+    '.task-vtx p{color:var(--text-2);font-size:var(--t-body);line-height:21px;max-width:70ch}',
+    '.task-score{display:grid;justify-items:end;align-content:start;gap:6px;text-align:right}',
+    '.task-score-n{font-size:var(--t-display);line-height:34px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}',
+    '.task-score-n small{margin-left:2px;color:var(--text-3);font-size:var(--t-small);font-weight:500;letter-spacing:0}',
+    '.task-grade-w{color:var(--text-2);font-size:var(--t-small);line-height:18px}',
+    '@media (max-width:639px){.task-verdict{grid-template-columns:minmax(0,1fr)}.task-score{grid-row:1;display:flex;flex-wrap:wrap;align-items:baseline;justify-items:start;gap:4px 12px;text-align:left}}',
+    '.task-res-grid{display:grid;gap:20px;min-width:0}',
+    '@media (min-width:1200px){.task-res-grid.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}',
+    '.task-rub-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:6px 12px;padding:9px 0;border-top:1px solid var(--border)}',
+    '.task-rub-row:first-child{border-top:0;padding-top:0}',
+    '.task-rub-row .acad-bar{grid-column:1 / -1}',
+    '.task-rub-n{font-size:var(--t-small);line-height:18px}',
+    '.task-rub-v{color:var(--text-3);font:500 var(--t-caption)/16px var(--f-mono)}',
+    '.task-rub-v b{color:var(--text);font-weight:600}',
+    '.task-model-tx{color:var(--text);font-size:1rem;line-height:1.65}',
+    '.task-model .acad-note{margin-top:10px}',
+    '.task-model .acad-credit{margin-top:6px}',
+    '.task-next{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}',
     '@media (max-width:479px){.task-next .btn{flex:1 1 100%}}',
-    '.task-empty .empty-art{margin-bottom:2px}',
-
+    '.task-hunt{display:grid;gap:14px;min-width:0;padding:16px 20px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel)}',
+    '@media (max-width:639px){.task-hunt{padding:14px 16px}}',
+    '.task-hunt-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}',
+    '.task-hunt-h > div{display:grid;gap:2px;min-width:0}',
+    '.task-hunt-h h2{font-size:var(--t-h2);line-height:24px;font-weight:600}',
+    '.task-hunt-sheet{display:grid;gap:16px;min-width:0}',
+    '.task-hunt-sheet .task-hunt{padding:0;border:0;background:none}',
+    '.task-gl{display:grid;gap:4px;min-width:0}',
+    '.task-gl-h{display:flex;align-items:center;gap:8px;margin:14px 0 4px;color:var(--text);font-size:var(--t-small);font-weight:600}',
+    '.task-gl-h svg{width:16px;height:16px;color:var(--text-2)}',
+    '.task-gl-h small{margin-left:auto;color:var(--text-3);font:500 var(--t-caption)/1 var(--f-mono)}',
+    '.task-gl-l{display:grid;margin:0;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}',
+    '.task-gl-r{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:4px 16px;padding:8px 12px;border-top:1px solid var(--border);font-size:var(--t-small);line-height:18px}',
+    '.task-gl-r:first-child{border-top:0}',
+    '.task-gl-r dt{margin:0;color:var(--text-2);overflow-wrap:anywhere}',
+    '.task-gl-r dd{display:grid;gap:2px;margin:0;min-width:0;overflow-wrap:anywhere}',
+    '.task-gl-r dd b{font-weight:500}',
+    '.task-gl-r dd small{color:var(--text-3);font-size:var(--t-caption);line-height:16px}',
+    '@media (max-width:420px){.task-gl-r{grid-template-columns:minmax(0,1fr)}}',
     /* ---- PRACTICE ---- */
-    '.practice-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(164px,1fr));gap:12px}',
-    '@media (min-width:640px){.practice-grid{grid-template-columns:repeat(auto-fill,minmax(204px,1fr));gap:16px}}',
-    'button.card.practice-game{display:flex;flex-direction:column;gap:12px;min-height:204px;padding:16px}',
-    '.practice-game-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}',
-    '.practice-game h3{font-size:1.0625rem;line-height:1.25}',
-    '.practice-game p{margin-top:4px;color:var(--soft);font-size:var(--fs-sm);line-height:1.45}',
-    '.practice-game-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;margin-top:auto;padding-top:12px;border-top:1px solid var(--line);color:var(--soft);font-size:var(--fs-xs)}',
-    /* phones: difficulty and record always on two lines, so every card's footer has the same rhythm */
-    '@media (max-width:479px){.practice-game-foot{flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:4px}}',
-    '.practice-diff{display:inline-flex;align-items:center;gap:4px}',
-    '.practice-diff i{width:7px;height:7px;border-radius:1.5px;background:var(--line-2);transform:rotate(45deg)}',
-    '.practice-diff i.on{background:var(--firuze)}',
-    '.practice-diff span{margin-left:4px}',
-    '.practice-best{display:inline-flex;align-items:center;gap:4px}',
-    '.practice-best svg{width:14px;height:14px;color:var(--zafaran-ink)}',
-    '.practice-best b{font-family:var(--f-display);font-size:.9375rem;color:var(--ink)}',
-    '.practice-game.feat{border-color:color-mix(in srgb,var(--firuze) 45%,var(--line))}',
-    '.practice-game.feat::after{content:none}',
-    '.practice-det{display:grid;gap:16px;scroll-margin-top:calc(var(--hdr-h) + var(--band-h) + 16px)}',
-    '.practice-det .card-h{margin-bottom:0}',
-    '.practice-det-src{display:grid;gap:4px;padding:12px 14px;border-radius:var(--r-md);background:var(--surface2);color:var(--soft);font-size:.9375rem;line-height:1.55}',
-    '.practice-det-src b{color:var(--ink);font-size:var(--fs-sm)}',
-    '.practice-det-text{font-family:var(--f-display);font-size:1.1875rem;line-height:2;letter-spacing:-.005em;overflow-wrap:anywhere}',
-    '@media (min-width:640px){.practice-det-text{font-size:1.3125rem}}',
-    '.practice-w{display:inline;margin:0 -1px;padding:3px;border:0;border-radius:6px;background:transparent;color:inherit;font:inherit;line-height:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background var(--t-fast),color var(--t-fast),box-shadow var(--t-fast)}',
-    '@media (hover:hover){.practice-w:hover{background:var(--surface2)}}',
-    '.practice-w:focus-visible{outline:2px solid var(--focus);outline-offset:1px}',
-    '.practice-w[aria-pressed="true"]{background:var(--fir-t);color:var(--firuze);box-shadow:inset 0 -2px 0 var(--firuze)}',
-    '.practice-w.hit{background:var(--ok-t);color:var(--ink);box-shadow:inset 0 -2px 0 var(--ok);text-decoration:line-through;text-decoration-color:var(--ok)}',
-    '.practice-w.miss{background:var(--nar-t);color:var(--nar);text-decoration:line-through;outline:1.5px dashed var(--nar);outline-offset:-1px}',
-    '.practice-w.false{background:transparent;color:var(--faint);box-shadow:inset 0 -2px 0 var(--line-2)}',
-    '.practice-w[aria-disabled="true"]{cursor:default}',
-    '.practice-fix{display:inline-block;margin:0 6px 0 3px;padding:0 7px;border-radius:7px;background:var(--fir-t);color:var(--firuze);font:600 .875rem/1.7 var(--f-body);text-decoration:none;vertical-align:.12em}',
-    '.practice-det-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}',
-    '.practice-det-bar .row{gap:8px}',
-    '.practice-det-res{display:grid;gap:16px;padding-top:16px;border-top:1px solid var(--line);animation:task-in .32s var(--ease-out) both}',
-    '.practice-det-sum{display:flex;flex-wrap:wrap;align-items:center;gap:16px 24px}',
-    '.practice-det-sum .stats{flex:1;min-width:210px}',
-    '.practice-det-list{display:grid;gap:10px}',
-    '.practice-det-li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:.9rem;line-height:1.5}',
-    '.practice-det-li s{color:var(--nar);text-decoration-thickness:2px}',
-    '.practice-det-li .task-now{font-family:var(--f-display)}',
+    '.practice-list{min-width:0;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);overflow:hidden}',
+    '.practice-lh{display:none}',
+    '.practice-row{display:grid;grid-template-columns:28px minmax(0,1fr) auto 14px;align-items:center;gap:4px 14px;width:100%;min-height:56px;padding:10px 16px;border:0;border-bottom:1px solid var(--border);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color var(--t-fast) ease}',
+    '.practice-row:last-child{border-bottom:0}',
+    '@media (hover:hover){.practice-row:hover{background:var(--hover)}}',
+    '.practice-row:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    '.practice-ic{width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--border);border-radius:var(--r-xs);color:var(--text-2)}',
+    '.practice-ic svg{width:16px;height:16px}',
+    '.practice-tx{display:grid;gap:2px;min-width:0}',
+    '.practice-tx b{font-size:var(--t-body);line-height:20px;font-weight:600}',
+    '.practice-tx small{color:var(--text-2);font-size:var(--t-small);line-height:18px}',
+    '.practice-m{margin-top:2px;font-size:var(--t-caption);line-height:16px}',
+    '.practice-skill,.practice-diff{display:none}',
+    '.practice-best{color:var(--text);font:500 var(--t-caption)/16px var(--f-mono);text-align:right;white-space:nowrap}',
+    '.practice-best.none{color:var(--text-3)}',
+    '.practice-chev{display:inline-flex;color:var(--text-3)}',
+    '.practice-chev svg{width:14px;height:14px}',
+    '.practice-diff{align-items:center;gap:8px;color:var(--text-2);font-size:var(--t-small)}',
+    '.practice-diff-b{display:inline-flex;align-items:flex-end;gap:2px;height:12px}',
+    '.practice-diff-b i{width:3px;border-radius:1px;background:var(--border-2)}',
+    '.practice-diff-b i:nth-child(1){height:6px}',
+    '.practice-diff-b i:nth-child(2){height:9px}',
+    '.practice-diff-b i:nth-child(3){height:12px}',
+    '.practice-diff-b i.on{background:var(--text-2)}',
+    '@media (min-width:900px){',
+    '.practice-lh,.practice-row{grid-template-columns:28px minmax(0,1fr) 150px 96px 104px 14px}',
+    '.practice-lh{display:grid;align-items:center;gap:14px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--sunken);color:var(--text-2);font:600 var(--t-micro)/14px var(--f-body);letter-spacing:.04em;text-transform:uppercase}',
+    '.practice-lh > :nth-child(5){text-align:right}',
+    '.practice-skill{display:block;color:var(--text-2);font-size:var(--t-small);line-height:18px}',
+    '.practice-diff{display:inline-flex}',
+    '.practice-m{display:none}',
+    '}',
+    '.practice-det{display:grid;gap:14px;min-width:0;padding:16px 20px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);scroll-margin-top:calc(var(--hdr-h) + 16px)}',
+    '@media (max-width:639px){.practice-det{padding:14px 16px}}',
+    '.practice-det-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}',
+    '.practice-det-h > div{display:grid;gap:2px;min-width:0}',
+    '.practice-det-h h2{font-size:var(--t-h2);line-height:24px;font-weight:600}',
     '.practice-q{display:grid;gap:16px}',
     '.practice-q-top{display:flex;align-items:center;gap:12px}',
-    '.practice-q-top .progress{flex:1}',
-    '.practice-q-sit{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);background:var(--zaf-t)}',
-    '.practice-q-sit svg{width:18px;height:18px;color:var(--zafaran-ink)}',
-    '.practice-q-sit small{display:block;color:var(--soft);font-size:var(--fs-xs)}',
+    '.practice-q-top .acad-bar{flex:1}',
+    '.practice-q-score{color:var(--text-2);font-size:var(--t-small);white-space:nowrap}',
+    '.practice-q-sit{display:grid;gap:2px;padding:10px 14px;border-left:2px solid var(--border-2);border-radius:0 var(--r-xs) var(--r-xs) 0;background:var(--sunken)}',
+    '.practice-q-sit b{font-weight:600;font-size:var(--t-body)}',
     '.practice-q-src{display:grid;gap:4px}',
-    '.practice-q-src p,.practice-q-term{font-family:var(--f-display);font-size:1.1875rem;line-height:1.5}',
-    '.practice-q-term{font-size:1.625rem;text-align:center;padding:10px 0}',
-    '.practice-q-sent{font-family:var(--f-display);font-size:1.25rem;line-height:1.55}',
-    '.practice-q-mark{padding:0 .2em;border-radius:6px;background:var(--fir-t);color:var(--firuze);box-shadow:inset 0 -2px 0 var(--firuze)}',
-    '.practice-q-ask{font-weight:600}',
-    '.practice-opts{display:grid;gap:10px}',
-    '.choice.practice-opt{align-items:center;padding-block:14px}',
-    '.practice-opt-k{flex:none;width:28px;height:28px;display:grid;place-items:center;border-radius:8px;background:var(--surface2);color:var(--soft);font:700 var(--fs-sm)/1 var(--f-body)}',
-    '.choice.practice-opt b{font-weight:500;line-height:1.45}',
+    '.practice-q-src p{color:var(--text);font-size:1rem;line-height:1.6}',
+    '.practice-q-term{padding:12px 0;font-size:var(--t-display);line-height:34px;font-weight:600;letter-spacing:-.01em;text-align:center}',
+    '.practice-q-sent{font-size:1.0625rem;line-height:1.7}',
+    '.practice-q-mark{padding:0 3px;border-radius:3px;background:var(--accent-t);color:inherit;box-shadow:inset 0 -2px 0 var(--accent)}',
+    '.practice-q-ask{font-size:var(--t-body);font-weight:600}',
+    '.practice-opts{display:grid;gap:8px}',
+    '.choice.practice-opt{align-items:center;gap:12px;padding-block:11px}',
+    '.practice-opt-k{flex:none;width:22px;height:22px;display:grid;place-items:center;border:1px solid var(--border-2);border-radius:4px;color:var(--text-2);font:500 var(--t-caption)/1 var(--f-mono)}',
+    '.choice.practice-opt b{font-size:var(--t-body);font-weight:500;line-height:21px}',
     '.practice-opts.locked .choice{pointer-events:none}',
-    '.choice.practice-opt.right{border-color:var(--ok);background:linear-gradient(var(--ok-t),var(--ok-t)),var(--surface)}',
-    '.choice.practice-opt.right::after{background:var(--ok);border-color:var(--ok)}',
-    '.choice.practice-opt.right::before{content:"";position:absolute;top:18px;right:18px;z-index:1;width:12px;height:12px;background:var(--surface);-webkit-mask:var(--m-check) center/contain no-repeat;mask:var(--m-check) center/contain no-repeat}',
-    '.choice.practice-opt.wrong{border-color:var(--nar);background:linear-gradient(var(--nar-t),var(--nar-t)),var(--surface);animation:task-shake .4s var(--ease-out)}',
-    '.choice.practice-opt.wrong::after{background:var(--nar);border-color:var(--nar)}',
-    '.choice.practice-opt.dim{opacity:.55}',
+    '.choice.practice-opt.right{border-color:var(--success);background:var(--success-t)}',
+    '.choice.practice-opt.right::after{border-color:var(--success);background:var(--success)}',
+    '.choice.practice-opt.right::before{content:"";position:absolute;top:50%;right:18px;z-index:1;width:10px;height:10px;margin-top:-5px;background:var(--panel);-webkit-mask:var(--m-check) center/contain no-repeat;mask:var(--m-check) center/contain no-repeat}',
+    '.choice.practice-opt.wrong{border-color:var(--danger);background:var(--danger-t)}',
+    '.choice.practice-opt.wrong::after{border-color:var(--danger);background:var(--danger)}',
+    '.choice.practice-opt.dim{opacity:.6}',
     '.practice-q-fb{display:grid;gap:12px}',
     '.practice-q-fb:empty{display:none}',
-    '.practice-timer{display:flex;align-items:center;gap:10px;font:600 var(--fs-sm)/1 var(--f-body);color:var(--ink)}',
-    '.practice-timer svg{width:18px;height:18px;color:var(--soft)}',
-    '.practice-timer .progress{flex:1}',
-    '.practice-timer .progress > i{animation:none;transition:width 1s linear}',
-    '.practice-timer.low{color:var(--nar)}',
-    '.practice-end{display:grid;justify-items:center;gap:12px;padding:8px 0 4px;text-align:center}',
-    '.practice-end h3{font-size:var(--fs-xl)}',
-    '.practice-end p{max-width:42ch;color:var(--soft)}',
-    '.practice-oral{display:grid;justify-items:center;gap:16px;text-align:center;padding-bottom:4px}',
-    '.practice-wave{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;max-width:320px;height:56px}',
-    '.practice-wave i{flex:1;max-width:6px;height:18%;border-radius:3px;background:var(--line-2);transition:background var(--t-base)}',
-    '.practice-wave.on i{background:var(--firuze);animation:practice-wave 1s var(--ease-in-out) infinite;animation-delay:calc(var(--i) * -70ms)}',
-    '.practice-wave.rec i{background:var(--nar)}',
-    '@keyframes practice-wave{0%,100%{height:18%}50%{height:var(--h,80%)}}',
-    '.practice-mic{width:76px;height:76px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--firuze);color:var(--on-firuze);box-shadow:0 12px 26px -10px var(--firuze);cursor:pointer;transition:transform var(--t-fast) var(--ease-out),opacity var(--t-base)}',
-    '.practice-mic svg{width:28px;height:28px}',
-    '.practice-mic:active{transform:scale(.94)}',
+    '.practice-fb{padding:10px 14px;border-left:2px solid var(--success);border-radius:0 var(--r-xs) var(--r-xs) 0;background:var(--sunken);color:var(--text);font-size:var(--t-body);line-height:21px;animation:acad-in 160ms ease both}',
+    '.practice-fb.bad{border-left-color:var(--danger)}',
+    '.practice-fb.info{border-left-color:var(--border-2)}',
+    '.practice-timer{display:flex;align-items:center;gap:10px;color:var(--text);font:500 var(--t-small)/1 var(--f-mono)}',
+    '.practice-timer svg{width:16px;height:16px;color:var(--text-2)}',
+    '.practice-timer .acad-bar{flex:1}',
+    '.practice-timer .acad-bar > i{transition:width 1s linear}',
+    '.practice-timer.low{color:var(--danger)}',
+    '.practice-timer.low .acad-bar > i{background:var(--danger)}',
+    '.practice-end{display:grid;justify-items:start;gap:8px}',
+    '.practice-end-n{font-size:var(--t-display);line-height:34px;font-weight:600;font-variant-numeric:tabular-nums}',
+    '.practice-end-n small{margin-left:4px;color:var(--text-3);font-size:var(--t-small);font-weight:500}',
+    '.practice-end h3{font-size:var(--t-h2);line-height:24px}',
+    '.practice-end p{max-width:52ch;color:var(--text-2);font-size:var(--t-body)}',
+    '.practice-oral{display:grid;justify-items:center;gap:14px;padding-bottom:4px;text-align:center}',
+    '.practice-wave{display:flex;align-items:center;justify-content:center;gap:3px;width:100%;max-width:280px;height:40px}',
+    '.practice-wave i{flex:1;max-width:3px;height:16%;border-radius:2px;background:var(--border-2)}',
+    '.practice-wave.on i{background:var(--accent);animation:practice-wave 1.2s ease-in-out infinite;animation-delay:calc(var(--i) * -60ms)}',
+    '@keyframes practice-wave{0%,100%{height:16%}50%{height:var(--h,70%)}}',
+    '.practice-mic{width:56px;height:56px;display:grid;place-items:center;border:1px solid var(--accent);border-radius:50%;background:var(--accent);color:var(--on-accent);cursor:pointer;transition:background-color var(--t-fast) ease,opacity var(--t-fast) ease}',
+    '.practice-mic svg{width:22px;height:22px}',
     '.practice-mic:disabled{opacity:.5;cursor:default}',
-    '.practice-mic.lac{background:var(--lacquer);color:var(--on-lacquer);box-shadow:0 12px 26px -10px var(--lacquer)}',
-    '.practice-mic.rec{background:var(--nar);color:var(--on-nar)}',
-    '@keyframes practice-pulse{from{opacity:1}to{opacity:1}}',
-    '.practice-oral-tx{max-width:44ch;font-family:var(--f-display);font-size:1.1875rem;line-height:1.5}',
-    '.practice-oral-tx.muted{font-family:var(--f-body);font-size:var(--fs-base)}',
+    '.practice-mic.lac{background:var(--panel);color:var(--accent)}',
+    '.practice-oral-tx{max-width:46ch;font-size:1rem;line-height:1.6}',
+    '.practice-oral-tx.muted{color:var(--text-2);font-size:var(--t-body)}',
     '.practice-fb-list{display:grid;gap:8px;width:100%;text-align:left}',
-    '.practice-req{display:grid;gap:6px;margin:0;padding-left:1.1em}',
-
+    '.practice-req{display:grid;gap:4px;margin:0;padding-left:1.1em;font-size:var(--t-body)}',
+    '.practice-quote{margin:0;padding:10px 14px;border-left:2px solid var(--border-2);background:var(--sunken);border-radius:0 var(--r-xs) var(--r-xs) 0;color:var(--text);font-size:var(--t-body);line-height:21px}',
     /* ---- CARDS ---- */
-    '@media (max-width:639px){.cards-chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:calc(var(--gutter) * -1);padding:2px var(--gutter) 4px}.cards-chips::-webkit-scrollbar{display:none}.cards-chips .chip{flex:none}}',
-    '.cards-wrap{display:grid;gap:16px;width:100%;max-width:640px;margin-inline:auto;min-width:0}',
-    '.cards-top{display:grid;gap:10px}',
-    '.cards-count{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;color:var(--soft);font-size:var(--fs-sm)}',
-    '.cards-count b{font-family:var(--f-display);font-size:1.125rem;color:var(--ink)}',
-    '.cards-count .row{gap:6px}',
-    '.cards-stage{position:relative;isolation:isolate;padding-bottom:12px;perspective:1600px}',
-    '.cards-stage::before,.cards-stage::after{content:"";position:absolute;left:14px;right:14px;bottom:2px;height:48px;z-index:-1;border:1px solid var(--line);border-radius:0 0 var(--r-xl) var(--r-xl);background:var(--surface);box-shadow:var(--sh-1)}',
-    '.cards-stage::after{left:30px;right:30px;bottom:-6px;z-index:-2;opacity:.75}',
-    '.cards-stage.single::before,.cards-stage.single::after{display:none}',
-    '.cards-stage.two::after{display:none}',
-    '.cards-card{position:relative;display:block;width:100%;min-height:372px;padding:0;border:0;border-radius:var(--r-xl);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;touch-action:pan-y;-webkit-tap-highlight-color:transparent;transition:transform .26s var(--ease-out),opacity .26s var(--ease-out)}',
-    '.cards-card:focus-visible{outline:2px solid var(--focus);outline-offset:4px}',
+    '.cards-bar{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 16px;min-width:0}',
+    '.cards-bar .acad-field{flex:0 1 240px}',
+    '.cards-sum{margin-left:auto;padding-bottom:7px}',
+    '.cards-wrap{display:grid;gap:14px;width:100%;max-width:680px;margin-inline:auto;min-width:0}',
+    '.cards-top{display:grid;gap:8px}',
+    '.cards-count{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 12px;color:var(--text-2);font-size:var(--t-small)}',
+    '.cards-count .acad-mono b{color:var(--text);font-weight:600}',
+    '.cards-stage{position:relative;padding-bottom:6px}',
+    '.cards-stage::after{content:"";position:absolute;left:10px;right:10px;bottom:0;height:8px;border:1px solid var(--border);border-top:0;border-radius:0 0 var(--r-sm) var(--r-sm);background:var(--panel)}',
+    '.cards-stage.single::after{display:none}',
+    '.cards-card{position:relative;z-index:1;display:block;width:100%;min-height:336px;padding:0;border:0;border-radius:var(--r-sm);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;touch-action:pan-y;-webkit-tap-highlight-color:transparent;transition:transform 160ms ease,opacity 160ms ease}',
+    '.cards-card:focus-visible{outline:2px solid var(--focus);outline-offset:3px}',
     '.cards-card.drag{transition:none}',
-    '.cards-card.out-r{transform:translateX(70%) rotate(8deg);opacity:0}',
-    '.cards-card.out-l{transform:translateX(-70%) rotate(-8deg);opacity:0}',
-    '.cards-card.in{animation:cards-in .34s var(--ease-out) both}',
-    '@keyframes cards-in{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}',
-    '.cards-inner{position:relative;display:grid;min-height:inherit;transform-style:preserve-3d;transition:transform .62s var(--ease-out)}',
-    '.cards-card.flipped .cards-inner{transform:rotateY(180deg)}',
-    '.cards-face{grid-area:1 / 1;position:relative;display:flex;flex-direction:column;gap:16px;min-width:0;padding:26px 22px 20px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);box-shadow:none;-webkit-backface-visibility:hidden;backface-visibility:hidden;overflow:hidden}',
-    '.cards-face::before{content:none}',
-    '.cards-face::after{content:none}',
-    '.cards-face.back{transform:rotateY(180deg);background:var(--surface)}',
-    '.cards-face-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 10px;position:relative}',
+    '.cards-card.out-r{transform:translateX(24px);opacity:0}',
+    '.cards-card.out-l{transform:translateX(-24px);opacity:0}',
+    '.cards-card.in{animation:acad-in 160ms ease both}',
+    '.cards-inner{display:grid;min-height:inherit}',
+    '.cards-face{grid-area:1 / 1;display:flex;flex-direction:column;gap:16px;min-width:0;padding:18px 24px 16px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);transition:opacity 160ms ease,visibility 0s linear 0s}',
+    '@media (max-width:639px){.cards-face{padding:16px 18px 14px}}',
+    '.cards-face.back{opacity:0;visibility:hidden}',
+    '.cards-card.flipped .cards-face.front{opacity:0;visibility:hidden}',
+    '.cards-card.flipped .cards-face.back{opacity:1;visibility:visible}',
+    '.cards-face-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding-bottom:12px;border-bottom:1px solid var(--border)}',
+    '.cards-side{color:var(--danger);font:600 var(--t-caption)/16px var(--f-body);letter-spacing:.04em;text-transform:uppercase}',
+    '.cards-side.ok{color:var(--success)}',
+    '.cards-tag{color:var(--text-2);font-size:var(--t-small);line-height:18px}',
+    '.cards-face-top > :last-child{margin-left:auto}',
     '.cards-blk{display:grid;gap:6px;min-width:0}',
-    '.cards-lbl{color:var(--soft);font:600 .6875rem/1.3 var(--f-body);letter-spacing:.06em;text-transform:uppercase}',
-    '.cards-src{color:var(--soft);font-size:.9375rem;line-height:1.55}',
-    '.cards-sent{font-family:var(--f-display);font-size:1.375rem;line-height:1.45;letter-spacing:-.005em;overflow-wrap:anywhere}',
-    '@media (min-width:640px){.cards-sent{font-size:1.5rem}}',
-    '.cards-bad{color:var(--nar);text-decoration:line-through;text-decoration-thickness:2px}',
-    'mark.cards-good{padding:0 .18em;border-radius:6px;background:var(--fir-t);color:var(--firuze);font-weight:600}',
-    '.cards-why{font-size:.9rem}',
-    '.cards-hint{display:flex;align-items:center;gap:8px;margin-top:auto;color:var(--faint);font-size:var(--fs-xs)}',
-    '.cards-hint svg{width:14px;height:14px}',
-    '.cards-box{display:inline-flex;align-items:center;gap:6px;color:var(--soft);font-size:var(--fs-xs)}',
-    '.cards-pips{display:inline-flex;gap:3px}',
-    '.cards-pips i{width:7px;height:7px;border-radius:1.5px;background:var(--line-2);transform:rotate(45deg)}',
-    '.cards-pips i.on{background:var(--firuze)}',
-    '.cards-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}',
-    '.cards-actions .btn,.cards-flip{min-height:52px;font-size:1rem}',
-    '.cards-keys{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;color:var(--faint);font-size:var(--fs-xs)}',
-    '.cards-keys span{display:inline-flex;align-items:center;gap:5px}',
+    '.cards-lbl{color:var(--text-3);font:500 var(--t-micro)/14px var(--f-body);letter-spacing:.04em;text-transform:uppercase}',
+    '.cards-src{color:var(--text-2);font-size:var(--t-body);line-height:21px}',
+    '.cards-sent{font-size:1.25rem;line-height:1.5;font-weight:500;letter-spacing:-.005em;overflow-wrap:anywhere}',
+    '@media (min-width:640px){.cards-sent{font-size:1.375rem}}',
+    '.cards-bad{color:var(--danger);text-decoration:line-through;text-decoration-thickness:1.5px}',
+    'mark.cards-good{padding:0 2px;border-radius:3px;background:var(--accent-t);color:var(--accent);font-weight:600}',
+    '.cards-why{display:grid;gap:4px;padding:10px 12px;border-left:2px solid var(--border-2);border-radius:0 var(--r-xs) var(--r-xs) 0;background:var(--sunken);font-size:var(--t-body);line-height:21px}',
+    '.cards-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border);color:var(--text-3);font-size:var(--t-caption);line-height:16px}',
+    '.cards-box{display:inline-flex;align-items:center;gap:6px;color:var(--text-2);font:500 var(--t-caption)/16px var(--f-mono)}',
+    '.cards-pips{display:inline-flex;gap:2px}',
+    '.cards-pips i{width:10px;height:4px;border-radius:1px;background:var(--border-2)}',
+    '.cards-pips i.on{background:var(--accent)}',
+    '.cards-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
+    '.cards-actions .btn,.cards-flip{min-height:40px}',
+    '.cards-actions .kbd,.cards-flip .kbd{margin-left:8px}',
+    '.cards-actions .btn-primary .kbd{border-color:color-mix(in srgb,var(--on-accent) 45%,transparent);color:inherit;background:transparent}',
+    '.cards-keys{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;color:var(--text-3);font-size:var(--t-caption)}',
+    '.cards-keys span{display:inline-flex;align-items:center;gap:6px}',
     '@media (hover:none){.cards-keys{display:none}}',
-    '.cards-done{display:grid;justify-items:center;gap:14px;padding:32px 20px;text-align:center}',
-    '.cards-done h2{font-size:var(--fs-2xl)}',
-    '.cards-done > p{max-width:44ch}',
-    '.cards-done .stats{width:100%;max-width:420px}',
-    '.cards-done .stat{justify-items:center}',
-    '.cards-done .actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}',
-    '.cards-empty .empty-art{margin-bottom:2px}',
-    '.cards-boxes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}',
-    '.cards-bx{display:grid;justify-items:center;gap:2px;min-width:0;padding:12px 4px 10px;border-radius:var(--r-md);background:var(--surface2);text-align:center}',
-    '.cards-bx b{font-family:var(--f-display);font-size:1.5rem;line-height:1.1}',
-    '.cards-bx span{font-size:var(--fs-xs);font-weight:600}',
-    '.cards-bx small{color:var(--soft);font-size:.6875rem;line-height:1.25}',
-    '.cards-bx .progress{width:72%;margin-top:6px}',
-
+    '.cards-done{display:grid;gap:12px}',
+    '.cards-done h2{font-size:var(--t-h2);line-height:24px;font-weight:600}',
+    '.cards-done p{color:var(--text-2);font-size:var(--t-body)}',
+    '.cards-boxes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));min-width:0;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);overflow:hidden}',
+    '.cards-bx{display:grid;gap:4px;min-width:0;padding:12px 14px;box-shadow:-1px 0 0 var(--border)}',
+    '.cards-bx span{color:var(--text-2);font-size:var(--t-caption);line-height:16px}',
+    '.cards-bx b{font-size:var(--t-h2);line-height:24px;font-weight:600;font-variant-numeric:tabular-nums}',
+    '.cards-bx small{color:var(--text-3);font-size:var(--t-caption);line-height:16px}',
+    '.cards-bx .acad-bar{margin-top:4px}',
+    '@media (max-width:639px){.cards-bx{padding:10px 8px}.cards-bx small{display:none}}',
+    '.cards-note{color:var(--text-2);font-size:var(--t-small);line-height:18px}',
     /* ---- PROGRESS ---- */
-    '.progress-hero{display:grid;gap:22px}',
-    '@media (min-width:760px){.progress-hero{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:center}}',
-    '.progress-hero-l{display:flex;align-items:center;gap:18px;min-width:0}',
-    '.progress-hero-l > .stack-sm{flex:1;min-width:0}',
-    '.progress-rank{font-size:var(--fs-2xl);line-height:1.1}',
-    '.card.lacquer .progress-rank em{color:color-mix(in srgb,var(--firuze) 72%,var(--on-deep))}',
-    '.progress-hero-main{display:grid;gap:18px;min-width:0}',
-    '.progress-ladder{display:flex;gap:4px;margin:0;padding:12px 0 0;border-top:1px solid color-mix(in srgb,var(--on-deep) 14%,transparent);list-style:none}',
-    '.progress-ladder li{flex:1;min-width:0;display:grid;justify-items:center;gap:6px;color:var(--on-deep-soft);font-size:.6875rem;letter-spacing:.02em;text-align:center}',
-    '.progress-ladder li span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.progress-ladder i{width:9px;height:9px;border:1px solid color-mix(in srgb,var(--on-deep) 40%,transparent);border-radius:2px;transform:rotate(45deg)}',
-    '.progress-ladder li.done i{background:color-mix(in srgb,var(--firuze) 72%,var(--on-deep));border-color:transparent}',
-    '.progress-ladder li.cur i{background:color-mix(in srgb,var(--firuze) 72%,var(--on-deep));border-color:transparent}',
-    '.progress-ladder li.cur span{color:color-mix(in srgb,var(--firuze) 72%,var(--on-deep));font-weight:700}',
-    '.progress-hero .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}',
-    '@media (min-width:480px){.progress-hero .stats{grid-template-columns:repeat(4,minmax(0,1fr))}}',
-    '@media (min-width:760px){.progress-hero .stats{grid-template-columns:repeat(2,minmax(0,1fr))}}',
-    '.progress-hero .stat{padding:12px;border-radius:var(--r-md);background:color-mix(in srgb,var(--on-deep) 7%,transparent)}',
-    '.progress-hero .stat > b{font-size:1.5rem;color:var(--on-deep)}',
+    '.progress-sum{display:grid;gap:14px;padding-bottom:0;overflow:hidden}',
+    '.progress-rank-row{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:6px 16px}',
+    '.progress-rank-row > div{display:grid;gap:2px}',
+    '.progress-rank{font-size:var(--t-h2);line-height:24px;font-weight:600}',
+    '.progress-xp{color:var(--text-2);font:500 var(--t-small)/18px var(--f-mono)}',
+    '.progress-next{display:grid;gap:6px}',
+    '.progress-next p{color:var(--text-2);font-size:var(--t-small);line-height:18px}',
+    '.progress-ladder{display:flex;gap:4px;margin:0;padding:0;list-style:none}',
+    '.progress-ladder li{flex:1;min-width:0;display:grid;gap:4px;padding-top:6px;border-top:2px solid var(--border);color:var(--text-3);font-size:var(--t-caption);line-height:16px}',
+    '.progress-ladder li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.progress-ladder li.done{border-top-color:var(--accent-line);color:var(--text-2)}',
+    '.progress-ladder li.cur{border-top-color:var(--accent);color:var(--text);font-weight:600}',
+    '.progress-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0 -20px;border-top:1px solid var(--border)}',
+    '.progress-kpi{display:grid;gap:2px;min-width:0;padding:12px 20px;box-shadow:-1px 0 0 var(--border)}',
+    '.progress-kpi span{color:var(--text-2);font-size:var(--t-caption);line-height:16px}',
+    '.progress-kpi b{font-size:var(--t-h2);line-height:24px;font-weight:600;font-variant-numeric:tabular-nums}',
+    '.progress-kpi b small{margin-left:3px;color:var(--text-3);font-size:var(--t-caption);font-weight:500}',
+    '@media (max-width:639px){.progress-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.progress-kpi:nth-child(n+3){border-top:1px solid var(--border)}.progress-kpi{padding:10px 16px}.progress-kpis{margin:0 -20px}}',
+    '.progress-grid{display:grid;gap:20px;min-width:0}',
+    '@media (min-width:1200px){.progress-grid.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}',
+    '.progress-tw{min-width:0;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);overflow-x:auto}',
+    '.progress-t{width:100%;border-collapse:collapse;font-size:var(--t-small);line-height:18px}',
+    '.progress-t th{padding:8px 12px;border-bottom:1px solid var(--border);background:var(--sunken);color:var(--text-2);font:600 var(--t-micro)/14px var(--f-body);letter-spacing:.04em;text-transform:uppercase;text-align:left;white-space:nowrap}',
+    '.progress-t td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}',
+    '.progress-t tbody tr:last-child td{border-bottom:0}',
+    '.progress-t .num{text-align:right;font-family:var(--f-mono);font-size:var(--t-caption);font-variant-numeric:tabular-nums;white-space:nowrap}',
+    '.progress-t td.bar{width:22%;min-width:72px}',
+    '.progress-t td small{display:block;color:var(--text-3);font-size:var(--t-caption);line-height:16px}',
+    '.progress-t tr.clickable{cursor:pointer;transition:background-color var(--t-fast) ease}',
+    '@media (hover:hover){.progress-t tr.clickable:hover{background:var(--hover)}}',
+    '.progress-t .acad-lv{margin-right:0}',
+    '.progress-d{font-family:var(--f-mono);font-size:var(--t-caption);white-space:nowrap}',
+    '.progress-d.up{color:var(--success)}',
+    '.progress-d.dn{color:var(--danger)}',
+    '.progress-d.eq{color:var(--text-3)}',
+    '@media (max-width:639px){.progress-t .hide-sm{display:none}.progress-t td,.progress-t th{padding-inline:10px}}',
+    '.progress-more{justify-self:start}',
     '.progress-chart{position:relative;min-width:0}',
     '.progress-chart svg{display:block;width:100%;height:auto;overflow:visible}',
-    '.progress-chart:focus-visible{outline:2px solid var(--focus);outline-offset:4px;border-radius:8px}',
-    '.progress-svg .g{fill:none;stroke:var(--line);stroke-width:1}',
-    '.progress-svg .sp{stroke:var(--line);stroke-width:1}',
-    '.progress-svg .b{fill:none;stroke:var(--faint);stroke-width:1.5;stroke-linejoin:round}',
-    '.progress-svg .n{fill:color-mix(in srgb,var(--firuze) 14%,transparent);stroke:var(--firuze);stroke-width:2;stroke-linejoin:round;transform-origin:190px 150px;animation:progress-grow .9s var(--ease-out) both}',
-    '@keyframes progress-grow{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:none}}',
-    '.progress-svg .d{fill:var(--firuze);stroke:var(--surface);stroke-width:2}',
-    '.progress-svg .hit{fill:transparent;cursor:pointer;outline:none}',
-    '.progress-svg text{font-family:var(--f-body);font-size:12px;fill:var(--soft)}',
-    '.progress-svg .lv{font-size:12.5px;font-weight:700;fill:var(--ink)}',
-    '.progress-svg .up{font-weight:600;fill:var(--ok)}',
-    '.progress-svg .dn{font-weight:600;fill:var(--nar)}',
-    '.progress-svg .ax{font-size:11px;fill:var(--faint);font-variant-numeric:tabular-nums}',
-    '.progress-svg .ln{fill:none;stroke:var(--firuze);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:0;animation:progress-draw 1.2s var(--ease-out) both}',
-    '@keyframes progress-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}',
-    '.progress-svg .ar{fill:var(--firuze);opacity:.12}',
-    '.progress-svg .cx{stroke:var(--line-2);stroke-width:1;opacity:0;transition:opacity var(--t-fast)}',
+    '.progress-chart:focus-visible{outline:2px solid var(--focus);outline-offset:4px;border-radius:var(--r-xs)}',
+    '.progress-svg .g{fill:none;stroke:var(--border);stroke-width:1}',
+    '.progress-svg .ln{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}',
+    '.progress-svg .d{fill:var(--panel);stroke:var(--accent);stroke-width:1.5}',
+    '.progress-svg .hit{fill:transparent;cursor:crosshair;outline:none}',
+    '.progress-svg text{font-family:var(--f-mono);font-size:10.5px;fill:var(--text-3)}',
+    '.progress-svg .end{font-family:var(--f-mono);font-size:12px;font-weight:600;fill:var(--text)}',
+    '.progress-svg .cx{stroke:var(--border-2);stroke-width:1;opacity:0;transition:opacity var(--t-fast) ease}',
     '.progress-svg .cx.on{opacity:1}',
-    '.progress-svg .end{font-family:var(--f-display);font-size:14px;font-weight:600;fill:var(--ink)}',
-    '.progress-tip{position:absolute;left:0;top:0;z-index:2;min-width:120px;max-width:220px;padding:8px 10px;border-radius:10px;background:var(--inv-bg);color:var(--inv-ink);box-shadow:var(--sh-2);font-size:.75rem;line-height:1.35;pointer-events:none;opacity:0;transform:translate(-50%,calc(-100% - 12px));transition:opacity var(--t-fast)}',
+    '.progress-tip{position:absolute;left:0;top:0;z-index:2;min-width:132px;max-width:220px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-xs);background:var(--panel);color:var(--text);box-shadow:var(--sh-2);font-size:var(--t-caption);line-height:16px;pointer-events:none;opacity:0;transform:translate(-50%,calc(-100% - 10px));transition:opacity var(--t-fast) ease}',
     '.progress-tip.on{opacity:1}',
-    '.progress-tip b{display:block;font:600 1.0625rem/1.2 var(--f-display)}',
-    '.progress-tip span{display:block;color:var(--inv-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.progress-legend{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--soft);font-size:var(--fs-xs)}',
-    '.progress-legend span{display:inline-flex;align-items:center;gap:6px}',
-    '.progress-legend i{width:16px;height:2px;border-radius:2px;background:var(--firuze)}',
-    '.progress-legend i.b{background:var(--faint)}',
-    '.progress-card{display:grid;gap:14px;align-content:start}',
-    '.progress-card .card-h{margin-bottom:0}',
-    '.progress-tbl summary{display:inline-flex;align-items:center;gap:6px;color:var(--soft);font-size:var(--fs-xs);font-weight:600;cursor:pointer;list-style:none}',
-    '.progress-tbl summary::-webkit-details-marker{display:none}',
-    '.progress-tbl summary svg{width:14px;height:14px;transition:transform var(--t-base)}',
-    '.progress-tbl[open] summary svg{transform:rotate(90deg)}',
-    '.progress-tbl .table-wrap{margin-top:10px;box-shadow:none}',
-    '.progress-meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}',
-    '.progress-emap{display:grid;gap:2px}',
-    '.progress-erow{display:grid;grid-template-columns:minmax(0,8.75rem) minmax(0,1fr) auto;align-items:center;gap:12px;width:calc(100% + 20px);margin:0 -10px;padding:9px 10px;border:0;border-radius:var(--r-md);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background var(--t-fast)}',
-    '@media (hover:hover){.progress-erow:hover{background:var(--surface2)}}',
-    '.progress-erow:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
-    '.progress-erow-t{min-width:0;font-size:var(--fs-sm);font-weight:500;line-height:1.3}',
-    '.progress-erow-t small{display:block;color:var(--faint);font-size:var(--fs-xs);font-weight:400}',
-    '.progress-erow-v{display:inline-flex;align-items:center;gap:6px;font:600 var(--fs-sm)/1 var(--f-body);font-variant-numeric:tabular-nums}',
-    '@media (max-width:479px){.progress-erow{grid-template-columns:minmax(0,1fr) auto}.progress-erow .progress{grid-column:1 / -1;grid-row:2}}',
-    '.progress-ms .list-row .tx .progress{margin-top:6px}',
-    '.progress-week{display:grid;gap:24px}',
-    '.progress-week-l{display:grid;gap:12px;min-width:0}',
-    '.progress-week-l .btn{justify-self:start}',
-    '.progress-week-meta{display:flex;justify-content:space-between;gap:8px;color:var(--on-deep-soft);font-size:var(--fs-sm)}',
-    '.progress-reward{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r-md);background:color-mix(in srgb,var(--on-deep) 8%,transparent)}',
-    '.progress-reward small{display:block;color:var(--on-deep-soft)}',
-    '.card.lacquer .avatar.sm{box-shadow:0 0 0 1.5px var(--deep),0 0 0 2.5px var(--firuze)}'
+    '.progress-tip b{display:block;font:600 var(--t-small)/18px var(--f-mono)}',
+    '.progress-tip span{display:block;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.progress-ms-l{display:grid;margin:0;padding:0;list-style:none}',
+    '.progress-ms-row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:4px 12px;width:100%;padding:10px 0;border:0;background:transparent;color:inherit;font:inherit;text-align:left}',
+    '.progress-ms-l > li + li{border-top:1px solid var(--border)}',
+    '.progress-ms-l > li:first-child,.progress-ms-l > li:first-child > .progress-ms-row{padding-top:0}',
+    'button.progress-ms-row{cursor:pointer;transition:background-color var(--t-fast) ease}',
+    '@media (hover:hover){button.progress-ms-row:hover{background:var(--hover)}}',
+    '.progress-ms-row .practice-ic.ok{color:var(--success);border-color:color-mix(in srgb,var(--success) 40%,var(--border))}',
+    '.progress-ms-tx{display:grid;gap:3px;min-width:0}',
+    '.progress-ms-tx b{font-size:var(--t-small);line-height:18px;font-weight:600}',
+    '.progress-ms-tx small{color:var(--text-2);font-size:var(--t-caption);line-height:16px}',
+    '.progress-ms-tx .acad-bar{max-width:220px}',
+    '.progress-ms-end{display:inline-flex;align-items:center;gap:8px;color:var(--text-2);font:500 var(--t-caption)/16px var(--f-mono);white-space:nowrap}',
+    '.progress-ms-end svg{width:14px;height:14px;color:var(--text-3)}',
+    '.progress-week-card{display:grid;gap:10px;align-content:start}',
+    '.progress-week-card h3{font-size:var(--t-h3);line-height:20px;font-weight:600}',
+    '.progress-week-card p{color:var(--text-2);font-size:var(--t-small);line-height:18px}',
+    '.progress-week-meta{display:flex;justify-content:space-between;gap:8px;color:var(--text-2);font:500 var(--t-caption)/16px var(--f-mono)}',
+    '.progress-week-card .btn,.progress-week-card .acad-status{justify-self:start}',
+    /* ---- LESSONS ---- */
+    '.lessons-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 16px;min-width:0;padding-bottom:16px;border-bottom:1px solid var(--border)}',
+    '.lessons-bar .seg button{min-height:28px;padding:3px 10px;font-size:var(--t-small)}',
+    '.lessons-f-q{flex:1 1 220px;min-width:0}',
+    '.lessons-f-q .input{height:32px;min-height:32px}',
+    '.lessons-f-sel{flex:0 1 150px}',
+    '@media (max-width:639px){.lessons-f-col,.lessons-f-col .seg{width:100%}.lessons-f-col .seg button{flex:1 1 0;padding-inline:6px}.lessons-f-sel{flex:1 1 120px}}',
+    '.lessons-grp{min-width:0;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);overflow:hidden}',
+    '.lessons-gh{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--sunken)}',
+    '.lessons-gh svg{width:16px;height:16px;color:var(--text-2)}',
+    '.lessons-gh h3{flex:1 1 auto;min-width:0;font-size:var(--t-h3);line-height:20px;font-weight:600}',
+    '.lessons-gh .acad-bar{width:72px}',
+    '.lessons-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto 14px;align-items:center;gap:4px 14px;width:100%;min-height:48px;padding:9px 16px;border:0;border-bottom:1px solid var(--border);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color var(--t-fast) ease}',
+    '.lessons-row:last-child{border-bottom:0}',
+    '@media (hover:hover){.lessons-row:hover{background:var(--hover)}}',
+    '.lessons-row:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    '.lessons-t{display:grid;gap:1px;min-width:0}',
+    '.lessons-t b{font-size:var(--t-body);line-height:20px;font-weight:500}',
+    '.lessons-t small{color:var(--text-2);font-size:var(--t-caption);line-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.lessons-len{display:none;color:var(--text-3);font:500 var(--t-caption)/16px var(--f-mono);text-align:right;white-space:nowrap}',
+    '.lessons-st{justify-self:end;display:inline-flex;align-items:center;gap:8px;color:var(--text-3);font-size:var(--t-caption);line-height:16px;white-space:nowrap}',
+    '.lessons-st.prog{color:var(--accent);font-weight:500}',
+    '.lessons-st.done{color:var(--text)}',
+    '.lessons-st.done svg{width:14px;height:14px;color:var(--success)}',
+    '.lessons-sc{font:600 var(--t-caption)/16px var(--f-mono)}',
+    '.lessons-gr{color:var(--text-2);font:500 var(--t-caption)/16px var(--f-mono)}',
+    '.lessons-chev{display:inline-flex;color:var(--text-3)}',
+    '.lessons-chev svg{width:14px;height:14px}',
+    '@media (min-width:900px){.lessons-row{grid-template-columns:30px minmax(0,1fr) 124px 112px 14px}.lessons-len{display:block}}',
+    '.lessons-th-ic{width:30px;display:inline-flex;justify-content:center;color:var(--text-2)}',
+    '.lessons-th-ic svg{width:16px;height:16px}',
+    '.lessons-back{justify-self:start;margin-bottom:-8px}',
+    '.lessons-ls{display:grid;gap:24px;width:100%;max-width:800px;min-width:0}',
+    '.lessons-ls-sec{display:grid;gap:10px;min-width:0}',
+    '.lessons-ls-sec > h2{font-size:var(--t-h2);line-height:24px;font-weight:600}',
+    '.lessons-rule{padding:12px 16px;border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:0 var(--r-sm) var(--r-sm) 0;background:var(--panel);font-size:var(--t-body);line-height:21px}',
+    '.lessons-ex{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 24px;padding:12px 0;border-top:1px solid var(--border)}',
+    '.lessons-ex:last-child{border-bottom:1px solid var(--border)}',
+    '.lessons-ex p{font-size:var(--t-body);line-height:21px;overflow-wrap:anywhere}',
+    '.lessons-ex .src{color:var(--text-2)}',
+    '.lessons-ex small{grid-column:1 / -1;color:var(--text-3);font-size:var(--t-caption);line-height:16px}',
+    '@media (max-width:639px){.lessons-ex{grid-template-columns:minmax(0,1fr)}}',
+    '.lessons-pit{display:grid;gap:2px;padding:10px 0;border-top:1px solid var(--border);font-size:var(--t-body);line-height:21px}',
+    '.lessons-pit:last-child{border-bottom:1px solid var(--border)}',
+    '.lessons-pit > span{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}',
+    '.lessons-pit small{color:var(--text-2);font-size:var(--t-small);line-height:18px}',
+    '.lessons-q{display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--border)}',
+    '.lessons-q > p{font-size:var(--t-body);line-height:21px;font-weight:500}',
+    '.lessons-sum{padding:12px 16px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--sunken);font-size:var(--t-body);line-height:21px}',
+    '.lessons-res{display:grid;gap:8px}',
+    '.lessons-res:empty{display:none}',
+    /* ---- GLOSSARY ---- */
+    '.glossary-layout{display:grid;gap:16px;min-width:0}',
+    '@media (min-width:1100px){.glossary-layout{grid-template-columns:220px minmax(0,1fr);align-items:start;gap:24px}}',
+    '.glossary-doms{display:none}',
+    '@media (min-width:1100px){.glossary-doms{display:grid;gap:1px;position:sticky;top:calc(var(--hdr-h) + 16px)}.glossary-sel{display:none}}',
+    '.glossary-dom{display:flex;align-items:center;gap:10px;width:100%;min-height:32px;padding:6px 10px;border:0;border-radius:var(--r-xs);background:transparent;color:var(--text-2);font:500 var(--t-small)/18px var(--f-body);text-align:left;cursor:pointer;transition:background-color var(--t-fast) ease,color var(--t-fast) ease}',
+    '.glossary-dom svg{width:16px;height:16px;flex:none}',
+    '.glossary-dom span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.glossary-dom small{color:var(--text-3);font:500 var(--t-micro)/14px var(--f-mono)}',
+    '@media (hover:hover){.glossary-dom:hover{background:var(--hover);color:var(--text)}}',
+    '.glossary-dom[aria-pressed="true"]{background:var(--selected);color:var(--text);font-weight:600}',
+    '.glossary-dom[aria-pressed="true"] svg{color:var(--accent)}',
+    '.glossary-dom:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    '.glossary-main{display:grid;gap:12px;min-width:0}',
+    '.glossary-tools{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 12px}',
+    '.glossary-tools .input-ic{flex:1 1 260px;min-width:0}',
+    '.glossary-tools .input{height:32px;min-height:32px}',
+    '.glossary-sel{flex:1 1 200px}',
+    '.glossary-why{color:var(--text-2);font-size:var(--t-small);line-height:18px;max-width:80ch}',
+    '.glossary-t td.en{width:34%;color:var(--text-2)}',
+    '.glossary-t td.az{width:30%;color:var(--text);font-weight:500}',
+    '.glossary-t td.nt{color:var(--text-2);font-size:var(--t-caption);line-height:16px}',
+    '.glossary-t tr.grp td{padding:7px 12px;background:var(--sunken);color:var(--text-2);font:600 var(--t-micro)/14px var(--f-body);letter-spacing:.04em;text-transform:uppercase}',
+    '.glossary-t tr.grp td span{margin-left:8px;color:var(--text-3);font-family:var(--f-mono);letter-spacing:0}',
+    '@media (max-width:639px){',
+    '.glossary-t thead{display:none}',
+    '.glossary-t tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2px 12px;padding:9px 12px;border-bottom:1px solid var(--border)}',
+    '.glossary-t tbody tr:last-child{border-bottom:0}',
+    '.glossary-t td{display:block;width:auto!important;padding:0;border:0}',
+    '.glossary-t td.nt{grid-column:1 / -1}',
+    '.glossary-t td.nt:empty{display:none}',
+    '.glossary-t tr.grp{display:block;padding:0}',
+    '.glossary-t tr.grp td{display:block;padding:7px 12px}',
+    '}',
+    '@media (prefers-reduced-motion:reduce){',
+    '.acad-page *,.practice-q *,.practice-oral *,.task-hunt-sheet *{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}',
+    '.practice-wave.on i{animation:none;height:40%}',
+    '}'
   ].join('\n');
+
+  /* ------------------------------------------------------------------
+     5a. SHARED VIEW PIECES — academy sub-navigation, meta lines,
+         severity labels, professional review rows
+     ------------------------------------------------------------------ */
+  var NAV = [
+    { id: 'task', t: 'Tapşırıq' }, { id: 'lessons', t: 'Dərslər' }, { id: 'practice', t: 'Məşq' },
+    { id: 'cards', t: 'Kartlar' }, { id: 'glossary', t: 'Lüğət' }, { id: 'progress', t: 'İnkişaf' }
+  ];
+  function acadNav(cur) {
+    var nav = h('nav', { class: 'acad-nav', 'aria-label': 'Akademiya bölmələri' });
+    NAV.forEach(function (it) {
+      if (it.id !== cur && !hasScreen(it.id)) return;
+      var n = it.id === 'cards' ? dueCount() : 0;
+      var a = h('a', { href: '#' + it.id, 'aria-current': it.id === cur ? 'page' : null }, it.t,
+        n ? h('span', { class: 'acad-nav-n', title: n + ' kart təkrar gözləyir', text: String(n) }) : null);
+      a.addEventListener('click', function (e) { e.preventDefault(); App.go(it.id); });
+      nav.appendChild(a);
+    });
+    return nav;
+  }
+  function pageHead(title, sub, actions) {
+    var acts = (actions || []).filter(Boolean);
+    return h('div', { class: 'page-h' },
+      h('div', null, h('h1', { text: title }), sub ? h('p', { text: sub }) : null),
+      acts.length ? h('div', { class: 'actions' }, acts) : null);
+  }
+  function metaLine(items, cls) {
+    return h('div', { class: 'acad-meta' + (cls ? ' ' + cls : '') }, items.filter(function (x) { return x !== null && x !== undefined && x !== ''; })
+      .map(function (x) { return typeof x === 'object' && x.nodeType ? x : h('span', { text: String(x) }); }));
+  }
+  function lvTag(id) { var lv = levelById(id); return h('span', { class: 'acad-lv', title: lv ? lv.id + ' · ' + lv.name : String(id || ''), text: String(id || '—') }); }
+  function sevTag(sev) { return h('span', { class: 'acad-sev', 'data-sev': sev || 'mid' }, h('i', { 'aria-hidden': 'true' }), SEV_LABEL[sev] || SEV_LABEL.mid); }
+  function initials(name) { var p = String(name || '').trim().split(/\s+/); return upper((p[0] || '').charAt(0) + (p[1] || '').charAt(0)); }
+  function whoTag(name) {
+    if (!name) return null;
+    return h('span', { class: 'acad-who' }, h('span', { class: 'acad-av', 'aria-hidden': 'true', text: initials(name) }), h('span', { text: name }));
+  }
+  function statusPill(text, kind) { return h('span', { class: 'acad-status' + (kind ? ' ' + kind : ''), text: text }); }
+  function bar(pct, label) {
+    pct = clamp(Math.round(Number(pct) || 0), 0, 100);
+    var a = label ? { class: 'acad-bar', role: 'progressbar', 'aria-label': label, 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100 } : { class: 'acad-bar', 'aria-hidden': 'true' };
+    return h('div', a, h('i', { style: 'width:' + pct + '%' }));
+  }
+  function field(label, ctl, cls) { return h('label', { class: 'acad-field' + (cls ? ' ' + cls : '') }, h('span', { text: label }), ctl); }
+  function statLine(items) {
+    return h('div', { class: 'acad-stats' }, items.map(function (it) {
+      return h('div', { class: 'acad-stat' }, h('span', { text: it.l }), h('b', { text: String(it.v) }));
+    }));
+  }
+  function emptyNote(title, text, actions) {
+    var acts = (actions || []).filter(Boolean);
+    return h('div', { class: 'acad-empty' }, h('b', { text: title }), text ? h('p', { text: text }) : null, acts.length ? h('div', { class: 'acad-act' }, acts) : null);
+  }
+
+  /* source sentence for a finding — only when the sentences of source and
+     translation line up one to one (otherwise the column is left out) */
+  function sentences(t) { return String(t || '').split(/(?<=[.!?…]["»”’)]?)\s+/u).map(function (s) { return s.trim(); }).filter(Boolean); }
+  function srcFor(src, text, frag) {
+    if (!frag) return '';
+    var S = sentences(src), X = sentences(text);
+    if (S.length < 2 || S.length !== X.length) return '';
+    for (var i = 0; i < X.length; i++) if (X[i].indexOf(frag) >= 0) return S[i];
+    return '';
+  }
+  /* one finding: severity · (source) · translation · correction · issue · reviewer */
+  function reviewRow(o) {
+    var row = h('li', { class: 'acad-rv-row' + (o.cls ? ' ' + o.cls : ''), 'data-sev': o.sev || 'mid' });
+    row.appendChild(h('div', { class: 'acad-rv-sev' }, sevTag(o.sev), h('span', { class: 'acad-rv-type', text: o.type || '' })));
+    if (o.withSrc) {
+      row.appendChild(h('div', { class: 'acad-rv-c acad-rv-src' }, h('span', { class: 'acad-rv-lbl', text: 'Mənbə' }),
+        h('span', { lang: o.srcLang || 'en', title: o.src || null, text: o.src || '—' })));
+    }
+    row.appendChild(h('div', { class: 'acad-rv-c acad-rv-was' }, h('span', { class: 'acad-rv-lbl', text: 'Tərcümədə' }),
+      o.missing ? h('span', { class: 'acad-miss', text: o.was }) : h('s', { class: 'acad-was', lang: 'az', text: o.was })));
+    row.appendChild(h('div', { class: 'acad-rv-c acad-rv-now' }, h('span', { class: 'acad-rv-lbl', text: 'Düzəliş' }),
+      h('b', { class: 'acad-now', lang: 'az', text: o.now })));
+    row.appendChild(h('div', { class: 'acad-rv-c acad-rv-why' }, h('span', { class: 'acad-rv-lbl', text: 'Problem' }), h('p', { text: o.why || '' })));
+    row.appendChild(h('div', { class: 'acad-rv-who' }, whoTag(o.who)));
+    row.appendChild(h('div', { class: 'acad-rv-act' }, o.act || null));
+    row.appendChild(h('div', { class: 'acad-rv-ext' }, o.ext || null));
+    return row;
+  }
+  function reviewList(rows, withSrc, label) {
+    return h('div', { class: 'acad-rv' + (withSrc ? ' with-src' : '') },
+      h('div', { class: 'acad-rv-h', 'aria-hidden': 'true' },
+        h('span', { text: 'Ciddilik' }), withSrc ? h('span', { text: 'Mənbə' }) : null,
+        h('span', { text: 'Tərcümədə' }), h('span', { text: 'Düzəliş' }), h('span', { text: 'Problem' }), h('span', { text: 'Rəyçi' })),
+      h('ol', { class: 'acad-rv-l', 'aria-label': label || 'Qeydlər' }, rows));
+  }
 
   /* ------------------------------------------------------------------
      5. TASK SCREEN
@@ -983,22 +1220,22 @@
       else later(function () { App.toast('Kitabxana mətni tapılmadı', 'info', { sub: 'Kitabxanada parçanı seçib «Tapşırığa çevir» düyməsinə yenidən toxunun' }); }, 300);
     }
 
-    page.appendChild(h('div', { class: 'page-h' },
-      h('div', null,
-        h('h1', { html: 'Bugünkü <em>tapşırıq</em>' }),
-        h('p', { text: 'Mətni oxuyun, öz variantınızı yazın — Mirzə Məclisi yoxlayıb hər səhvi izah edəcək.' })),
-      userCards().length ? h('div', { class: 'actions' },
-        h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { App.go('cards'); } }, ie('cards'), 'Səhv kartları')) : null));
+    page.appendChild(acadNav('task'));
+    var nCards = userCards().length;
+    page.appendChild(pageHead('Tapşırıq', 'Mətni oxuyun, öz variantınızı yazın — Mirzə Məclisi yoxlayıb hər qeydi izah edəcək.', [
+      hasScreen('lessons') ? h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { App.go('lessons'); } }, ie('list'), 'Bütün tapşırıqlar') : null,
+      nCards ? h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { App.go('cards'); } }, ie('cards'), 'Səhv kartları', h('span', { class: 'acad-count', text: String(nCards) })) : null
+    ]));
 
-    page.appendChild(modeCard());
-    T.getCard = levelCard();
+    T.getCard = toolbar();
     page.appendChild(T.getCard);
+    page.appendChild(T.noteRow);
     T.briefSlot = h('div', { class: 'task-slot', hidden: true });
-    T.srcSlot = h('div', { class: 'task-slot' });
     page.appendChild(T.briefSlot);
-    page.appendChild(T.srcSlot);
+    T.srcSlot = h('div', { class: 'task-src-slot' });
     T.trCard = translationCard();
-    page.appendChild(T.trCard);
+    T.work = h('div', { class: 'task-work' }, T.srcSlot, T.trCard);
+    page.appendChild(T.work);
     T.resSlot = h('div', { class: 'task-res-slot', 'aria-live': 'polite' });
     page.appendChild(T.resSlot);
     T.huntSlot = h('div', { class: 'task-slot', hidden: true });
@@ -1032,39 +1269,11 @@
     if (T.paintLevel) T.paintLevel();
   }
 
-  function levelCard() {
-    var meter = h('div', { class: 'task-lv-meter', role: 'group', 'aria-label': 'Səviyyə' });
-    var lbl = h('b'), sub = h('small');
-    var btns = LEVELS.map(function (lv) {
-      var b = h('button', { type: 'button', 'aria-pressed': 'false', title: lv.id + ' · ' + lv.name }, lv.id);
-      b.addEventListener('click', function () {
-        if (!T || T.level === lv.id) return;
-        var prev = T.level;
-        setLevel(lv.id);
-        fetchTask(null, false, function () { setLevel(prev); });
-      });
-      meter.appendChild(b);
-      return b;
-    });
-    T.paintLevel = function () {
-      var cur = levelIdx(T.level), lv = LEVELS[cur];
-      btns.forEach(function (b, i) { b.setAttribute('aria-pressed', i === cur ? 'true' : 'false'); b.classList.toggle('on', i <= cur); });
-      lbl.textContent = lv.id + ' · ' + lv.name;
-      sub.textContent = lv.d;
-    };
-    T.getBtn = h('button', { class: 'btn btn-secondary', type: 'button' }, ie('sparkle'), 'Yeni mətn al');
-    T.getBtn.addEventListener('click', function () { fetchTask(null, false); });
-    T.paintLevel();
-    return h('section', { class: 'card task-get', 'aria-label': 'Səviyyə və yeni mətn' },
-      h('div', { class: 'task-lv' }, h('span', { class: 'eyebrow', text: 'Səviyyəniz' }), meter, h('div', { class: 'task-lv-tx' }, lbl, sub)),
-      T.getBtn);
-  }
-
-  /* «Tərcümə et» / «Səhvi tap» + collection choice */
+  /* segmented control (mode, level) */
   function segBtns(items, cur, onPick, label, cls) {
-    var wrap = h('div', { class: 'seg ' + cls, role: 'group', 'aria-label': label });
+    var wrap = h('div', { class: 'seg ' + (cls || ''), role: 'group', 'aria-label': label });
     var btns = items.map(function (it) {
-      var b = h('button', { type: 'button', 'aria-pressed': 'false' }, it.icon ? ie(it.icon) : null, it.label);
+      var b = h('button', { type: 'button', 'aria-pressed': 'false', title: it.title || null }, it.icon ? ie(it.icon) : null, it.label);
       b.addEventListener('click', function () { onPick(it.id); });
       wrap.appendChild(b);
       return b;
@@ -1073,63 +1282,64 @@
     wrap._paint(cur);
     return wrap;
   }
-  function modeCard() {
-    var modes = segBtns([{ id: 'tr', label: 'Tərcümə et', icon: 'edit' }, { id: 'hunt', label: 'Səhvi tap', icon: 'search' }], T.mode, setMode, 'Tapşırıq növü', 'block');
-    if (!HUNT.length) modes.hidden = true;
-    var cols = segBtns(COLS, T.col, setCol, 'Mətn toplusu', 'wrap sm');
-    T.colRow = h('div', { class: 'task-mode-row' }, h('span', { class: 'eyebrow plain', text: 'Mətnlər' }), cols);
-    if (COLS.length < 2) T.colRow.hidden = true;
-    T.paintCol = function () { cols._paint(T.col); };
-    T.paintModeBtns = function () { modes._paint(T.mode); };
-    T.modeNote = h('p', { class: 'small muted' });
-    return h('section', { class: 'card task-mode', 'aria-label': 'Tapşırıq növü və mətnlər' }, modes, T.colRow, domRow(), T.modeNote);
-  }
 
-  /* «Sahə» — horizontally scrolling chip row (Hamısı + domains), a one-line intro and «Lüğət» */
-  function domRow() {
-    var chips = h('div', { class: 'task-dom-chips', role: 'group', 'aria-label': 'Sahə' });
-    var items = [{ key: '', name: 'Hamısı', icon: 'grid' }].concat(DOMAINS);
-    var btns = items.map(function (d) {
-      var b = h('button', { class: 'chip', type: 'button', 'aria-pressed': 'false', title: d.name }, ie(d.icon), h('span', { text: d.name }));
-      b.addEventListener('click', function () { setDom(d.key); });
-      chips.appendChild(b);
-      return b;
-    });
-    var why = h('p', { class: 'task-dom-why small' });
-    why.addEventListener('click', function () { why.classList.toggle('open'); });
-    var gloss = h('button', { class: 'btn btn-ghost btn-sm task-dom-gl', type: 'button', 'aria-haspopup': 'dialog' }, ie('book'), h('span', { text: 'Lüğət' }));
-    gloss.addEventListener('click', function () { glossarySheet(T && T.dom ? T.dom : ''); });
-    var info = h('div', { class: 'task-dom-info' }, why, gloss);
-    T.domRow = h('div', { class: 'task-mode-row task-dom' },
-      h('span', { class: 'eyebrow plain', text: 'Sahə' }), chips, info);
+  /* one compact toolbar: mode · collection · domain · level · new text; a quiet note line below */
+  function toolbar() {
+    var modes = segBtns([{ id: 'tr', label: 'Tərcümə et' }, { id: 'hunt', label: 'Səhvi tap' }], T.mode, setMode, 'Tapşırıq növü', 'sm');
+    var fMode = field('Rejim', modes, 'task-f-mode');
+    if (!HUNT.length) fMode.hidden = true;
+
+    var colSel = h('select', { class: 'select sm', 'aria-label': 'Mətn toplusu' }, COLS.map(function (c) { return h('option', { value: c.id, text: c.label }); }));
+    colSel.addEventListener('change', function () { setCol(colSel.value); });
+    T.colRow = field('Mətnlər', colSel, 'task-f-col');
+    if (COLS.length < 2) T.colRow.hidden = true;
+
+    var domSel = h('select', { class: 'select sm', 'aria-label': 'Sahə' },
+      h('option', { value: '', text: 'Bütün sahələr' }),
+      DOMAINS.map(function (d) { return h('option', { value: d.key, text: d.name }); }));
+    domSel.addEventListener('change', function () { setDom(domSel.value); });
+    T.domRow = field('Sahə', domSel, 'task-f-dom');
     if (!DOMAINS.length) T.domRow.hidden = true;
+
+    var lvSeg = segBtns(LEVELS.map(function (l) { return { id: l.id, label: l.id, title: l.id + ' · ' + l.name + ' — ' + lower(l.d) }; }), T.level, function (id) {
+      if (!T || T.level === id) return;
+      var prev = T.level;
+      setLevel(id);
+      fetchTask(null, false, function () { setLevel(prev); });
+    }, 'Səviyyə', 'sm task-lv');
+    var fLv = field('Səviyyə', lvSeg, 'task-f-lv');
+    T.paintLevel = function () { lvSeg._paint(T.level); var lv = levelById(T.level); fLv.title = lv ? lv.id + ' · ' + lv.name + ' — ' + lower(lv.d) : ''; };
+
+    T.getBtn = h('button', { class: 'btn btn-secondary task-bar-new', type: 'button' }, ie('refresh'), 'Yeni mətn al');
+    T.getBtn.addEventListener('click', function () { fetchTask(null, false); });
+
+    T.paintCol = function () { colSel.value = T.col; };
+    T.paintModeBtns = function () { modes._paint(T.mode); };
+
+    /* note line: domain intro / collection note + «Lüğət» */
+    T.note = h('p', null);
+    T.note.addEventListener('click', function () { if (T.note.classList.contains('clamp')) T.note.classList.toggle('open'); });
+    var gloss = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-haspopup': 'dialog' }, ie('book'), h('span', { text: 'Lüğət' }));
+    gloss.addEventListener('click', function () { glossarySheet(T && T.dom ? T.dom : ''); });
+    T.gloss = gloss;
+    T.noteRow = h('div', { class: 'task-note' }, T.note, gloss);
     T.paintDom = function () {
-      var cur = T.dom || '';
-      btns.forEach(function (b, i) { b.setAttribute('aria-pressed', items[i].key === cur ? 'true' : 'false'); });
-      var d = domByKey(cur);
-      why.textContent = d ? d.why : 'Yeddi peşəkar sahə — hər birində 6 tapşırıq və termin lüğəti. Sahə seçin və ya hamısından növbə ilə alın.';
-      why.classList.remove('open');
-      why.title = d ? 'Tam oxumaq üçün toxunun' : '';
+      var d = domByKey(T.dom || '');
+      domSel.value = d ? d.key : '';
       gloss.lastChild.textContent = d ? 'Lüğət · ' + d.glossary.length : 'Lüğət';
-      gloss.hidden = d ? !d.glossary.length : !DOMAINS.some(function (x) { return x.glossary.length; });
+      gloss.hidden = T.mode === 'hunt' || (d ? !d.glossary.length : !DOMAINS.some(function (x) { return x.glossary.length; }));
     };
-    T.scrollDom = function () {
-      var i = 0; items.forEach(function (d, k) { if (d.key === (T.dom || '')) i = k; });
-      var b = btns[i]; if (!b) return;
-      try { chips.scrollTo({ left: Math.max(0, b.offsetLeft - chips.offsetLeft - 24), behavior: reduced() ? 'auto' : 'smooth' }); } catch (e) { chips.scrollLeft = Math.max(0, b.offsetLeft - chips.offsetLeft - 24); }
-    };
+    T.paintLevel();
     T.paintDom();
-    later(function () { if (T && T.scrollDom) T.scrollDom(); }, 60);
-    return T.domRow;
+    return h('div', { class: 'task-bar', role: 'group', 'aria-label': 'Tapşırıq seçimi' }, fMode, T.colRow, T.domRow, fLv, T.getBtn);
   }
   function setDom(k) {
-    if (!T || T.checking) return;
+    if (!T || T.checking) { if (T) paintMode(); return; }
     if ((T.dom || '') === k && T.col === 'base') return;
     var prev = { dom: T.dom, col: T.col };
     T.dom = k; sset('academy:dom', k);
     if (T.col !== 'base') { T.col = 'base'; sset('academy:col', 'base'); }
     paintMode();
-    if (T.scrollDom) T.scrollDom();
     fetchTask(null, false, function () {
       T.dom = prev.dom; T.col = prev.col; sset('academy:dom', prev.dom); sset('academy:col', prev.col); paintMode();
     });
@@ -1141,7 +1351,7 @@
     var groups = (only ? [only] : DOMAINS).filter(function (d) { return d.glossary.length; });
     var total = groups.reduce(function (s, d) { return s + d.glossary.length; }, 0);
     var q = h('input', { class: 'input', type: 'search', placeholder: 'İngiliscə və ya azərbaycanca axtarın…', 'aria-label': 'Termin axtar', autocomplete: 'off', spellcheck: 'false' });
-    var count = h('p', { class: 'small muted', 'aria-live': 'polite' });
+    var count = h('p', { class: 'acad-count', 'aria-live': 'polite' });
     var list = h('div', { class: 'task-gl' });
     function paint() {
       var f = fold(q.value.trim()), n = 0;
@@ -1150,22 +1360,24 @@
         var rows = d.glossary.filter(function (g) { return !f || fold(g.en + ' ' + g.az + ' ' + g.note).indexOf(f) >= 0; });
         if (!rows.length) return;
         n += rows.length;
-        if (!only) list.appendChild(h('h3', { class: 'task-gl-h' }, ie(d.icon), h('span', { text: d.name }), h('small', { class: 'tnum', text: String(rows.length) })));
+        if (!only) list.appendChild(h('h3', { class: 'task-gl-h' }, ie(d.icon), h('span', { text: d.name }), h('small', { text: String(rows.length) })));
         list.appendChild(h('dl', { class: 'task-gl-l' }, rows.map(function (g) {
           return h('div', { class: 'task-gl-r' },
             h('dt', { lang: 'en', text: g.en }),
             h('dd', null, h('b', { lang: 'az', text: g.az }), g.note ? h('small', { text: g.note }) : null));
         })));
       });
-      if (!n) list.appendChild(h('p', { class: 'muted', text: 'Heç nə tapılmadı — başqa sözlə axtarın.' }));
+      if (!n) list.appendChild(h('p', { class: 'acad-note', text: 'Heç nə tapılmadı — başqa sözlə axtarın.' }));
       count.textContent = f ? n + ' termin tapıldı' : total + ' termin' + (only ? '' : ' · ' + groups.length + ' sahə');
     }
     q.addEventListener('input', paint);
     paint();
     App.sheet({ title: only ? 'Lüğət · ' + only.name : 'Sahə lüğətləri', wide: true,
-      body: h('div', { class: 'stack' }, only && only.why ? h('p', { class: 'small muted', text: only.why }) : null, h('label', { class: 'input-ic' }, ie('search'), q), count, list) });
+      body: h('div', { class: 'stack' }, only && only.why ? h('p', { class: 'acad-note', text: only.why }) : null, h('label', { class: 'input-ic' }, ie('search'), q), count, list),
+      actions: hasScreen('glossary') ? [{ label: 'Lüğət səhifəsində aç', kind: 'ghost', icon: 'book', onClick: function () { setTimeout(function () { App.go('glossary', { dom: only ? only.key : '' }); }, 60); } }] : null });
   }
   App.academyGlossary = glossarySheet;
+
   function paintMode() {
     if (!T) return;
     var hunt = T.mode === 'hunt';
@@ -1174,13 +1386,20 @@
     T.colRow.hidden = hunt || COLS.length < 2;
     if (T.domRow) T.domRow.hidden = hunt || !DOMAINS.length;
     if (T.paintDom) T.paintDom();
-    T.srcSlot.hidden = hunt; T.trCard.hidden = hunt; T.resSlot.hidden = hunt; T.huntSlot.hidden = !hunt;
+    T.work.hidden = hunt; T.resSlot.hidden = hunt; T.huntSlot.hidden = !hunt;
     if (hunt) T.briefSlot.hidden = true; else T.briefSlot.hidden = !(T.task && T.task.sim);
-    T.modeNote.textContent = hunt
-      ? 'Dərc olunmuş real tərcümədə (NTREX-128) səhvləri tapın: şübhəli sözlərə toxunun və «Yoxla».'
+    var d = domByKey(T.dom || '');
+    var note = hunt
+      ? 'Dərc olunmuş real tərcümədə (NTREX-128) səhvləri tapın: şübhəli sözləri seçin və «Yoxla».'
       : T.col === 'news' ? 'Real xəbər mətnləri — nümunə kimi dərc olunmuş peşəkar tərcümə göstəriləcək.'
       : T.col === 'docs' ? 'İnsan Hüquqları haqqında Ümumi Bəyannamə — BMT-nin rəsmi tərcüməsi ilə müqayisə.'
+      : d && d.why ? d.why
+      : DOMAINS.length ? 'Yeddi peşəkar sahə — hər birində tapşırıqlar və termin lüğəti. Sahə seçin və ya hamısından növbə ilə alın.'
       : 'Mətni oxuyun, öz variantınızı yazın — Mirzə Məclisi yoxlayacaq.';
+    T.note.textContent = note;
+    T.note.classList.remove('open');
+    T.note.classList.toggle('clamp', note.length > 150);
+    T.note.title = note.length > 150 ? 'Tam oxumaq üçün toxunun' : '';
     if (T.getBtn) { T.getBtn.lastChild.textContent = hunt ? 'Başqa mətn' : 'Yeni mətn al'; }
   }
   function setMode(m) {
@@ -1191,7 +1410,7 @@
     else if (!T.task) fetchTask(null, true);
   }
   function setCol(c) {
-    if (!T || T.col === c || T.checking) return;
+    if (!T || T.col === c || T.checking) { if (T) paintMode(); return; }
     var prev = T.col, pdom = T.dom;
     T.col = c; sset('academy:col', c);
     if (c !== 'base' && T.dom) { T.dom = ''; sset('academy:dom', ''); }
@@ -1238,17 +1457,17 @@
   }
 
   function srcSkeleton() {
-    return h('section', { class: 'card framed', role: 'status' },
+    return h('section', { class: 'task-pane task-src', role: 'status' },
       h('span', { class: 'sr-only', text: 'Mətn hazırlanır…' }),
       h('div', { class: 'sk-stack' },
-        h('span', { class: 'skeleton text', style: 'width:140px' }),
+        h('span', { class: 'skeleton text', style: 'width:120px' }),
         h('span', { class: 'skeleton title' }),
-        h('div', { class: 'row' }, h('span', { class: 'skeleton', style: 'width:72px;height:22px;border-radius:999px' }), h('span', { class: 'skeleton', style: 'width:90px;height:22px;border-radius:999px' }), h('span', { class: 'skeleton', style: 'width:64px;height:22px;border-radius:999px' })),
+        h('span', { class: 'skeleton text', style: 'width:60%' }),
         h('span', { class: 'skeleton text' }), h('span', { class: 'skeleton text', style: 'width:92%' }), h('span', { class: 'skeleton text', style: 'width:64%' })));
   }
 
   function fetchTask(domain, initial, onCancel) {
-    if (!T || isBusy(T.getBtn) || T.checking) return;
+    if (!T || isBusy(T.getBtn) || T.checking) { if (onCancel && T && T.checking) onCancel(); return; }
     if (T.mode === 'hunt') { loadHunt(nextHunt(T.level)); return; }
     (initial ? Promise.resolve(true) : confirmDiscard()).then(function (ok) {
       if (!T) return;
@@ -1282,7 +1501,7 @@
     T.task = task; T.hints = clamp(Number(o.hints) || 0, 0, task.hints.length); T.result = null; T.lastChecked = null;
     T.reg = o.reg || task.reg;
     T.briefSlot.textContent = '';
-    T.briefSlot.hidden = !task.sim;
+    T.briefSlot.hidden = !task.sim || T.mode === 'hunt';
     if (task.sim) T.briefSlot.appendChild(briefCard(task));
     T.srcSlot.textContent = '';
     T.srcSlot.appendChild(sourceCard(task));
@@ -1306,36 +1525,37 @@
 
   function briefCard(task) {
     var s = task.sim;
-    return h('section', { class: 'card lacquer task-brief', 'aria-label': 'Sifarişin şərtləri' },
-      h('div', { class: 'task-brief-top' }, icTile('folder', 'gold'),
-        h('div', { class: 'stack-sm grow' },
-          h('span', { class: 'eyebrow', text: 'Simulyator · real sifariş' }),
-          h('h2', { html: esc(task.client) + ' — <em>' + esc(task.title) + '</em>' }))),
+    return h('section', { class: 'acad-panel task-brief', 'aria-label': 'Sifarişin şərtləri' },
+      h('div', { class: 'acad-panel-h' },
+        h('div', null, h('span', { class: 'acad-cap', text: 'Simulyator · sifariş' }), h('h2', { text: task.client + ' — ' + task.title })),
+        statusPill(s.deadline, 'acc')),
       h('dl', { class: 'kv' },
         h('dt', { text: 'Son tarix' }), h('dd', { text: s.deadline }),
         h('dt', { text: 'Həcm' }), h('dd', { text: s.volume }),
         h('dt', { text: 'Əlaqə' }), h('dd', { text: s.contact })),
-      h('div', { class: 'badges' }, s.req.map(function (r) { return badge(r, '', 'check'); })));
+      h('div', { class: 'stack-sm' }, h('span', { class: 'acad-cap', text: 'Müştərinin tələbləri' }),
+        h('ul', null, s.req.map(function (r) { return h('li', { text: r }); }))));
   }
 
   function sourceCard(task) {
     var lv = levelById(task.level), pr = pairOf(task);
     var hintBox = h('div', { class: 'task-hints', 'aria-live': 'polite' });
     var hintBtn = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' });
-    var hintCount = h('span', { class: 'small muted tnum' });
+    var hintCount = h('span', { class: 'acad-count' });
     function paint() {
       hintBox.textContent = '';
       hintBox.hidden = !T.hints;
       if (T.hints) {
-        hintBox.appendChild(h('div', { class: 'callout navy' }, ie('bulb'),
-          h('div', null, h('b', { text: 'İpucu' }), h('ul', null, task.hints.slice(0, T.hints).map(function (x) { return h('li', { text: x }); })))));
+        hintBox.appendChild(h('span', { class: 'acad-cap', text: 'İpucları' }));
+        hintBox.appendChild(h('ol', null, task.hints.slice(0, T.hints).map(function (x) { return h('li', { text: x }); })));
       }
       var done = T.hints >= task.hints.length;
       hintBtn.textContent = '';
       hintBtn.appendChild(ie('bulb'));
-      hintBtn.appendChild(D.createTextNode(done ? 'İpucları bitdi' : (T.hints ? 'Növbəti ipucu · −2 XP' : 'İpucu · −2 XP')));
+      hintBtn.appendChild(D.createTextNode(done ? 'İpucları bitdi' : (T.hints ? 'Növbəti ipucu' : 'İpucu göstər')));
+      if (!done) hintBtn.appendChild(h('span', { class: 'task-cost', text: '−2 XP' }));
       hintBtn.disabled = done;
-      hintCount.textContent = 'İpucu: ' + T.hints + ' / ' + task.hints.length;
+      hintCount.textContent = 'İpucu ' + T.hints + ' / ' + task.hints.length;
     }
     hintBtn.addEventListener('click', function () {
       if (T.hints >= task.hints.length) return;
@@ -1344,37 +1564,36 @@
       else nz('think', null, 1200);
     });
     paint();
-    return h('section', { class: 'card framed task-src', 'aria-labelledby': 'task-src-h' },
-      h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Mənbə · ' + pr.from.toUpperCase() + ' → ' + pr.to.toUpperCase() + ' · ' + task.client }), h('h2', { id: 'task-src-h', text: task.title })),
-        h('div', { class: 'actions' }, h('button', { class: 'icon-btn sm ghost', type: 'button', 'aria-label': 'Mənbəni kopyala', title: 'Kopyala', html: App.icon('copy'), onclick: function () { copyText(task.src, 'Mənbə kopyalandı'); } }))),
-      h('div', { class: 'task-meta' },
-        badge(lv.id + ' · ' + lv.name, 'navy'),
-        badge(task.domain, 'gold'),
-        h('span', { class: 'badge', title: 'Üslub avtomatik təyin edildi' }, ie('sparkle'), (T.reg || task.reg) + ' · avtomatik'),
-        badge(words(task.src) + ' söz'),
-        badge('~' + task.minutes + ' dəq', '', 'clock')),
+    return h('section', { class: 'task-pane task-src', 'aria-labelledby': 'task-src-h' },
+      h('div', { class: 'task-pane-h' },
+        h('span', { class: 'acad-cap', text: 'Mənbə · ' + pr.from.toUpperCase() + ' → ' + pr.to.toUpperCase() }),
+        h('button', { class: 'icon-btn sm ghost', type: 'button', 'aria-label': 'Mənbəni kopyala', title: 'Kopyala', html: App.icon('copy'), onclick: function () { copyText(task.src, 'Mənbə kopyalandı'); } })),
+      h('div', { class: 'task-src-head' },
+        h('h2', { id: 'task-src-h', text: task.title }),
+        metaLine([lvTag(task.level), lv ? lv.name : null, task.domain, task.client,
+          h('span', { title: 'Üslub avtomatik təyin edildi', text: (T.reg || task.reg) + ' üslub' }),
+          words(task.src) + ' söz', '~' + task.minutes + ' dəq'])),
       h('p', { class: 'task-src-tx', lang: pr.from, text: task.src }),
-      task.credit ? h('p', { class: 'task-credit', text: task.credit }) : null,
+      task.credit ? h('p', { class: 'acad-credit', text: task.credit }) : null,
       task.custom ? customCredit(task) : null,
-      task.hints.length ? h('div', { class: 'task-src-foot' }, hintBtn, hintCount) : null,
-      hintBox);
+      hintBox,
+      task.hints.length ? h('div', { class: 'task-pane-f' }, hintBtn, hintCount) : null);
   }
   function customCredit(task) {
     var bits = ['Mənbə: ' + (task.source || task.client)];
     if (task.licence) bits.push('Lisenziya: ' + task.licence);
-    return h('p', { class: 'task-credit' }, bits.join(' · '),
+    return h('p', { class: 'acad-credit' }, bits.join(' · '),
       task.url ? h('span', null, ' · ', h('a', { href: task.url, target: '_blank', rel: 'noopener noreferrer', text: 'Mənbəni aç' })) : null);
   }
 
   function updateWC() { if (T && T.wc && T.ta) { var n = words(T.ta.value); T.wc.textContent = n + ' söz'; } }
 
   function translationCard() {
-    var ta = h('textarea', { class: 'textarea task-ta', id: 'task-ta', rows: '5', placeholder: 'Tərcüməni bura yazın…', lang: 'az', spellcheck: 'true', 'aria-describedby': 'task-ta-hint' });
+    var ta = h('textarea', { class: 'textarea task-ta', id: 'task-ta', rows: '6', placeholder: 'Tərcüməni bura yazın…', lang: 'az', spellcheck: 'true', 'aria-describedby': 'task-ta-hint' });
     var err = h('span', { class: 'err', hidden: true, role: 'alert' }, ie('alert'), 'Əvvəlcə tərcüməni yazın — ən azı bir cümlə.');
-    var wc = h('span', { class: 'badge tnum', text: '0 söz' });
+    var wc = h('span', { class: 'acad-count', text: '0 söz' });
     var draft = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, ie('file'), 'Nümunə qaralama');
-    var check = h('button', { class: 'btn btn-primary', type: 'button' }, ie('sparkle'), 'Yoxlat');
+    var check = h('button', { class: 'btn btn-primary', type: 'button' }, ie('check'), 'Yoxlat');
     T.ta = ta; T.err = err; T.wc = wc; T.check = check; T.draftBtn = draft;
     var wrote = false;
     ta.addEventListener('input', function () {
@@ -1391,29 +1610,28 @@
       nz('point', 'Bu, tipik tələbə qaralamasıdır. Göndərin — Məclis səhvləri tapsın!', 3000);
     });
     check.addEventListener('click', runCheck);
-    return h('section', { class: 'card task-tr', 'aria-labelledby': 'task-tr-h' },
-      h('div', { class: 'card-h' },
-        h('div', null, T.trEye = h('span', { class: 'eyebrow', text: 'Tərcümə · AZ' }), h('h2', { id: 'task-tr-h', text: 'Sizin variantınız' })),
-        wc),
-      h('div', { class: 'field' },
+    return h('section', { class: 'task-pane task-tr', 'aria-labelledby': 'task-tr-h' },
+      h('div', { class: 'task-pane-h' }, T.trEye = h('span', { class: 'acad-cap', text: 'Tərcümə · AZ' }), wc),
+      h('h2', { class: 'task-tr-h', id: 'task-tr-h', text: 'Sizin variantınız' }),
+      h('div', { class: 'field task-field' },
         h('label', { class: 'sr-only', for: 'task-ta', text: 'Sizin tərcüməniz' }),
         ta, err,
-        h('span', { class: 'hint', id: 'task-ta-hint', text: 'Terminlərə, rəqəmlərə və üsluba diqqət edin. Məclis hər səhvi izah edəcək.' })),
-      h('div', { class: 'task-tr-foot' },
-        h('div', { class: 'row' }, draft,
-          h('span', { class: 'task-keys small muted', 'aria-hidden': 'true' }, h('kbd', { class: 'kbd', text: MOD }), h('kbd', { class: 'kbd', text: 'Enter' }))),
+        h('span', { class: 'hint', id: 'task-ta-hint', text: 'Terminlərə, rəqəmlərə və üsluba diqqət edin. Məclis hər qeydi izah edəcək.' })),
+      h('div', { class: 'task-pane-f' },
+        h('div', { class: 'acad-act' }, draft,
+          h('span', { class: 'task-keys', 'aria-hidden': 'true' }, h('kbd', { class: 'kbd', text: MOD }), h('kbd', { class: 'kbd', text: 'Enter' }))),
         check));
   }
 
   function resultSkeleton() {
     return h('div', { class: 'task-res-sk', role: 'status' },
       h('span', { class: 'sr-only', text: 'Məclis yoxlayır…' }),
-      h('section', { class: 'card pad-lg' },
-        h('div', { class: 'row', style: 'gap:20px;flex-wrap:nowrap' },
-          h('span', { class: 'skeleton circle', style: 'width:96px;height:96px;flex:none' }),
-          h('span', { class: 'skeleton circle', style: 'width:112px;height:112px;flex:none' }),
-          h('div', { class: 'sk-stack grow' }, h('span', { class: 'skeleton title' }), h('span', { class: 'skeleton text' }), h('span', { class: 'skeleton text', style: 'width:70%' })))),
-      h('div', { class: 'grid-2' }, h('span', { class: 'skeleton block' }), h('span', { class: 'skeleton block' })));
+      h('section', { class: 'acad-panel' },
+        h('span', { class: 'skeleton text', style: 'width:180px' }),
+        h('span', { class: 'skeleton title', style: 'width:40%' }),
+        h('span', { class: 'skeleton text' }), h('span', { class: 'skeleton text', style: 'width:70%' })),
+      h('section', { class: 'acad-panel' },
+        h('span', { class: 'skeleton text', style: 'width:30%' }), h('span', { class: 'skeleton text' }), h('span', { class: 'skeleton text', style: 'width:84%' })));
   }
 
   function runCheck() {
@@ -1445,7 +1663,7 @@
       if (g !== gen || !T) return;
       T.checking = false; busy(T.check, false);
       T.resSlot.textContent = '';
-      if (!(e && e.ok === false)) App.toast('Məclis toplana bilmədi', 'err', { sub: 'Bir az sonra yenidən cəhd edin' });
+      if (!(e && e.ok === false)) App.toast('Yoxlama tamamlanmadı', 'err', { sub: 'Bağlantını yoxlayın və bir az sonra yenidən cəhd edin' });
     });
   }
 
@@ -1527,70 +1745,66 @@
     T.resSlot.appendChild(res);
     later(function () { focusSoft(res.querySelector('.task-verdict')); scrollToEl(res); }, 60);
     later(function () {
-      var medal = res.querySelector('.task-medal');
-      burstAt(medal, out.score >= 81 ? 'stars' : out.score >= 61 ? 'diamonds' : 'ink');
-      if (fresh) addXP(out.xp, pointOf(medal));
+      var sc = res.querySelector('.task-score-n');
+      burstAt(sc, 'stars');
+      if (fresh) addXP(out.xp, pointOf(sc));
       else App.toast('Bu variant artıq yoxlanılıb', 'info', { sub: 'XP yalnız yeni variant üçün verilir' });
-    }, reduced() ? 120 : 520);
+    }, reduced() ? 120 : 420);
   }
 
   function resultView(out) {
-    var g = out.grade, task = out.task;
-    var medal = h('span', { class: 'medal lg pop task-medal' + (g.l === 'E' || g.l === 'F' ? ' nar' : ''), 'aria-hidden': 'true' }, h('b', { text: g.l }));
-    var verdict = h('section', { class: 'card pad-lg carpet task-verdict', tabindex: '-1', 'aria-labelledby': 'task-v-h' },
-      h('div', { class: 'task-grade' }, medal, h('span', { class: 'task-grade-w', text: g.w })),
-      App.ring(out.score, 'bal', null),
+    var g = out.grade, task = out.task, n = out.errors.length;
+    var sealKind = out.score >= 85 ? 'ok' : out.score >= 70 ? 'warn' : 'err';
+    var verdict = h('section', { class: 'task-verdict', tabindex: '-1', 'aria-labelledby': 'task-v-h' },
       h('div', { class: 'task-vtx' },
-        h('span', { class: 'eyebrow', text: 'Mirzə Məclisinin rəyi' }),
+        h('span', { class: 'acad-cap', text: 'Mirzə Məclisinin rəyi' }),
         h('h2', { id: 'task-v-h' }, h('span', { class: 'sr-only', text: 'Qiymət ' + g.l + ', ' + g.w + ', ' + out.score + ' bal. ' }), g.head),
-        h('p', { class: 'muted', text: out.summary }),
-        h('div', { class: 'chips' },
-          badge('+' + out.xp + ' XP', 'gold', 'zap'),
-          out.errors.length ? badge(out.errors.length + ' qeyd', 'red', 'alert') : badge('Səhvsiz', 'green', 'check'),
-          out.hints ? badge(out.hints + ' ipucu', '', 'bulb') : null,
-          badge(task.level + ' · ' + task.domain, 'navy'))));
+        h('p', { text: out.summary }),
+        metaLine(['+' + out.xp + ' XP', n ? n + ' qeyd' : 'Qeyd yoxdur', out.hints ? out.hints + ' ipucu' : null, lvTag(task.level), task.domain])),
+      h('div', { class: 'task-score' },
+        h('span', { class: 'task-score-n', 'aria-hidden': 'true' }, String(out.score), h('small', { text: '/100' })),
+        h('span', { class: 'task-grade-w', text: g.l + ' · ' + g.w }),
+        statusPill(out.verdict.seal, sealKind)));
 
-    var skills = h('section', { class: 'card', 'aria-labelledby': 'task-sk-h' },
-      h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow', text: 'Bacarıqlar' }), h('h2', { id: 'task-sk-h', text: 'Nə yaxşı alındı?' }))),
-      h('div', { class: 'task-skills' }, out.rubric.map(function (r) {
+    var rub = h('section', { class: 'acad-panel task-rub', 'aria-labelledby': 'task-sk-h' },
+      h('div', { class: 'acad-panel-h' }, h('div', null, h('span', { class: 'acad-cap', text: 'Meyarlar' }), h('h3', { id: 'task-sk-h', text: 'Qiymətləndirmə' }))),
+      h('div', { class: 'task-rub-l' }, out.rubric.map(function (r) {
         var pct = r.max ? Math.round(r.score / r.max * 100) : 0;
-        var cls = pct >= 85 ? ' green' : pct >= 65 ? ' gold' : '';
-        return h('div', { class: 'task-skill' },
-          h('span', { class: 'task-skill-n', text: r.name }),
-          h('span', { class: 'task-skill-v' }, h('b', { text: String(r.score) }), ' / ' + r.max),
-          h('div', { class: 'progress' + cls, role: 'progressbar', 'aria-label': r.name, 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: 'width:' + pct + '%' })));
+        return h('div', { class: 'task-rub-row' },
+          h('span', { class: 'task-rub-n', text: r.name }),
+          h('span', { class: 'task-rub-v' }, h('b', { text: String(r.score) }), ' / ' + r.max),
+          bar(pct, r.name));
       })));
 
-    var model = !task.model ? null : h('section', { class: 'card framed task-model', 'aria-labelledby': 'task-m-h' },
-      h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Nümunə' }), h('h2', { id: 'task-m-h', text: task.modelLabel || 'Məclisin variantı' })),
-        h('div', { class: 'actions' }, h('button', { class: 'icon-btn sm ghost', type: 'button', 'aria-label': 'Variantı kopyala', title: 'Kopyala', html: App.icon('copy'), onclick: function () { copyText(task.model, (task.modelLabel || 'Məclisin variantı') + ' kopyalandı'); } }))),
+    var model = !task.model ? null : h('section', { class: 'acad-panel task-model', 'aria-labelledby': 'task-m-h' },
+      h('div', { class: 'acad-panel-h' },
+        h('div', null, h('span', { class: 'acad-cap', text: 'Nümunə' }), h('h3', { id: 'task-m-h', text: task.modelLabel || 'Məclisin variantı' })),
+        h('button', { class: 'icon-btn sm ghost', type: 'button', 'aria-label': 'Variantı kopyala', title: 'Kopyala', html: App.icon('copy'), onclick: function () { copyText(task.model, (task.modelLabel || 'Məclisin variantı') + ' kopyalandı'); } })),
       h('p', { class: 'task-model-tx', lang: pairOf(task).to, text: task.model }),
-      h('p', { class: 'muted', text: task.modelNote || 'Yeganə düzgün variant deyil — amma terminlər, rəqəmlər və üslub burada qorunub.' }),
-      task.credit ? h('p', { class: 'task-credit', text: task.credit }) : null);
+      h('p', { class: 'acad-note', text: task.modelNote || 'Yeganə düzgün variant deyil — amma terminlər, rəqəmlər və üslub burada qorunub.' }),
+      task.credit ? h('p', { class: 'acad-credit', text: task.credit }) : null);
 
-    var counter = badge('0 / ' + out.errors.length + ' düzəldilib', 'navy');
+    var counter = h('span', { class: 'acad-count', text: '0 / ' + n + ' düzəldilib' });
     T.counter = counter;
     var errList;
-    if (!out.errors.length) {
-      var art = h('div', { class: 'empty-art', 'aria-hidden': 'true' });
-      errList = h('div', { class: 'empty task-empty' }, art,
-        h('h3', { text: 'Səhv tapılmadı' }),
-        h('p', { text: 'Beş mirzənin heç biri irad tutmadı. Növbəti səviyyəni sınamağın vaxtıdır!' }),
-        h('div', { class: 'actions' }, levelIdx(task.level) < LEVELS.length - 1 ? h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { setLevel(LEVELS[levelIdx(task.level) + 1].id); fetchTask(null, true); } }, ie('arrow'), LEVELS[levelIdx(task.level) + 1].id + ' səviyyəsini sına') : null));
-      later(function () { mountMini(art, 'celebrate'); }, 30);
+    if (!n) {
+      var nextLv = levelIdx(task.level) < LEVELS.length - 1 ? LEVELS[levelIdx(task.level) + 1] : null;
+      errList = emptyNote('Qeyd yoxdur', 'Beş mirzənin heç biri irad tutmadı. Növbəti səviyyəni sınamağın vaxtıdır.', [
+        nextLv ? h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { setLevel(nextLv.id); fetchTask(null, true); scrollToEl(T.getCard); } }, nextLv.id + ' səviyyəsini sına', ie('arrow')) : null]);
     } else {
-      errList = h('div', { class: 'task-errs' }, out.errors.map(function (e, i) { return errCard(e, i, out); }));
+      var withSrc = out.errors.some(function (e) { return !isMissing(e) && !!srcFor(task.src, out.text, e.was); });
+      errList = reviewList(out.errors.map(function (e, i) { return errCard(e, i, out, withSrc); }), withSrc, 'Məclisin qeydləri');
     }
-    var errSec = h('section', { class: 'stack', 'aria-labelledby': 'task-errs-h' },
-      h('div', { class: 'sec-h' }, h('h2', { id: 'task-errs-h', text: out.errors.length ? 'Səhvlər və izahlar' : 'Səhvlər' }), out.errors.length ? counter : null),
+    var errSec = h('section', { class: 'acad-sec', 'aria-labelledby': 'task-errs-h' },
+      h('div', { class: 'acad-sec-h' }, h('h2', { id: 'task-errs-h', text: n ? 'Rəy · ' + n + ' qeyd' : 'Rəy' }), n ? counter : null),
       errList);
 
     var next = h('div', { class: 'task-next' },
-      h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { scrollToEl(T.ta.closest('.card') || T.ta); later(function () { focusSoft(T.ta); }, reduced() ? 0 : 380); } }, ie('edit'), 'Yenidən yaz'),
+      h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { scrollToEl(T.ta.closest('.task-pane') || T.ta); later(function () { focusSoft(T.ta); }, reduced() ? 0 : 380); } }, ie('edit'), 'Yenidən yaz'),
       h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { fetchTask(null, true); scrollToEl(T.getCard); } }, 'Növbəti mətn', ie('arrow')));
 
-    return h('div', { class: 'task-res' }, verdict, model ? h('div', { class: 'grid-2' }, skills, model) : skills, errSec, next);
+    return h('div', { class: 'task-res' }, verdict, errSec,
+      h('div', { class: 'task-res-grid' + (model ? ' two' : '') }, rub, model), next);
   }
 
   function sentenceWith(text, frag) {
@@ -1622,38 +1836,36 @@
     return true;
   }
 
-  function errCard(e, i, out) {
+  /* a finding as a review row: [Tətbiq et] applies the correction (and files an error card),
+     [Özüm düzəldim] lets the student type the fix first (+5 XP) */
+  function errCard(e, i, out, withSrc) {
     var missing = isMissing(e);
-    var fixEl = h('div', { class: 'task-err-fix' },
-      h('span', { class: 'sr-only', text: 'Səhv: ' }),
-      missing ? h('span', { class: 'task-miss', text: e.was === '…' ? 'Buraxılıb' : e.was === '—' ? 'Tərcümədə yoxdur' : e.was }) : h('s', { class: 'task-was', text: e.was }),
-      h('span', { class: 'task-arrow', html: App.icon('arrow'), 'aria-hidden': 'true' }),
-      h('span', { class: 'sr-only', text: 'Düzgün: ' }),
-      h('b', { class: 'task-now', text: e.now }));
-    var whyId = 'task-why-' + i;
-    var why = h('div', { class: 'task-why', id: whyId, hidden: true },
-      h('p', { text: e.why }),
-      e.ex ? h('p', { class: 'task-ex' }, h('span', { class: 'eyebrow plain', text: 'Nümunə' }), h('span', { text: e.ex })) : null);
-    var whyBtn = h('button', { class: 'task-why-btn', type: 'button', 'aria-expanded': 'false', 'aria-controls': whyId }, ie('help'), 'Niyə?');
+    var exId = 'task-ex-' + i;
+    var exBox = e.ex ? h('div', { class: 'acad-rv-ex', id: exId, hidden: true }, h('span', { class: 'acad-rv-lbl', text: 'Nümunə' }), h('span', { text: e.ex })) : null;
+    var exBtn = e.ex ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-expanded': 'false', 'aria-controls': exId }, ie('help'), 'Nümunə') : null;
     function toggleWhy(force) {
-      var open = force != null ? force : why.hidden;
-      why.hidden = !open; whyBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (!exBox) return;
+      var open = force != null ? force : exBox.hidden;
+      exBox.hidden = !open; exBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
-    whyBtn.addEventListener('click', function () { toggleWhy(); });
+    if (exBtn) exBtn.addEventListener('click', function () { toggleWhy(); });
 
     var tries = 0;
     var inp = h('input', { class: 'input', type: 'text', lang: 'az', autocomplete: 'off', 'aria-label': 'Düzəlişiniz', placeholder: 'Düzgün forma…' });
     var test = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, 'Yoxla');
     var note = h('small', { 'aria-live': 'polite', text: 'Düzgün formanı yazın və «Yoxla» basın.' });
-    var selfBox = h('div', { class: 'task-self', hidden: true }, h('div', { class: 'task-self-row' }, inp, test), note);
-    var bSelf = h('button', { class: 'btn btn-sm', type: 'button', 'aria-expanded': 'false' }, ie('edit'), 'Özüm düzəldim');
-    var bShow = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, ie('check'), 'Düzgün variant');
-    var state = h('div', { class: 'task-err-state' });
-    var card = h('article', { class: 'task-err', 'data-sev': e.severity, style: 'animation-delay:' + Math.min(i, 6) * 60 + 'ms' },
-      h('div', { class: 'task-err-top' }, badge(e.type, SEV_BADGE[e.severity] || 'gold'), h('small', { text: (SEV_LABEL[e.severity] || 'Vacib') + ' · ' + e.elder + ' tapdı' })),
-      fixEl, whyBtn, why,
-      h('div', { class: 'task-err-act' }, bSelf, bShow),
-      selfBox, state);
+    var selfBox = h('div', { class: 'acad-rv-self', hidden: true }, h('div', { class: 'acad-rv-self-row' }, inp, test), note);
+    var bSelf = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-expanded': 'false' }, ie('edit'), 'Özüm düzəldim');
+    var bShow = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, ie('check'), missing ? 'Düzgün variant' : 'Tətbiq et');
+    var state = h('span', { class: 'acad-rv-state', 'aria-live': 'polite' });
+    var card = reviewRow({
+      sev: e.severity, type: e.type, withSrc: withSrc, srcLang: pairOf(out.task).from,
+      src: withSrc && !missing ? srcFor(out.task.src, out.text, e.was) : '',
+      was: missing ? (e.was === '…' ? 'Buraxılıb' : e.was === '—' ? 'Tərcümədə yoxdur' : e.was) : e.was, missing: missing,
+      now: e.now, why: e.why, who: e.elder,
+      act: [bShow, bSelf, exBtn, state], ext: [selfBox, exBox]
+    });
+    var nowEl = card.querySelector('.acad-now');
 
     function norm(s) { return lower(String(s || '').trim()).replace(/[«»"“”.,!?:;]/g, '').replace(/\s+/g, ' '); }
     function check() {
@@ -1662,25 +1874,28 @@
       if (ok) { resolve('self'); return; }
       tries++;
       inp.setAttribute('aria-invalid', 'true'); shake(inp);
-      if (tries === 1) { note.textContent = 'Hələ yox — «Niyə?» izahına baxın.'; toggleWhy(true); nz('think', null, 1200); }
-      else note.textContent = 'İpucu: «' + e.now.slice(0, Math.max(2, Math.ceil(e.now.length / 2))) + '…». Və ya «Düzgün variant»ı açın.';
+      if (tries === 1) { note.textContent = 'Hələ yox — nümunəyə baxın.'; toggleWhy(true); nz('think', null, 1200); }
+      else note.textContent = 'İpucu: «' + e.now.slice(0, Math.max(2, Math.ceil(e.now.length / 2))) + '…». Və ya «Tətbiq et» düyməsinə basın.';
+    }
+    function setState(txt) {
+      state.textContent = '';
+      state.appendChild(ie('check'));
+      state.appendChild(D.createTextNode(txt));
     }
     function resolve(how) {
       if (card.classList.contains('done')) return;
       card.classList.add('done');
-      selfBox.hidden = true;
-      state.textContent = '';
+      selfBox.hidden = true; bSelf.hidden = true; bShow.hidden = true;
       if (how === 'self') {
         applyFix(e);
-        state.appendChild(badge('Özünüz düzəltdiniz · +5 XP', 'green', 'check'));
-        addXP(5, pointOf(fixEl));
-        burstAt(fixEl, 'stars');
+        setState('Özünüz düzəltdiniz · +5 XP');
+        addXP(5, pointOf(nowEl));
+        burstAt(nowEl, 'stars');
         nz('success', pick(['Əla! Məhz belə.', 'Düz tapdınız!', e.elder + ' razıdır!']), 2000);
       } else {
         var applied = applyFix(e);
         var added = addUserCard(e, out.task, out.text, out.errors);
-        state.appendChild(badge(applied ? 'Düzəliş mətnə tətbiq olundu' : 'Düzgün variant göstərildi', 'navy', 'check'));
-        if (added) { state.appendChild(D.createTextNode(' ')); state.appendChild(badge('Kartlara əlavə olundu', 'gold', 'cards')); }
+        setState((applied ? 'Düzəliş mətnə tətbiq olundu' : 'Düzgün variant göstərildi') + (added ? ' · kartlara əlavə olundu' : ''));
         toggleWhy(true);
         if (added && !T.cardToast) {
           T.cardToast = true;
@@ -1693,9 +1908,8 @@
       if (T.counter) T.counter.textContent = T.fixed + ' / ' + out.errors.length + ' düzəldilib';
       if (T.fixed >= out.errors.length) {
         later(function () {
-          if (T && T.counter) burstAt(T.counter, 'confetti');
           nz('celebrate', 'Bütün səhvlər düzəldi! Yenidən yoxlatsanız, bal artacaq.', 3400);
-          App.toast('Bütün səhvlər düzəldildi', 'ok', { sub: 'Mətni Məclisə yenidən göndərin', action: { label: 'Yoxlat', onClick: function () { scrollToEl(T.ta.closest('.card') || T.ta); } } });
+          App.toast('Bütün qeydlər düzəldildi', 'ok', { sub: 'Mətni Məclisə yenidən göndərin', action: { label: 'Yoxlat', onClick: function () { scrollToEl(T.ta.closest('.task-pane') || T.ta); } } });
         }, 450);
       }
     }
@@ -1730,7 +1944,7 @@
   function loadHunt(item) {
     if (!T || !T.huntSlot) return;
     T.huntSlot.textContent = '';
-    if (!item) { T.huntSlot.appendChild(h('p', { class: 'muted', text: 'Real mətnlər yüklənmədi.' })); return; }
+    if (!item) { T.huntSlot.appendChild(emptyNote('Real mətnlər yüklənmədi', 'Səhifəni yeniləyin və ya bir az sonra yenidən cəhd edin.')); return; }
     T.hunt = item;
     if (item.level !== T.level) setLevel(item.level);
     T.huntSlot.appendChild(huntView(item, { onNext: function () { loadHunt(nextHunt(T.level)); scrollToEl(T.huntSlot); } }));
@@ -1757,14 +1971,19 @@
     return sp;
   }
 
+  function tapLegend() {
+    return h('div', { class: 'acad-legend', 'aria-hidden': 'true' },
+      h('span', null, h('i'), 'tapdınız'), h('span', null, h('i', { class: 'miss' }), 'buraxdınız'), h('span', null, h('i', { class: 'false' }), 'düzgün söz idi'));
+  }
+
   function huntView(item, opts) {
     opts = opts || {};
-    var sec = h('section', { class: 'card pad-lg practice-det task-hunt', 'aria-label': 'Səhvi tap' });
+    var sec = h('section', { class: 'task-hunt', 'aria-label': 'Səhvi tap' });
     function build() {
       var checked = false, toks = [], spans = huntSpans(item);
       sec.textContent = '';
-      var count = h('span', { class: 'small muted tnum', 'aria-live': 'polite', text: 'Seçilib: 0' });
-      var text = h('p', { class: 'practice-det-text', lang: 'az' });
+      var count = h('span', { class: 'acad-count', 'aria-live': 'polite', text: 'Seçilib: 0' });
+      var text = h('p', { class: 'acad-tap', lang: 'az' });
       var re = /[\p{L}\p{N}]+(?:[.,'’-][\p{L}\p{N}]+)*%?/gu, last = 0, m, txt = item.model;
       while ((m = re.exec(txt))) {
         if (m.index > last) text.appendChild(D.createTextNode(txt.slice(last, m.index)));
@@ -1786,8 +2005,8 @@
         count.textContent = 'Seçilib: ' + selected().length;
       }
       var clearBtn = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, 'Təmizlə');
-      var checkBtn = h('button', { class: 'btn btn-primary', type: 'button' }, ie('search'), 'Yoxla');
-      var res = h('div', { class: 'practice-det-res', hidden: true, 'aria-live': 'polite' });
+      var checkBtn = h('button', { class: 'btn btn-primary', type: 'button' }, ie('check'), 'Yoxla');
+      var res = h('div', { class: 'acad-tapres', hidden: true, 'aria-live': 'polite' });
       clearBtn.addEventListener('click', function () {
         if (checked) return;
         toks.forEach(function (t) { t.setAttribute('aria-pressed', 'false'); });
@@ -1832,52 +2051,45 @@
           if (found[k] || !e.w || !e.w[0] || !e.now || e.now === '—') return;
           if (addUserCard({ was: e.w[0], now: e.now, type: e.type, why: e.why, elder: TYPE_ELDER[e.type] || 'Mənaçı Mirzə' }, { id: item.id, src: item.src }, item.model, [])) added++;
         });
-        var ring = App.ring(score, 'bal', null, { size: 'sm' });
         res.hidden = false;
-        res.appendChild(h('div', { class: 'practice-det-sum' }, ring,
-          h('div', { class: 'stats' },
-            h('div', { class: 'stat' }, h('b', { text: hits + '/' + total }), h('span', { text: 'tapıldı' })),
-            h('div', { class: 'stat' }, h('b', { text: String(misses) }), h('span', { text: 'buraxıldı' })),
-            h('div', { class: 'stat' }, h('b', { text: String(falses) }), h('span', { text: 'yanlış həyəcan' }))),
-          rec && score > 0 ? badge('Yeni rekord!', 'gold', 'trophy') : null));
-        res.appendChild(h('div', { class: 'task-errs' }, item.errors.map(function (e, k) {
-          var sev = SEV[e.type] || 'mid';
-          return h('article', { class: 'task-err', 'data-sev': sev },
-            h('div', { class: 'task-err-top' }, badge(e.type, SEV_BADGE[sev] || 'gold'), found[k] ? badge('Tapdınız', 'green', 'check') : badge('Buraxdınız', 'red', 'alert')),
-            h('div', { class: 'task-err-fix' },
-              h('s', { class: 'task-was', text: e.w[0] }),
-              h('span', { class: 'task-arrow', html: App.icon('arrow'), 'aria-hidden': 'true' }),
-              h('b', { class: 'task-now', text: e.now === '—' ? '(silinməlidir)' : e.now })),
-            h('p', { class: 'task-hunt-why', text: e.why }),
-            e.ex ? h('p', { class: 'task-ex' }, h('span', { class: 'eyebrow plain', text: 'Nümunə' }), h('span', { text: e.ex })) : null);
-        })));
-        if (item.fixed) res.appendChild(h('div', { class: 'practice-det-src task-hunt-fixed' },
-          h('span', { class: 'eyebrow plain', text: 'Düzəldilmiş tərcümə · redaktə' }),
+        var stats = statLine([{ l: 'Bal', v: score }, { l: 'Tapıldı', v: hits + ' / ' + total }, { l: 'Buraxıldı', v: misses }, { l: 'Yanlış seçim', v: falses }]);
+        res.appendChild(h('div', { class: 'acad-sec-h' }, h('span', { class: 'acad-cap', text: 'Nəticə' }), rec && score > 0 ? statusPill('Yeni rekord', 'acc') : (prev != null ? h('span', { class: 'acad-count', text: 'Rekord: ' + prev + ' bal' }) : null)));
+        res.appendChild(stats);
+        res.appendChild(tapLegend());
+        var withSrc = item.errors.some(function (e) { return !!srcFor(item.src, item.model, (e.w || [])[0]); });
+        res.appendChild(reviewList(item.errors.map(function (e, k) {
+          return reviewRow({ sev: SEV[e.type] || 'mid', type: e.type, withSrc: withSrc, src: withSrc ? srcFor(item.src, item.model, (e.w || [])[0]) : '',
+            was: (e.w || [])[0] || '—', now: e.now === '—' ? '(silinməlidir)' : e.now, why: e.why, who: TYPE_ELDER[e.type] || 'Mənaçı Mirzə',
+            act: found[k] ? h('span', { class: 'acad-rv-state' }, ie('check'), 'Tapdınız') : h('span', { class: 'acad-rv-state miss' }, ie('alert'), 'Buraxdınız'),
+            ext: e.ex ? h('div', { class: 'acad-rv-ex' }, h('span', { class: 'acad-rv-lbl', text: 'Nümunə' }), h('span', { text: e.ex })) : null });
+        }), withSrc, 'Səhvlər'));
+        if (item.fixed) res.appendChild(h('div', { class: 'acad-fixed' },
+          h('span', { class: 'acad-cap', text: 'Düzəldilmiş tərcümə · redaktə' }),
           h('p', { lang: 'az', text: item.fixed })));
-        res.appendChild(h('div', { class: 'row task-hunt-next' },
+        res.appendChild(h('div', { class: 'acad-act end' },
           h('button', { class: 'btn btn-ghost', type: 'button', onclick: build }, ie('refresh'), 'Yenidən'),
           opts.onNext ? h('button', { class: 'btn btn-secondary', type: 'button', onclick: opts.onNext }, 'Növbəti mətn', ie('arrow')) : null));
         refreshGrid();
         var xp = hits ? Math.max(5, Math.round((LV_XP[item.level] || 30) * score / 100)) : 0;
         later(function () {
-          if (xp) addXP(xp, pointOf(ring));
+          if (xp) addXP(xp, pointOf(stats));
           if (added) App.toast('Səhv kartlarına əlavə olundu', 'ok', { sub: added + ' buraxılmış səhv — təkrarda qarşınıza çıxacaq', action: { label: 'Bax', onClick: function () { App.go('cards'); } } });
-          if (score >= 80) { burstAt(ring, 'confetti'); nz('celebrate', 'Peşəkar redaktor gözü! ' + hits + ' / ' + total + ' səhv tapıldı.', 3000); }
+          if (score >= 80) nz('celebrate', 'Peşəkar redaktor gözü! ' + hits + ' / ' + total + ' səhv tapıldı.', 3000);
           else if (score >= 50) nz('success', hits + ' səhv tapdınız. Buraxılanlar kartlara düşdü.', 3000);
           else nz('worried', 'Real tərcümələrdə səhv gizlənir — buraxılanlara baxın.', 3000);
         }, 300);
       });
       var lv = levelById(item.level);
-      sec.appendChild(h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Səhvi tap · real tərcümə' }), h('h2', { text: item.title || 'Real xəbər' })),
-        h('div', { class: 'actions' }, badge(lv ? lv.id + ' · ' + lv.name : item.level, 'navy'))));
-      sec.appendChild(h('div', { class: 'task-meta' }, badge(item.domain || 'Xəbər', 'gold'), badge(words(item.src) + ' söz')));
-      sec.appendChild(h('div', { class: 'practice-det-src' }, h('span', { class: 'eyebrow plain', text: 'Mənbə · EN' }), h('p', { lang: 'en', text: item.src })));
-      sec.appendChild(h('p', { class: 'muted', html: 'Aşağıdakı <b>dərc olunmuş tərcümədə ' + item.errors.length + ' səhv</b> var. Səhv olduğunu düşündüyünüz sözlərə toxunun, sonra «Yoxla». Yanlış həyəcan −10 bal.' }));
-      sec.appendChild(h('div', { class: 'stack-sm' }, h('span', { class: 'eyebrow plain', text: 'Dərc olunmuş tərcümə · AZ' }), text));
-      sec.appendChild(h('div', { class: 'practice-det-bar' }, count, h('div', { class: 'row' }, clearBtn, checkBtn)));
+      sec.appendChild(h('div', { class: 'task-hunt-h' },
+        h('div', null, h('span', { class: 'acad-cap', text: 'Səhvi tap · real tərcümə' }), h('h2', { text: item.title || 'Real xəbər' })),
+        lvTag(item.level)));
+      sec.appendChild(metaLine([lv ? lv.name : null, item.domain || 'Xəbər', words(item.src) + ' söz', item.errors.length + ' səhv']));
+      sec.appendChild(h('div', { class: 'acad-srcblk' }, h('span', { class: 'acad-rv-lbl', text: 'Mənbə · EN' }), h('p', { lang: 'en', text: item.src })));
+      sec.appendChild(h('p', { class: 'acad-note', html: 'Aşağıdakı dərc olunmuş tərcümədə <b>' + item.errors.length + ' səhv</b> var. Səhv olduğunu düşündüyünüz sözləri seçin, sonra «Yoxla». Yanlış seçim −10 bal.' }));
+      sec.appendChild(h('div', { class: 'stack-sm' }, h('span', { class: 'acad-cap', text: 'Dərc olunmuş tərcümə · AZ' }), text));
+      sec.appendChild(h('div', { class: 'acad-tapbar' }, count, h('div', { class: 'acad-act' }, clearBtn, checkBtn)));
       sec.appendChild(res);
-      sec.appendChild(h('p', { class: 'task-credit', text: NTREX_LINE + ' · annotasiya: Nuanza (CC BY-SA 4.0)' }));
+      sec.appendChild(h('p', { class: 'acad-credit', text: NTREX_LINE + ' · annotasiya: Nuanza (CC BY-SA 4.0)' }));
     }
     build();
     return sec;
@@ -1897,22 +2109,19 @@
   }
 
   /* ------------------------------------------------------------------
-     6. PRACTICE SCREEN
+     6. PRACTICE SCREEN — a tidy list of drills + the Detective round
      ------------------------------------------------------------------ */
   var P = null;
 
   function renderPractice(page, params) {
     P = { page: page };
-    page.appendChild(h('div', { class: 'page-h' },
-      h('div', null,
-        h('h1', { html: 'Məşq <em>meydanı</em>' }),
-        h('p', { text: (NUM_WORD[GAMES.length] || GAMES.length) + ' oyun — hər biri bir bacarığı itiləyir. Ən yaxşı nəticələriniz yadda qalır.' })),
-      h('div', { class: 'actions' },
-        h('button', { class: 'btn', type: 'button', onclick: function () { openGame(pick(GAMES)); } }, ie('refresh'), 'Təsadüfi oyun'))));
-    P.grid = h('div', { class: 'practice-grid' });
+    page.appendChild(acadNav('practice'));
+    page.appendChild(pageHead('Məşq', (NUM_WORD[GAMES.length] || GAMES.length) + ' qısa məşq — hər biri bir bacarığı itiləyir. Ən yaxşı nəticələriniz yadda qalır.', [
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { openGame(pick(GAMES)); } }, ie('refresh'), 'Təsadüfi məşq')]));
+    P.grid = h('div', { class: 'practice-list' });
     buildGrid();
-    page.appendChild(h('section', { class: 'stack', 'aria-labelledby': 'practice-games-h' },
-      h('div', { class: 'sec-h' }, h('h2', { id: 'practice-games-h', text: 'Oyunlar' }), h('span', { class: 'small muted', text: GAMES.length + ' oyun · hər biri bir bacarıq' })),
+    page.appendChild(h('section', { class: 'acad-sec', 'aria-labelledby': 'practice-games-h' },
+      h('div', { class: 'acad-sec-h' }, h('h2', { id: 'practice-games-h', text: 'Məşqlər' }), h('small', { text: GAMES.length + ' məşq · hər biri bir bacarıq' })),
       P.grid));
     P.det = detSection();
     page.appendChild(P.det);
@@ -1922,20 +2131,24 @@
   function buildGrid() {
     if (!P || !P.grid) return;
     P.grid.textContent = '';
+    P.grid.appendChild(h('div', { class: 'practice-lh', 'aria-hidden': 'true' },
+      h('span'), h('span', { text: 'Məşq' }), h('span', { text: 'Bacarıq' }), h('span', { text: 'Çətinlik' }), h('span', { text: 'Ən yaxşı nəticə' }), h('span')));
     GAMES.forEach(function (g) { P.grid.appendChild(gameCard(g)); });
   }
 
   function gameCard(g) {
     var best = bestOf(g.id);
-    var diff = h('span', { class: 'practice-diff', 'aria-label': 'Çətinlik: ' + DIFF[g.diff] },
-      [1, 2, 3].map(function (n) { return h('i', { class: n <= g.diff ? 'on' : '', 'aria-hidden': 'true' }); }),
-      h('span', { 'aria-hidden': 'true', text: DIFF[g.diff] }));
-    var bestEl = h('span', { class: 'practice-best' }, ie('trophy'),
-      best == null ? h('span', { text: 'Rekord yoxdur' }) : h('span', null, h('b', { text: String(best) }), ' ' + (g.id === 'speed' ? 'termin' : 'bal')));
-    var b = h('button', { class: 'card practice-game' + (g.feat ? ' feat' : ''), type: 'button', 'aria-label': g.name + '. ' + g.desc + ' Çətinlik: ' + DIFF[g.diff] + '. ' + (best == null ? 'Rekord yoxdur.' : 'Rekord: ' + fmtBest(g.id, best) + '.') },
-      h('div', { class: 'practice-game-top' }, icTile(g.icon, g.cls), g.feat ? badge('Oynayın', 'practice-fir', 'play') : badge(g.skill, '')),
-      h('div', null, h('h3', { text: g.name }), h('p', { text: g.desc })),
-      h('div', { class: 'practice-game-foot' }, diff, bestEl));
+    var diff = h('span', { class: 'practice-diff' },
+      h('span', { class: 'practice-diff-b', 'aria-hidden': 'true' }, [1, 2, 3].map(function (n) { return h('i', { class: n <= g.diff ? 'on' : '' }); })),
+      h('span', { text: DIFF[g.diff] }));
+    var b = h('button', { class: 'practice-row', type: 'button', 'aria-label': g.name + '. ' + g.desc + ' Bacarıq: ' + g.skill + '. Çətinlik: ' + DIFF[g.diff] + '. ' + (best == null ? 'Nəticə yoxdur.' : 'Ən yaxşı nəticə: ' + fmtBest(g.id, best) + '.') },
+      h('span', { class: 'practice-ic', html: App.icon(g.icon), 'aria-hidden': 'true' }),
+      h('span', { class: 'practice-tx' }, h('b', { text: g.name }), h('small', { text: g.desc }),
+        h('span', { class: 'practice-m acad-meta' }, h('span', { text: g.skill }), h('span', { text: DIFF[g.diff] }))),
+      h('span', { class: 'practice-skill', text: g.skill }),
+      diff,
+      h('span', { class: 'practice-best' + (best == null ? ' none' : ''), text: best == null ? '—' : fmtBest(g.id, best) }),
+      h('span', { class: 'practice-chev', html: App.icon('chevron'), 'aria-hidden': 'true' }));
     b.addEventListener('click', function () { openGame(g); });
     return b;
   }
@@ -1956,14 +2169,14 @@
   }
 
   function detSection() {
-    var sec = h('section', { class: 'card pad-lg practice-det', id: 'practice-det', 'aria-labelledby': 'practice-det-h' });
+    var sec = h('section', { class: 'practice-det', id: 'practice-det', 'aria-labelledby': 'practice-det-h' });
     var di = (Number(sget('academy:det', 0)) || 0) % DET.length;
     function next() { di = (di + 1) % DET.length; sset('academy:det', di); build(); later(function () { var w = sec.querySelector('.practice-w'); focusSoft(w); }, 60); }
     function build() {
       var d = DET[di], checked = false, toks = [];
       sec.textContent = '';
-      var count = h('span', { class: 'small muted tnum', 'aria-live': 'polite', text: 'Seçilib: 0' });
-      var text = h('p', { class: 'practice-det-text', lang: 'az' });
+      var count = h('span', { class: 'acad-count', 'aria-live': 'polite', text: 'Seçilib: 0' });
+      var text = h('p', { class: 'acad-tap', lang: 'az' });
       var re = /[\p{L}\p{N}]+(?:[.,'’-][\p{L}\p{N}]+)*%?/gu, last = 0, m, used = {};
       while ((m = re.exec(d.tgt))) {
         if (m.index > last) text.appendChild(D.createTextNode(d.tgt.slice(last, m.index)));
@@ -1985,8 +2198,8 @@
         count.textContent = 'Seçilib: ' + selected().length;
       }
       var clearBtn = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, 'Təmizlə');
-      var checkBtn = h('button', { class: 'btn btn-primary', type: 'button' }, ie('search'), 'Yoxla');
-      var res = h('div', { class: 'practice-det-res', hidden: true, 'aria-live': 'polite' });
+      var checkBtn = h('button', { class: 'btn btn-primary', type: 'button' }, ie('check'), 'Yoxla');
+      var res = h('div', { class: 'acad-tapres', hidden: true, 'aria-live': 'polite' });
       clearBtn.addEventListener('click', function () {
         if (checked) return;
         toks.forEach(function (t) { t.setAttribute('aria-pressed', 'false'); });
@@ -1996,14 +2209,14 @@
         if (checked) return;
         if (!selected().length) { shake(text); App.toast('Əvvəlcə şübhəli sözləri seçin', 'warn', { sub: 'Səhv olduğunu düşündüyünüz sözə toxunun' }); return; }
         checked = true;
-        var hits = 0, misses = 0, falses = 0, total = d.errors.length;
+        var hits = 0, misses = 0, falses = 0, total = d.errors.length, found = {};
         toks.forEach(function (t) {
           var on = t.getAttribute('aria-pressed') === 'true';
           t.removeAttribute('aria-pressed');
           t.setAttribute('aria-disabled', 'true');
           if (t._err >= 0) {
             var e = d.errors[t._err];
-            if (on) { hits++; t.classList.add('hit'); } else { misses++; t.classList.add('miss'); }
+            if (on) { hits++; found[t._err] = true; t.classList.add('hit'); } else { misses++; t.classList.add('miss'); }
             t.setAttribute('aria-label', t.textContent + ' — ' + (on ? 'tapdınız' : 'buraxdınız') + '. Düzgün: ' + e.now);
             t.insertAdjacentElement('afterend', h('ins', { class: 'practice-fix', text: e.now }));
           } else if (on) {
@@ -2015,37 +2228,37 @@
         var prev = bestOf('detective'), rec = prev == null || score > prev;
         if (rec && score > 0) setBest('detective', score);
         checkBtn.disabled = true; clearBtn.disabled = true;
-        var ring = App.ring(score, 'bal', null, { size: 'sm' });
         res.hidden = false;
-        res.appendChild(h('div', { class: 'practice-det-sum' }, ring,
-          h('div', { class: 'stats' },
-            h('div', { class: 'stat' }, h('b', { text: hits + '/' + total }), h('span', { text: 'tapıldı' })),
-            h('div', { class: 'stat' }, h('b', { text: String(misses) }), h('span', { text: 'buraxıldı' })),
-            h('div', { class: 'stat' }, h('b', { text: String(falses) }), h('span', { text: 'yanlış həyəcan' }))),
-          rec && score > 0 ? badge('Yeni rekord!', 'gold', 'trophy') : null));
-        res.appendChild(h('div', { class: 'practice-det-list' }, d.errors.map(function (e) {
-          return h('div', { class: 'practice-det-li' }, badge(e.type, SEV_BADGE[SEV[e.type]] || 'gold'), h('s', { text: e.w }), h('span', { class: 'task-arrow', html: App.icon('arrow'), 'aria-hidden': 'true' }), h('b', { class: 'task-now', text: e.now }), h('span', { class: 'muted', text: '— ' + e.why }));
-        })));
-        res.appendChild(h('div', { class: 'row', style: 'justify-content:flex-end' },
+        var stats = statLine([{ l: 'Bal', v: score }, { l: 'Tapıldı', v: hits + ' / ' + total }, { l: 'Buraxıldı', v: misses }, { l: 'Yanlış seçim', v: falses }]);
+        res.appendChild(h('div', { class: 'acad-sec-h' }, h('span', { class: 'acad-cap', text: 'Nəticə' }), rec && score > 0 ? statusPill('Yeni rekord', 'acc') : (prev != null ? h('span', { class: 'acad-count', text: 'Rekord: ' + prev + ' bal' }) : null)));
+        res.appendChild(stats);
+        res.appendChild(tapLegend());
+        var withSrc = d.errors.some(function (e) { return !!srcFor(d.src, d.tgt, e.w); });
+        res.appendChild(reviewList(d.errors.map(function (e, k) {
+          return reviewRow({ sev: SEV[e.type] || 'mid', type: e.type, withSrc: withSrc, src: withSrc ? srcFor(d.src, d.tgt, e.w) : '',
+            was: e.w, now: e.now, why: e.why, who: TYPE_ELDER[e.type] || 'Mənaçı Mirzə',
+            act: found[k] ? h('span', { class: 'acad-rv-state' }, ie('check'), 'Tapdınız') : h('span', { class: 'acad-rv-state miss' }, ie('alert'), 'Buraxdınız') });
+        }), withSrc, 'Səhvlər'));
+        res.appendChild(h('div', { class: 'acad-act end' },
           h('button', { class: 'btn btn-ghost', type: 'button', onclick: build }, ie('refresh'), 'Yenidən'),
           h('button', { class: 'btn btn-secondary', type: 'button', onclick: next }, 'Növbəti mətn', ie('arrow'))));
         refreshGrid();
         var xp = hits * 4 + (score === 100 ? 10 : 0);
         later(function () {
-          if (xp) addXP(xp, pointOf(ring));
-          if (score >= 80) { burstAt(ring, 'confetti'); nz('celebrate', 'Əsl detektivsiniz! ' + hits + ' səhvin hamısını tutdunuz.', 3000); }
+          if (xp) addXP(xp, pointOf(stats));
+          if (score >= 80) nz('celebrate', 'Əsl detektivsiniz! ' + hits + ' səhvin hamısını tutdunuz.', 3000);
           else if (score >= 50) nz('success', hits + ' səhv tapdınız. Buraxılanlara baxın — kartlara düşəcək.', 3000);
           else nz('worried', 'Bir neçəsi gözdən qaçdı — Məclis göstərdi. Yenə cəhd edək?', 3000);
         }, 300);
       });
-      sec.appendChild(h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Detektiv · sınaq raundu' }), h('h2', { id: 'practice-det-h', text: 'Səhvləri tapın' })),
-        h('div', { class: 'actions' }, badge('Mətn ' + (di + 1) + ' / ' + DET.length, 'navy'),
+      sec.appendChild(h('div', { class: 'practice-det-h' },
+        h('div', null, h('span', { class: 'acad-cap', text: 'Detektiv · sınaq raundu' }), h('h2', { id: 'practice-det-h', text: 'Səhvləri tapın' })),
+        h('div', { class: 'acad-act' }, h('span', { class: 'acad-count', text: 'Mətn ' + (di + 1) + ' / ' + DET.length }),
           h('button', { class: 'icon-btn sm ghost', type: 'button', 'aria-label': 'Başqa mətn', title: 'Başqa mətn', html: App.icon('refresh'), onclick: next }))));
-      sec.appendChild(h('p', { class: 'muted', html: 'Tərcümədə <b>' + d.errors.length + ' səhv</b> gizlənib. Şübhəli sözlərə toxunun, sonra «Yoxla».' }));
-      sec.appendChild(h('div', { class: 'practice-det-src' }, h('span', { class: 'eyebrow plain', text: 'Mənbə · EN' }), h('b', { text: d.title }), h('p', { lang: 'en', text: d.src })));
-      sec.appendChild(text);
-      sec.appendChild(h('div', { class: 'practice-det-bar' }, count, h('div', { class: 'row' }, clearBtn, checkBtn)));
+      sec.appendChild(h('div', { class: 'acad-srcblk' }, h('span', { class: 'acad-rv-lbl', text: 'Mənbə · EN' }), h('b', { text: d.title }), h('p', { lang: 'en', text: d.src })));
+      sec.appendChild(h('p', { class: 'acad-note', html: 'Tərcümədə <b>' + d.errors.length + ' səhv</b> gizlənib. Şübhəli sözləri seçin, sonra «Yoxla». Yanlış seçim −10 bal.' }));
+      sec.appendChild(h('div', { class: 'stack-sm' }, h('span', { class: 'acad-cap', text: 'Tərcümə · AZ' }), text));
+      sec.appendChild(h('div', { class: 'acad-tapbar' }, count, h('div', { class: 'acad-act' }, clearBtn, checkBtn)));
       sec.appendChild(res);
     }
     build();
@@ -2067,7 +2280,7 @@
     if (g.id === 'speed') {
       timerBar = h('i', { style: 'width:100%' });
       timerTx = h('b', { class: 'tnum', text: '60 san' });
-      timerEl = h('div', { class: 'practice-timer', role: 'timer', 'aria-label': 'Qalan vaxt' }, ie('clock'), h('div', { class: 'progress thin' }, timerBar), timerTx);
+      timerEl = h('div', { class: 'practice-timer', role: 'timer', 'aria-label': 'Qalan vaxt' }, ie('clock'), h('div', { class: 'acad-bar' }, timerBar), timerTx);
       tick = setInterval(function () {
         if (over) { clearInterval(tick); return; }
         left--;
@@ -2083,12 +2296,12 @@
       body.textContent = '';
       var pct = Math.round(i / qs.length * 100);
       body.appendChild(h('div', { class: 'practice-q-top' },
-        h('span', { class: 'small muted tnum', text: (i + 1) + ' / ' + qs.length }),
-        h('div', { class: 'progress thin', role: 'progressbar', 'aria-label': 'Gediş', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: 'width:' + pct + '%' })),
-        g.id === 'vs' ? badge('Siz ' + right + ' : ' + ai + ' AI', 'navy') : badge(right + ' düz', 'green')));
+        h('span', { class: 'acad-count', text: (i + 1) + ' / ' + qs.length }),
+        bar(pct, 'Gediş'),
+        h('span', { class: 'practice-q-score', text: g.id === 'vs' ? 'Siz ' + right + ' : ' + ai + ' maşın' : right + ' düz' })));
       if (timerEl) body.appendChild(timerEl);
-      if (q.sit) body.appendChild(h('div', { class: 'practice-q-sit' }, ie('message'), h('span', null, h('small', { text: 'Situasiya' }), h('b', { text: q.sit }))));
-      if (q.src) body.appendChild(h('div', { class: 'practice-q-src' }, h('span', { class: 'eyebrow plain', text: 'Mənbə · EN' }), h('p', { lang: 'en', text: q.src })));
+      if (q.sit) body.appendChild(h('div', { class: 'practice-q-sit' }, h('span', { class: 'acad-rv-lbl', text: 'Situasiya' }), h('b', { text: q.sit })));
+      if (q.src) body.appendChild(h('div', { class: 'practice-q-src' }, h('span', { class: 'acad-cap', text: 'Mənbə · EN' }), h('p', { lang: 'en', text: q.src })));
       if (q.sent) body.appendChild(h('p', { class: 'practice-q-sent', lang: 'az' }, q.sent[0], h('mark', { class: 'practice-q-mark', text: q.sent[1] }), q.sent[2]));
       if (q.term) body.appendChild(h('p', { class: 'practice-q-term', lang: 'en', text: q.term }));
       body.appendChild(h('p', { class: 'practice-q-ask', text: q.q || ASK[g.id] }));
@@ -2123,12 +2336,12 @@
         return;
       }
       var msg = ok ? pick(OK_MSG) : 'Düzgün cavab: ' + 'ABCD'.charAt(q.answer) + '.';
-      var extra = g.id === 'vs' ? ' Variant ' + 'AB'.charAt(q.ai) + ' — AI-nin variantı idi.' : '';
-      fb.appendChild(h('div', { class: 'callout ' + (ok ? 'green' : 'red') }, ie(ok ? 'check' : 'info'), h('div', null, h('b', { text: msg + ' ' }), q.explain + extra)));
+      var extra = g.id === 'vs' ? ' Variant ' + 'AB'.charAt(q.ai) + ' — maşın tərcüməsi idi.' : '';
+      fb.appendChild(h('div', { class: 'practice-fb' + (ok ? '' : ' bad') }, h('b', { text: msg + ' ' }), q.explain + extra));
       var last = i >= qs.length - 1;
       var nextBtn = h('button', { class: 'btn btn-primary', type: 'button' }, last ? 'Nəticəyə bax' : 'Növbəti', ie('arrow'));
       nextBtn.addEventListener('click', function () { i++; if (i >= qs.length) finish(false); else render(); });
-      fb.appendChild(h('div', { class: 'row', style: 'justify-content:flex-end' }, nextBtn));
+      fb.appendChild(h('div', { class: 'acad-act end' }, nextBtn));
       focusSoft(nextBtn);
       try { fb.scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' }); } catch (e) { /* ignore */ }
       if (ok && right % 2 === 0) nz('success', null, 1200);
@@ -2141,24 +2354,24 @@
       if (rec) setBest(g.id, score);
       var xp = right * (g.id === 'speed' ? 3 : 5);
       body.textContent = '';
-      var head = g.id === 'speed' ? h('span', { class: 'medal lg pop', 'aria-hidden': 'true' }, h('b', { text: String(right) })) : App.ring(score, 'bal', null);
+      var head = h('div', { class: 'practice-end-n' }, String(score), h('small', { text: g.id === 'speed' ? 'termin' : '/100 bal' }));
       var title, sub;
-      if (g.id === 'vs') { title = right > ai ? 'Siz qalib gəldiniz!' : right === ai ? 'Bərabərlik!' : 'Bu dəfə AI qalib gəldi'; sub = 'Hesab ' + right + ' : ' + ai + '. Hər raundda daha təbii variantı seçmək — redaktorun əsas bacarığıdır.'; }
-      else if (g.id === 'speed') { title = (timeUp ? 'Vaxt bitdi! ' : 'Hamısı cavablandı! ') + right + ' termin'; sub = right + ' düz cavab, ' + (i - right) + ' səhv. Lüğətçi Mirzə yanlış cavabları kartlarınıza yazdı.'; }
-      else { title = score >= 80 ? 'Əla nəticə!' : score >= 50 ? 'Yaxşıdır — bir az da!' : 'Bir də cəhd edək'; sub = qs.length + ' sualdan ' + right + ' düz cavab. ' + (g.id === 'context' ? 'Üslub hissi məşqlə gəlir.' : 'Ədəbi norma — tərcüməçinin imzasıdır.'); }
-      body.appendChild(h('div', { class: 'practice-end' }, head,
+      if (g.id === 'vs') { title = right > ai ? 'Siz qalib gəldiniz' : right === ai ? 'Bərabərlik' : 'Bu dəfə maşın qalib gəldi'; sub = 'Hesab ' + right + ' : ' + ai + '. Hər raundda daha təbii variantı seçmək — redaktorun əsas bacarığıdır.'; }
+      else if (g.id === 'speed') { title = (timeUp ? 'Vaxt bitdi · ' : 'Hamısı cavablandı · ') + right + ' termin'; sub = right + ' düz cavab, ' + (i - right) + ' səhv. Lüğətçi Mirzə yanlış cavabları kartlarınıza yazdı.'; }
+      else { title = score >= 80 ? 'Əla nəticə' : score >= 50 ? 'Yaxşıdır — bir az da' : 'Bir də cəhd edək'; sub = qs.length + ' sualdan ' + right + ' düz cavab. ' + (g.id === 'context' ? 'Üslub hissi məşqlə gəlir.' : 'Ədəbi norma — tərcüməçinin imzasıdır.'); }
+      body.appendChild(h('div', { class: 'practice-end' },
+        h('span', { class: 'acad-cap', text: 'Nəticə' }), head,
         h('h3', { text: title }), h('p', { text: sub }),
-        rec ? badge('Yeni rekord!', 'gold', 'trophy') : (prev != null ? badge('Rekord: ' + fmtBest(g.id, prev), '') : null)));
+        rec ? statusPill('Yeni rekord', 'acc') : (prev != null ? h('span', { class: 'acad-count', text: 'Rekord: ' + fmtBest(g.id, prev) }) : null)));
       s.setActions([
         { label: 'Bağla', kind: 'ghost' },
-        { label: 'Yenidən oyna', kind: 'primary', icon: 'refresh', onClick: function () { setTimeout(function () { playQuiz(g); }, 380); } }
+        { label: 'Yenidən', kind: 'primary', icon: 'refresh', onClick: function () { setTimeout(function () { playQuiz(g); }, 380); } }
       ]);
       refreshGrid();
       setTimeout(function () {
         if (xp) addXP(xp, pointOf(head));
-        if (rec) burstAt(head, 'confetti');
         var great = g.id === 'speed' ? right >= 8 : score >= 80;
-        nz(great ? 'celebrate' : 'success', great ? 'Möhtəşəm! ' + title : 'Yaxşı məşq idi — sabah daha yaxşı olacaq.', 2600);
+        nz(great ? 'celebrate' : 'success', great ? 'Möhtəşəm! ' + title + '.' : 'Yaxşı məşq idi — sabah daha yaxşı olacaq.', 2600);
       }, 420);
     }
     render();
@@ -2181,7 +2394,7 @@
       var play = h('button', { class: 'practice-mic lac', type: 'button', 'aria-label': 'Dinlə' }, ie('play'));
       var tx = h('p', { class: 'practice-oral-tx muted', text: 'Natiqin sözlərini dinləyin. Mətn yalnız dinlədikdən sonra görünəcək.' });
       var slot = h('div');
-      body.appendChild(h('span', { class: 'eyebrow', text: 'Addım 1 / 2 · Dinləyin' }));
+      body.appendChild(h('span', { class: 'acad-cap', text: 'Addım 1 / 2 · Dinləyin' }));
       body.appendChild(wave); body.appendChild(play); body.appendChild(tx); body.appendChild(slot);
       focusSoft(play);
       play.addEventListener('click', function () {
@@ -2201,10 +2414,10 @@
     function step2() {
       body.textContent = '';
       var wave = mkWave(); wave.classList.add('on', 'rec');
-      var clock = h('b', { class: 'tnum', text: '0:00' });
+      var clock = h('b', { class: 'acad-count', text: '0:00' });
       var stopBtn = h('button', { class: 'practice-mic rec', type: 'button', 'aria-label': 'Dayandır' }, ie('pause'));
-      body.appendChild(h('span', { class: 'eyebrow', text: 'Addım 2 / 2 · Danışın' }));
-      body.appendChild(h('p', { class: 'muted', text: 'Dinlənilir… Prototipdə mikrofon işə salınmır — nəticə nümunədir.' }));
+      body.appendChild(h('span', { class: 'acad-cap', text: 'Addım 2 / 2 · Danışın' }));
+      body.appendChild(h('p', { class: 'acad-note', text: 'Dinlənilir… Prototipdə mikrofon işə salınmır — nəticə nümunədir.' }));
       body.appendChild(wave); body.appendChild(stopBtn); body.appendChild(clock);
       focusSoft(stopBtn);
       var sec = 0, stopped = false;
@@ -2213,7 +2426,7 @@
       function stop() {
         if (stopped || over) return; stopped = true; clearInterval(iv);
         body.textContent = '';
-        body.appendChild(h('span', { class: 'eyebrow', text: 'Mirzələr qiymətləndirir' }));
+        body.appendChild(h('span', { class: 'acad-cap', text: 'Mirzələr qiymətləndirir' }));
         body.appendChild(h('div', { class: 'sk-stack', style: 'width:100%;max-width:420px', role: 'status' }, h('span', { class: 'skeleton title' }), h('span', { class: 'skeleton text' }), h('span', { class: 'skeleton text', style: 'width:76%' })));
         nz('think', null, 1200);
         t(result, 1100);
@@ -2226,18 +2439,18 @@
       var score = 88;
       var prev = bestOf('oral'), rec = prev == null || score > prev;
       if (rec) setBest('oral', score);
-      var ring = App.ring(score, 'bal', null);
-      body.appendChild(ring);
-      body.appendChild(h('h3', { text: 'Axıcı və dəqiq!' }));
-      body.appendChild(h('div', { class: 'practice-q-src', style: 'text-align:left;width:100%' }, h('span', { class: 'eyebrow plain', text: 'Tanınan tərcümə' }), h('p', { lang: 'az', text: '«Bakıya xoş gəlmisiniz! Konfrans saat doqquzda, B zalında başlayır.»' })));
+      var head = h('div', { class: 'practice-end-n' }, String(score), h('small', { text: '/100 bal' }));
+      body.appendChild(h('div', { class: 'practice-end', style: 'width:100%;text-align:left' },
+        h('span', { class: 'acad-cap', text: 'Nəticə' }), head, h('h3', { text: 'Axıcı və dəqiq' }),
+        rec ? statusPill('Yeni rekord', 'acc') : null));
+      body.appendChild(h('div', { class: 'practice-q-src', style: 'text-align:left;width:100%' }, h('span', { class: 'acad-cap', text: 'Tanınan tərcümə' }), h('p', { lang: 'az', text: '«Bakıya xoş gəlmisiniz! Konfrans saat doqquzda, B zalında başlayır.»' })));
       body.appendChild(h('div', { class: 'practice-fb-list' },
-        h('div', { class: 'callout green' }, ie('check'), h('div', null, h('b', { text: 'Salamlama: ' }), 'təbii səslənir, intonasiya yerindədir.')),
-        h('div', { class: 'callout' }, ie('bulb'), h('div', null, h('b', { text: '«nine sharp»: ' }), '«düz saat doqquzda» daha dəqiq olardı — dəqiqlik vurğusu itdi.')),
-        h('div', { class: 'callout green' }, ie('check'), h('div', null, h('b', { text: 'Ad və rəqəm: ' }), '«Hall B» — «B zalı», vaxt düzgün ötürülüb.'))));
-      if (rec) body.appendChild(badge('Yeni rekord!', 'gold', 'trophy'));
+        h('div', { class: 'practice-fb' }, h('b', { text: 'Salamlama: ' }), 'təbii səslənir, intonasiya yerindədir.'),
+        h('div', { class: 'practice-fb info' }, h('b', { text: '«nine sharp»: ' }), '«düz saat doqquzda» daha dəqiq olardı — dəqiqlik vurğusu itdi.'),
+        h('div', { class: 'practice-fb' }, h('b', { text: 'Ad və rəqəm: ' }), '«Hall B» — «B zalı», vaxt düzgün ötürülüb.')));
       s.setActions([{ label: 'Bağla', kind: 'ghost' }, { label: 'Yenidən', kind: 'primary', icon: 'refresh', onClick: function () { setTimeout(function () { playOral(g); }, 380); } }]);
       refreshGrid();
-      setTimeout(function () { addXP(15, pointOf(ring)); if (rec) burstAt(ring, 'stars'); nz('success', 'Gözəl şifahi tərcümə! «nine sharp»ı yadda saxlayaq.', 2800); }, 400);
+      setTimeout(function () { addXP(15, pointOf(head)); nz('success', 'Gözəl şifahi tərcümə! «nine sharp»ı yadda saxlayaq.', 2800); }, 400);
     }
     step1();
   }
@@ -2245,13 +2458,12 @@
   function simBrief() {
     var task = taskById('sim-ada'), s = task.sim;
     var body = h('div', { class: 'stack' },
-      h('div', { class: 'row', style: 'gap:12px;flex-wrap:nowrap' }, icTile('cap', 'green'),
-        h('div', { class: 'stack-sm' }, h('b', { text: task.client }), h('small', { class: 'muted', text: s.contact }))),
-      h('div', { class: 'callout navy' }, ie('message'), h('div', null, '«Salam! Tələbə bələdçisinin 3-cü fəslini tərcümə etdirmək istəyirik. Əvvəlcə kiçik sınaq parçası göndəririk: üslub rəsmi-neytral olsun, lüğətimizə əməl edin.»')),
+      metaLine([h('b', { text: task.client }), s.contact]),
+      h('blockquote', { class: 'practice-quote' }, '«Salam! Tələbə bələdçisinin 3-cü fəslini tərcümə etdirmək istəyirik. Əvvəlcə kiçik sınaq parçası göndəririk: üslub rəsmi-neytral olsun, lüğətimizə əməl edin.»'),
       h('dl', { class: 'kv' },
         h('dt', { text: 'Son tarix' }), h('dd', { text: s.deadline }),
         h('dt', { text: 'Həcm' }), h('dd', { text: s.volume })),
-      h('div', { class: 'stack-sm' }, h('span', { class: 'eyebrow', text: 'Müştərinin tələbləri' }),
+      h('div', { class: 'stack-sm' }, h('span', { class: 'acad-cap', text: 'Müştərinin tələbləri' }),
         h('ul', { class: 'practice-req' }, s.req.map(function (r) { return h('li', { text: r }); }))));
     App.sheet({
       title: 'Simulyator: yeni sifariş', body: body,
@@ -2263,18 +2475,16 @@
   }
 
   /* ------------------------------------------------------------------
-     7. CARDS SCREEN (spaced repetition)
+     7. CARDS SCREEN (spaced repetition) — an editorial flashcard
      ------------------------------------------------------------------ */
   var C = null;
 
   function renderCards(page, params) {
     C = { page: page, tag: params.tag || null };
-    page.appendChild(h('div', { class: 'page-h' },
-      h('div', null,
-        h('h1', { html: 'Səhv <em>kartları</em>' }),
-        h('p', { text: 'Tapşırıqlarda buraxdığınız səhvlər kart olur. «Bildim» — kart seyrəkləşir, «Çətin oldu» — tez-tez qayıdır.' }))));
+    page.appendChild(acadNav('cards'));
+    page.appendChild(pageHead('Səhv kartları', 'Tapşırıqlarda buraxdığınız səhvlər kart olur. «Bildim» — kart seyrəkləşir, «Çətin oldu» — tez-tez qayıdır.'));
     if (!deck().length) { renderNoCards(page); return; }
-    C.chips = h('div', { class: 'chips cards-chips', role: 'group', 'aria-label': 'Mövzu üzrə süzgəc' });
+    C.chips = h('div', { class: 'cards-bar' });
     page.appendChild(C.chips);
     paintChips();
     C.wrap = h('div', { class: 'cards-wrap' });
@@ -2288,13 +2498,9 @@
   /* a new user has no mistakes yet — so no cards, just one clear next step */
   function renderNoCards(page) {
     C.ended = true;
-    var art = h('div', { class: 'empty-art', 'aria-hidden': 'true' });
-    page.appendChild(h('div', { class: 'empty cards-empty' }, art,
-      h('h3', { text: 'Hələ səhv kartı yoxdur' }),
-      h('p', { text: 'Tapşırıqda tərcüməniz yoxlananda səhvin düzgün variantına baxın — o, buraya kart kimi düşəcək və vaxtaşırı təkrarlanacaq.' }),
-      h('div', { class: 'actions' },
-        h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { App.go('task'); } }, ie('edit'), 'Tapşırıq götür'))));
-    later(function () { mountMini(art, 'idle'); }, 30);
+    page.appendChild(emptyNote('Hələ səhv kartı yoxdur',
+      'Tapşırıqda tərcüməniz yoxlananda düzəlişi tətbiq edin — o, buraya kart kimi düşəcək və vaxtaşırı təkrarlanacaq.',
+      [h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { App.go('task'); } }, ie('edit'), 'Tapşırıq götür')]));
   }
 
   function paintChips() {
@@ -2302,12 +2508,15 @@
     deck().forEach(function (c) { if (tags.indexOf(c.tag) < 0) tags.push(c.tag); });
     if (C.tag && tags.indexOf(C.tag) < 0) C.tag = null;
     C.chips.textContent = '';
-    C.chips.hidden = tags.length < 2;
-    [null].concat(tags).forEach(function (tg) {
-      var b = h('button', { class: 'chip', type: 'button', 'aria-pressed': C.tag === tg ? 'true' : 'false', text: tg || 'Hamısı' });
-      b.addEventListener('click', function () { if (C.tag === tg) return; C.tag = tg; paintChips(); startSession(false); });
-      C.chips.appendChild(b);
-    });
+    var sel = h('select', { class: 'select sm', 'aria-label': 'Mövzu üzrə süzgəc' },
+      h('option', { value: '', text: 'Bütün mövzular' }),
+      tags.map(function (tg) { return h('option', { value: tg, text: tg }); }));
+    sel.value = C.tag || '';
+    sel.addEventListener('change', function () { var v = sel.value || null; if (C.tag === v) return; C.tag = v; startSession(false); });
+    var f = field('Mövzu', sel);
+    f.hidden = tags.length < 2;
+    C.chips.appendChild(f);
+    C.chips.appendChild(h('span', { class: 'acad-count cards-sum', text: deck().length + ' kart · ' + dueCount() + ' bu gün' }));
   }
 
   function startSession(all) {
@@ -2324,7 +2533,7 @@
   function boxPips(box) {
     return h('span', { class: 'cards-box', title: 'Qutu ' + box + ' / 5' },
       h('span', { class: 'cards-pips', 'aria-hidden': 'true' }, [1, 2, 3, 4, 5].map(function (n) { return h('i', { class: n <= box ? 'on' : '' }); })),
-      'Qutu ' + box);
+      'Qutu ' + box + '/5');
   }
   function markPart(sentence, part, cls, tag) {
     var i = part ? sentence.indexOf(part) : -1;
@@ -2345,37 +2554,37 @@
     var pct = total ? Math.round(C.done / total * 100) : 0;
     C.wrap.appendChild(h('div', { class: 'cards-top' },
       h('div', { class: 'cards-count' },
-        h('span', null, h('b', { class: 'tnum', text: String(C.done) }), ' / ' + total + ' kart'),
-        h('span', { class: 'row' }, badge('Bildim ' + C.known, 'green', 'check'), badge('Çətin ' + C.hard, 'red', 'refresh'))),
-      h('div', { class: 'progress', role: 'progressbar', 'aria-label': 'Təkrar gedişi', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: 'width:' + pct + '%' }))));
+        h('span', { class: 'acad-mono' }, h('b', { text: String(C.done) }), ' / ' + total + ' kart'),
+        metaLine(['Bildim ' + C.known, 'Çətin ' + C.hard])),
+      bar(pct, 'Təkrar gedişi')));
 
     var front = h('div', { class: 'cards-face front' },
-      h('div', { class: 'cards-face-top' }, badge(c.tag, TAG_BADGE[c.tag] || ''), boxPips(rec.box || 1)),
+      h('div', { class: 'cards-face-top' }, h('span', { class: 'cards-side', text: 'Səhv' }), h('span', { class: 'cards-tag', text: c.tag }), boxPips(rec.box || 1)),
       h('div', { class: 'cards-blk' }, h('span', { class: 'cards-lbl', text: 'Mənbə · EN' }), h('p', { class: 'cards-src', lang: 'en', text: c.src })),
       h('div', { class: 'cards-blk' }, h('span', { class: 'cards-lbl', text: c.mine ? 'Sizin tapşırıqdakı variant' : 'Əvvəlki variantınız' }),
         h('p', { class: 'cards-sent', lang: 'az' }, markPart(c.wrong, c.bad, 'cards-bad', 's'))),
-      h('div', { class: 'cards-hint' }, ie('refresh'), 'Düzgün variantı xatırlayın və kartı çevirin'));
+      h('div', { class: 'cards-foot' }, h('span', { text: 'Düzgün variantı xatırlayın, sonra kartı çevirin' }), h('kbd', { class: 'kbd', text: 'Boşluq' })));
     var back = h('div', { class: 'cards-face back', 'aria-hidden': 'true' },
-      h('div', { class: 'cards-face-top' }, badge('Düzgün variant', 'green', 'check'), h('span', { class: 'small muted', text: c.elder })),
+      h('div', { class: 'cards-face-top' }, h('span', { class: 'cards-side ok', text: 'Düzgün' }), h('span', { class: 'cards-tag', text: c.tag }), c.elder ? whoTag(c.elder) : boxPips(rec.box || 1)),
       h('div', { class: 'cards-blk' }, h('span', { class: 'cards-lbl', text: 'Belə olmalıdır' }),
         h('p', { class: 'cards-sent', lang: 'az' }, markPart(c.right, c.good, 'cards-good', 'mark'))),
-      h('div', { class: 'callout navy cards-why' }, ie('bulb'), h('div', null, h('b', { text: 'Niyə? ' }), c.why)),
-      h('div', { class: 'cards-hint' }, ie('clock'), 'Bildim → ' + dueLabel(Math.min(5, (rec.box || 1) + 1)) + ' · Çətin oldu → bu sessiyada yenə'));
+      h('div', { class: 'cards-why' }, h('span', { class: 'cards-lbl', text: 'Niyə' }), h('p', { text: c.why })),
+      h('div', { class: 'cards-foot' }, h('span', { text: 'Bildim → ' + dueLabel(Math.min(5, (rec.box || 1) + 1)) + ' · Çətin oldu → bu sessiyada yenə' })));
     var card = h('button', { class: 'cards-card' + (first ? '' : ' in'), type: 'button', 'aria-label': 'Kart: ' + c.wrong + '. Çevirmək üçün basın' },
       h('div', { class: 'cards-inner' }, front, back));
-    var stage = h('div', { class: 'cards-stage' + (C.queue.length <= 1 ? ' single' : C.queue.length === 2 ? ' two' : '') }, card);
+    var stage = h('div', { class: 'cards-stage' + (C.queue.length <= 1 ? ' single' : '') }, card);
     C.wrap.appendChild(stage);
 
-    var flipBtn = h('button', { class: 'btn btn-secondary btn-block cards-flip', type: 'button' }, ie('refresh'), 'Kartı çevir');
-    var hardBtn = h('button', { class: 'btn btn-danger', type: 'button' }, ie('refresh'), 'Çətin oldu');
-    var knewBtn = h('button', { class: 'btn btn-secondary', type: 'button' }, ie('check'), 'Bildim');
+    var flipBtn = h('button', { class: 'btn btn-secondary btn-block cards-flip', type: 'button' }, 'Kartı çevir', h('kbd', { class: 'kbd', 'aria-hidden': 'true', text: 'Boşluq' }));
+    var hardBtn = h('button', { class: 'btn btn-secondary', type: 'button' }, 'Çətin oldu', h('kbd', { class: 'kbd', 'aria-hidden': 'true', text: '1' }));
+    var knewBtn = h('button', { class: 'btn btn-primary', type: 'button' }, 'Bildim', h('kbd', { class: 'kbd', 'aria-hidden': 'true', text: '2' }));
     var acts = h('div', { class: 'cards-actions', hidden: true }, hardBtn, knewBtn);
     C.wrap.appendChild(flipBtn);
     C.wrap.appendChild(acts);
     C.wrap.appendChild(h('div', { class: 'cards-keys', 'aria-hidden': 'true' },
       h('span', null, h('kbd', { class: 'kbd', text: 'Boşluq' }), 'çevir'),
-      h('span', null, h('kbd', { class: 'kbd', text: '1' }), 'çətin oldu'),
-      h('span', null, h('kbd', { class: 'kbd', text: '2' }), 'bildim'),
+      h('span', null, h('kbd', { class: 'kbd', text: '1' }), h('kbd', { class: 'kbd', text: '←' }), 'çətin oldu'),
+      h('span', null, h('kbd', { class: 'kbd', text: '2' }), h('kbd', { class: 'kbd', text: '→' }), 'bildim'),
       h('span', null, 'və ya kartı sağa / sola sürüşdürün')));
     C.cur = { card: card, front: front, back: back, acts: acts, flipBtn: flipBtn, knewBtn: knewBtn, c: c };
 
@@ -2388,7 +2597,7 @@
       if (x0 === null || e.pointerId !== pid) return;
       dx = e.clientX - x0;
       if (!moved && Math.abs(dx) > 8) { moved = true; card.classList.add('drag'); try { card.setPointerCapture(pid); } catch (er) { /* ignore */ } }
-      if (moved) card.style.transform = 'translateX(' + dx + 'px) rotate(' + f1(dx / 24) + 'deg)';
+      if (moved) card.style.transform = 'translateX(' + dx + 'px)';
     });
     function endDrag() {
       if (x0 === null) return;
@@ -2413,7 +2622,7 @@
     k.back.setAttribute('aria-hidden', C.flipped ? 'false' : 'true');
     if (C.flipped && k.acts.hidden) {
       k.acts.hidden = false; k.flipBtn.hidden = true;
-      later(function () { focusSoft(k.knewBtn); }, reduced() ? 0 : 320);
+      later(function () { focusSoft(k.knewBtn); }, reduced() ? 0 : 180);
     }
   }
 
@@ -2442,7 +2651,7 @@
       C.busy = false;
       if (!C.queue.length) finishSession(); else renderCard(false);
       if (C.boxes && C.boxes.isConnected) { var nb = boxesCard(); C.boxes.parentNode.replaceChild(nb, C.boxes); C.boxes = nb; }
-    }, reduced() ? 30 : 260);
+    }, reduced() ? 30 : 170);
   }
 
   function nextDueText() {
@@ -2460,56 +2669,45 @@
     var xp = 10 + C.known * 2;
     bumpMission('cards', C.uniq);
     try { if (App.refreshNav) App.refreshNav(); } catch (e) { /* ignore */ }
-    var medal = h('span', { class: 'medal xl pop', 'aria-hidden': 'true' }, h('b', { text: String(C.uniq) }));
     var remaining = dueCount();
-    var actions = h('div', { class: 'actions' });
-    if (C.hard) actions.appendChild(h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { startSession(false); } }, ie('refresh'), 'Çətinləri təkrarla'));
-    else if (remaining) actions.appendChild(h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { startSession(false); } }, ie('cards'), 'Yenə ' + Math.min(10, remaining) + ' kart'));
-    actions.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { App.go('home'); } }, ie('home'), 'Masaya qayıt'));
-    C.wrap.appendChild(h('section', { class: 'card pad-lg carpet cards-done', 'aria-labelledby': 'cards-done-h' },
-      medal,
-      h('h2', { id: 'cards-done-h', html: 'Təkrar <em>tamamlandı</em>!' }),
-      h('p', { class: 'muted', text: C.uniq + ' kart təkrarlandı. ' + nextDueText() + '.' }),
-      h('div', { class: 'stats' },
-        h('div', { class: 'stat' }, h('b', { text: String(C.known) }), h('span', { text: 'bildim' })),
-        h('div', { class: 'stat' }, h('b', { text: String(C.hard) }), h('span', { text: 'çətin oldu' })),
-        h('div', { class: 'stat' }, h('b', { text: acc + '%' }), h('span', { text: 'dəqiqlik' })),
-        h('div', { class: 'stat' }, h('b', { text: '+' + xp }), h('span', { text: 'XP' }))),
+    var actions = h('div', { class: 'acad-act' });
+    if (C.hard) actions.appendChild(h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { startSession(false); } }, ie('refresh'), 'Çətinləri təkrarla'));
+    else if (remaining) actions.appendChild(h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { startSession(false); } }, ie('cards'), 'Yenə ' + Math.min(10, remaining) + ' kart'));
+    actions.appendChild(h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { App.go('home'); } }, ie('home'), 'Masaya qayıt'));
+    var head = h('h2', { id: 'cards-done-h', text: 'Təkrar tamamlandı' });
+    C.wrap.appendChild(h('section', { class: 'acad-panel cards-done', 'aria-labelledby': 'cards-done-h' },
+      h('span', { class: 'acad-cap', text: 'Sessiya bitdi' }),
+      head,
+      h('p', { text: C.uniq + ' kart təkrarlandı. ' + nextDueText() + '.' }),
+      statLine([{ l: 'Bildim', v: C.known }, { l: 'Çətin oldu', v: C.hard }, { l: 'Dəqiqlik', v: acc + '%' }, { l: 'XP', v: '+' + xp }]),
       actions));
     later(function () {
-      burstAt(medal, 'confetti');
-      addXP(xp, pointOf(medal));
+      addXP(xp, pointOf(head));
       nz('celebrate', acc >= 80 ? 'Möhtəşəm təkrar! Yaddaş belə qurulur.' : 'Sessiya bitdi! Çətin kartlar tezliklə qayıdacaq.', 3200);
-    }, reduced() ? 100 : 420);
+    }, reduced() ? 100 : 300);
   }
 
   function renderCardsEmpty(cards) {
     C.ended = true;
     C.wrap.textContent = '';
-    var art = h('div', { class: 'empty-art', 'aria-hidden': 'true' });
-    C.wrap.appendChild(h('div', { class: 'empty cards-empty' }, art,
-      h('h3', { text: C.tag ? '«' + C.tag + '» üzrə təkrar yoxdur' : 'Bu gün üçün hamısı təkrarlanıb' }),
-      h('p', { text: nextDueText() + '. Yaddaş dincəlməyi də sevir — amma istəsəniz, yenə məşq edə bilərsiniz.' }),
-      h('div', { class: 'actions' },
+    C.wrap.appendChild(emptyNote(C.tag ? '«' + C.tag + '» üzrə təkrar yoxdur' : 'Bu gün üçün hamısı təkrarlanıb',
+      nextDueText() + '. Yaddaş dincəlməyi də sevir — amma istəsəniz, yenə məşq edə bilərsiniz.', [
         cards.length ? h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { startSession(true); } }, ie('cards'), 'Yenə də məşq et') : null,
-        h('button', { class: 'btn', type: 'button', onclick: function () { App.go('task'); } }, ie('edit'), 'Tapşırıq götür'))));
-    later(function () { mountMini(art, 'sleep'); }, 30);
+        h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { App.go('task'); } }, ie('edit'), 'Tapşırıq götür')]));
   }
 
   function boxesCard() {
     var s = srsAll(), counts = [0, 0, 0, 0, 0, 0], all = deck();
     all.forEach(function (c) { var b = s[c.id] ? clamp(Number(s[c.id].box) || 1, 1, 5) : 1; counts[b]++; });
     var max = Math.max.apply(null, counts.slice(1)) || 1;
-    return h('section', { class: 'card', 'aria-labelledby': 'cards-bx-h' },
-      h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Aralıqlı təkrar' }), h('h2', { id: 'cards-bx-h', text: 'Kartlar qutularda' })),
-        badge(all.length + ' kart', 'navy')),
+    return h('section', { class: 'acad-sec', 'aria-labelledby': 'cards-bx-h' },
+      h('div', { class: 'acad-sec-h' }, h('h2', { id: 'cards-bx-h', text: 'Aralıqlı təkrar' }), h('small', { class: 'tnum', text: all.length + ' kart · 5 qutu' })),
       h('div', { class: 'cards-boxes' }, [1, 2, 3, 4, 5].map(function (b) {
         return h('div', { class: 'cards-bx' },
-          h('b', { text: String(counts[b]) }), h('span', { text: 'Qutu ' + b }), h('small', { text: INT_LABEL[b] }),
-          h('div', { class: 'progress thin' + (b >= 4 ? ' green' : b >= 2 ? ' gold' : ''), 'aria-hidden': 'true' }, h('i', { style: 'width:' + Math.round(counts[b] / max * 100) + '%' })));
+          h('span', { text: 'Qutu ' + b }), h('b', { text: String(counts[b]) }), h('small', { text: INT_LABEL[b] }),
+          bar(Math.round(counts[b] / max * 100)));
       })),
-      h('p', { class: 'small muted', style: 'margin-top:12px', text: '«Bildim» dedikcə kart növbəti qutuya keçir və daha seyrək görünür. «Çətin oldu» onu birinci qutuya qaytarır.' }));
+      h('p', { class: 'cards-note', text: '«Bildim» dedikcə kart növbəti qutuya keçir və daha seyrək görünür. «Çətin oldu» onu birinci qutuya qaytarır.' }));
   }
 
   function onCardsKey(e) {
@@ -2525,14 +2723,16 @@
   }
 
   /* ------------------------------------------------------------------
-     8. PROGRESS SCREEN («Mənim inkişafım»)
+     8. PROGRESS SCREEN («Mənim inkişafım») — rank bar, KPI strip,
+        skills table, a minimal score line, weak areas, history
      ------------------------------------------------------------------ */
+  /* ax: the rubric skill (AXES index) whose change since the first check is the area's trend */
   var EMAP = [
-    { t: 'Məna və yalançı dostlar', s: '«actual», «eventually»', types: ['Məna', 'Boş seqment'], tag: 'Məna' },
-    { t: 'Terminologiya', s: 'Lüğətə uyğunluq', types: ['Termin'], tag: 'Termin' },
-    { t: 'Türk formaları', s: '«için», «içinde»', types: ['Türk forması'], tag: 'Türk forması' },
-    { t: 'Rəqəm və tarix', s: '12,4% · 15 mart', types: ['Rəqəm', 'Tarix'], tag: 'Rəqəm' },
-    { t: 'Üslub və yazılış', s: 'Müraciət, register, orfoqrafiya', types: ['Üslub', 'Söz sırası', 'Orfoqrafiya', 'Ardıcıllıq', 'Durğu', 'Ad'], tag: 'Üslub' }
+    { t: 'Məna və yalançı dostlar', s: '«actual», «eventually»', types: ['Məna', 'Boş seqment'], tag: 'Məna', ax: 0 },
+    { t: 'Terminologiya', s: 'Lüğətə uyğunluq', types: ['Termin'], tag: 'Termin', ax: 1 },
+    { t: 'Türk formaları', s: '«için», «içinde»', types: ['Türk forması'], tag: 'Türk forması', ax: 3 },
+    { t: 'Rəqəm və tarix', s: '12,4% · 15 mart', types: ['Rəqəm', 'Tarix'], tag: 'Rəqəm', ax: 4 },
+    { t: 'Üslub və yazılış', s: 'Müraciət, register, orfoqrafiya', types: ['Üslub', 'Söz sırası', 'Orfoqrafiya', 'Ardıcıllıq', 'Durğu', 'Ad'], tag: 'Üslub', ax: 2 }
   ];
 
   function renderProgress(page) {
@@ -2546,151 +2746,96 @@
       var avgLast = Math.round(hist.slice(-k).reduce(function (s, x) { return s + x.s; }, 0) / k);
       sub = n + ' tapşırıq yoxlanıb. Orta bal ' + avgFirst + '-dən ' + avgLast + '-ə ' + (avgLast > avgFirst ? 'qalxıb' : avgLast < avgFirst ? 'enib' : 'bərabər qalıb') + '.';
     } else if (n === 1) {
-      sub = 'İlk tapşırıq yoxlanıb — ' + hist[0].s + ' bal. Növbəti nəticələrlə qrafik yaranacaq.';
+      sub = 'İlk tapşırıq yoxlanıb — ' + hist[0].s + ' bal. Növbəti nəticələrlə dinamika yaranacaq.';
     }
 
-    page.appendChild(h('div', { class: 'page-h' },
-      h('div', null,
-        h('h1', { html: 'Mənim <em>inkişafım</em>' }),
-        h('p', { text: sub }))));
-
+    page.appendChild(acadNav('progress'));
+    page.appendChild(pageHead('Mənim inkişafım', sub));
     page.appendChild(rankCard(p, r, hist));
     if (!n) {
       page.appendChild(progressEmpty());
       return;
     }
-    var charts = [];
-    if (now) charts.push(radarCard(now, base));
-    if (n >= 2) charts.push(lineCard(hist));
-    if (charts.length === 2) page.appendChild(h('div', { class: 'grid-2' }, charts));
-    else charts.forEach(function (c) { page.appendChild(c); });
-    var em = errorMapCard();
-    var ms = missionsCard();
-    if (em) page.appendChild(h('div', { class: 'grid-2' }, em, ms));
-    else page.appendChild(ms);
-    page.appendChild(weeklyCard());
+    var row = [];
+    if (now) row.push(skillsCard(now, base));
+    if (n >= 2) row.push(lineCard(hist));
+    if (row.length) page.appendChild(h('div', { class: 'progress-grid' + (row.length === 2 ? ' two' : '') }, row));
+    var em = errorMapCard(now, base);
+    if (em) page.appendChild(em);
+    page.appendChild(historyCard(hist));
+    page.appendChild(h('div', { class: 'progress-grid two' }, missionsCard(), weeklyCard()));
   }
 
   function progressEmpty() {
-    var art = h('div', { class: 'empty-art', 'aria-hidden': 'true' });
-    var el = h('div', { class: 'empty' }, art,
-      h('h3', { text: 'Hələ nəticə yoxdur' }),
-      h('p', { text: 'İlk tərcüməniz yoxlananda bacarıqlarınız, ballarınız və səhv xəritəniz burada görünəcək.' }),
-      h('div', { class: 'actions' },
-        h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { App.go('task'); } }, ie('edit'), 'İlk tapşırığa başla')));
-    later(function () { mountMini(art, 'point'); }, 30);
-    return el;
+    return emptyNote('Hələ nəticə yoxdur', 'İlk tərcüməniz yoxlananda bacarıqlarınız, ballarınız və zəif tərəfləriniz burada görünəcək.',
+      [h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { App.go('task'); } }, ie('edit'), 'İlk tapşırığa başla')]);
   }
 
   function rankCard(p, r, hist) {
     var pct = Math.round((r.progress || 0) * 100);
     var xp = Number(p.xp) || 0, streak = Number(p.streak) || 0;
     var R = ranks();
-    var stats = [];
-    if (xp) stats.push(h('div', { class: 'stat' }, h('b', { text: num(xp) }), h('span', { text: 'ümumi XP' })));
-    if (streak) stats.push(h('div', { class: 'stat' }, h('b', { text: String(streak) }), h('span', { text: 'günlük seriya' })));
-    if (hist.length) {
-      var avg = Math.round(hist.reduce(function (s, x) { return s + x.s; }, 0) / hist.length);
-      stats.push(h('div', { class: 'stat' }, h('b', { text: String(hist.length) }), h('span', { text: 'tapşırıq' })));
-      stats.push(h('div', { class: 'stat' }, h('b', { text: String(avg) }), h('span', { text: 'orta bal' })));
-    }
-    var nextTx = r.nextName ? (xp ? r.nextName + ' rütbəsinə ' + num(r.toNext) + ' XP qalıb' : 'Hər tapşırıq XP gətirir. ' + r.nextName + ' rütbəsi ' + num(r.toNext) + ' XP-dədir.') : 'Ən yüksək rütbə — Ustad!';
-    return h('section', { class: 'card lacquer pad-lg progress-hero', 'aria-labelledby': 'progress-rank-h' },
-      h('div', { class: 'progress-hero-main' },
-        h('div', { class: 'progress-hero-l' },
-          h('span', { class: 'medal lg', 'aria-hidden': 'true' }, h('b', { text: r.name.charAt(0) })),
-          h('div', { class: 'stack-sm' },
-            h('span', { class: 'eyebrow', text: 'Rütbəniz' }),
-            h('h2', { class: 'progress-rank', id: 'progress-rank-h', html: '<em>' + esc(r.name) + '</em>' }),
-            h('p', { class: 'muted small', text: nextTx }),
-            h('div', { class: 'progress progress-fir', role: 'progressbar', 'aria-label': 'Növbəti rütbəyə', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: 'width:' + pct + '%' })))),
-        h('ol', { class: 'progress-ladder', 'aria-label': 'Rütbələr' }, R.map(function (rk, i) {
-          return h('li', { class: i < r.index ? 'done' : i === r.index ? 'cur' : '', 'aria-current': i === r.index ? 'step' : null }, h('i', { 'aria-hidden': 'true' }), h('span', { text: rk.name }));
-        }))),
-      stats.length ? h('div', { class: 'stats' }, stats) : null);
+    var avg = hist.length ? Math.round(hist.reduce(function (s, x) { return s + x.s; }, 0) / hist.length) : null;
+    var last = hist.length ? hist[hist.length - 1].s : null;
+    var nextTx = r.nextName ? (xp ? r.nextName + ' rütbəsinə ' + num(r.toNext) + ' XP qalıb' : 'Hər tapşırıq XP gətirir. ' + r.nextName + ' rütbəsi ' + num(r.toNext) + ' XP-dədir.') : 'Ən yüksək rütbə — Ustad.';
+    function kpi(label, val, unit) { return h('div', { class: 'progress-kpi' }, h('span', { text: label }), h('b', null, val == null ? '—' : String(val), unit && val != null ? h('small', { text: unit }) : null)); }
+    return h('section', { class: 'acad-panel progress-sum', 'aria-labelledby': 'progress-rank-h' },
+      h('div', { class: 'progress-rank-row' },
+        h('div', null, h('span', { class: 'acad-cap', text: 'Rütbə' }), h('h2', { class: 'progress-rank', id: 'progress-rank-h', text: r.name })),
+        h('span', { class: 'progress-xp', text: num(xp) + ' XP' })),
+      h('div', { class: 'progress-next' }, bar(pct, 'Növbəti rütbəyə'), h('p', { text: nextTx })),
+      h('ol', { class: 'progress-ladder', 'aria-label': 'Rütbələr' }, R.map(function (rk, i) {
+        return h('li', { class: i < r.index ? 'done' : i === r.index ? 'cur' : '', 'aria-current': i === r.index ? 'step' : null }, h('span', { text: rk.name }));
+      })),
+      h('div', { class: 'progress-kpis' },
+        kpi('Yoxlanan tapşırıq', hist.length),
+        kpi('Orta bal', avg, '/100'),
+        kpi('Son bal', last, '/100'),
+        kpi('Günlük seriya', streak, streak === 1 ? 'gün' : 'gün')));
   }
 
-  function radarCard(now, base) {
+  function delta(d) {
+    if (d == null) return h('span', { class: 'progress-d eq', text: '—' });
+    return h('span', { class: 'progress-d ' + (d > 0 ? 'up' : d < 0 ? 'dn' : 'eq'), text: (d > 0 ? '↑ +' : d < 0 ? '↓ −' : '→ ') + Math.abs(d) });
+  }
+
+  function skillsCard(now, base) {
     var B = base && base.some(function (v, i) { return v !== now[i]; }) ? base : null;
-    var cx = 190, cy = 150, R = 92, n = AXES.length;
-    function pt(i, v) { var a = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + Math.cos(a) * R * v / 100, cy + Math.sin(a) * R * v / 100]; }
-    function poly(vals) { return vals.map(function (v, i) { var q = pt(i, v); return f1(q[0]) + ',' + f1(q[1]); }).join(' '); }
-    var s = '<svg class="progress-svg" viewBox="0 0 380 300" aria-hidden="true">';
-    [25, 50, 75, 100].forEach(function (v) { s += '<polygon class="g" points="' + poly(AXES.map(function () { return v; })) + '"/>'; });
-    AXES.forEach(function (a, i) { var q = pt(i, 100); s += '<line class="sp" x1="' + cx + '" y1="' + cy + '" x2="' + f1(q[0]) + '" y2="' + f1(q[1]) + '"/>'; });
-    if (B) s += '<polygon class="b" points="' + poly(B) + '"/>';
-    s += '<polygon class="n" points="' + poly(now) + '"/>';
-    now.forEach(function (v, i) { var q = pt(i, v); s += '<circle class="d" data-i="' + i + '" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="4"/>'; });
-    AXES.forEach(function (a, i) {
-      var ang = -Math.PI / 2 + i * 2 * Math.PI / n, c = Math.cos(ang), sn = Math.sin(ang);
-      var x = cx + c * (R + 16), y = cy + sn * (R + 16);
-      var anchor = c > 0.3 ? 'start' : c < -0.3 ? 'end' : 'middle';
-      var y1, y2;
-      if (sn < -0.5) { y1 = y - 16; y2 = y - 1; } else if (sn > 0.5) { y1 = y + 8; y2 = y + 23; } else { y1 = y - 3; y2 = y + 13; }
-      var g = B ? now[i] - B[i] : 0;
-      s += '<text x="' + f1(x) + '" y="' + f1(y1) + '" text-anchor="' + anchor + '">' + esc(a) + '</text>';
-      s += '<text class="lv" x="' + f1(x) + '" y="' + f1(y2) + '" text-anchor="' + anchor + '">' + now[i] + (g ? ' <tspan class="' + (g > 0 ? 'up' : 'dn') + '">' + (g > 0 ? '+' : '−') + Math.abs(g) + '</tspan>' : '') + '</text>';
-    });
-    now.forEach(function (v, i) { var q = pt(i, v); s += '<circle class="hit" tabindex="0" role="img" aria-label="' + esc(AXES[i]) + ': ' + v + (B ? ', başlanğıcda ' + B[i] : '') + '" data-i="' + i + '" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="14"/>'; });
-    s += '</svg>';
-    var wrap = h('div', { class: 'progress-chart', html: s });
-    var tip = h('div', { class: 'progress-tip', 'aria-hidden': 'true' });
-    wrap.appendChild(tip);
-    var svg = wrap.querySelector('svg');
-    function show(i) {
-      var q = pt(i, now[i]), r = svg.getBoundingClientRect(), sc = r.width / 380;
-      tip.textContent = '';
-      tip.appendChild(h('b', { text: String(now[i]) }));
-      tip.appendChild(h('span', { text: AXES[i] }));
-      if (B) tip.appendChild(h('span', { text: 'Başlanğıcda: ' + B[i] }));
-      tip.style.left = clamp(q[0] * sc, 64, r.width - 64) + 'px';
-      tip.style.top = (q[1] * sc) + 'px';
-      tip.classList.add('on');
-      Array.prototype.forEach.call(svg.querySelectorAll('.d'), function (d) { d.setAttribute('r', d.getAttribute('data-i') === String(i) ? '6' : '4'); });
-    }
-    function hide() { tip.classList.remove('on'); Array.prototype.forEach.call(svg.querySelectorAll('.d'), function (d) { d.setAttribute('r', '4'); }); }
-    Array.prototype.forEach.call(svg.querySelectorAll('.hit'), function (c) {
-      var i = Number(c.getAttribute('data-i'));
-      c.addEventListener('pointerenter', function () { show(i); });
-      c.addEventListener('pointerleave', hide);
-      c.addEventListener('focus', function () { show(i); });
-      c.addEventListener('blur', hide);
-      c.addEventListener('click', function () { show(i); });
-    });
-    var table = h('details', { class: 'progress-tbl' },
-      h('summary', null, ie('chevron'), 'Cədvəl kimi göstər'),
-      h('div', { class: 'table-wrap' }, h('table', { class: 'table compact' },
-        h('thead', null, h('tr', null, h('th', { text: 'Bacarıq' }), B ? h('th', { class: 'num', text: 'Başlanğıcda' }) : null, h('th', { class: 'num', text: 'İndi' }))),
-        h('tbody', null, AXES.map(function (a, i) { return h('tr', null, h('td', { text: a }), B ? h('td', { class: 'num', text: String(B[i]) }) : null, h('td', { class: 'num' }, h('b', { text: String(now[i]) }))); })))));
-    return h('section', { class: 'card progress-card', 'aria-labelledby': 'progress-radar-h' },
-      h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow', text: 'Bacarıqlar' }), h('h2', { id: 'progress-radar-h', text: 'Bacarıq radarı' }))),
-      B ? h('div', { class: 'progress-legend' }, h('span', null, h('i', { 'aria-hidden': 'true' }), 'İndi'), h('span', null, h('i', { class: 'b', 'aria-hidden': 'true' }), 'Başlanğıcda')) : null,
-      wrap, table);
+    return h('section', { class: 'acad-sec', 'aria-labelledby': 'progress-sk-h' },
+      h('div', { class: 'acad-sec-h' }, h('h2', { id: 'progress-sk-h', text: 'Bacarıqlar' }), h('small', { text: 'Məclisin meyarları üzrə, 0–100' })),
+      h('div', { class: 'progress-tw' }, h('table', { class: 'progress-t' },
+        h('thead', null, h('tr', null, h('th', { text: 'Bacarıq' }), h('th', { class: 'num hide-sm', text: 'Başlanğıc' }), h('th', { class: 'num', text: 'İndi' }), h('th', { class: 'num', text: 'Dəyişmə' }), h('th', { class: 'hide-sm', text: '' }))),
+        h('tbody', null, AXES.map(function (a, i) {
+          return h('tr', null,
+            h('td', { text: a }),
+            h('td', { class: 'num hide-sm', text: B ? String(B[i]) : '—' }),
+            h('td', { class: 'num' }, h('b', { text: String(now[i]) })),
+            h('td', { class: 'num' }, delta(B ? now[i] - B[i] : null)),
+            h('td', { class: 'bar hide-sm' }, bar(now[i])));
+        })))));
   }
 
   function lineCard(hist) {
     var pts = hist.slice(-12), n = pts.length;
-    var Wd = 360, Ht = 210, pl = 30, pr = 30, pt = 18, pb = 28, y0 = 40, y1 = 100;
+    var Wd = 360, Ht = 180, pl = 28, pr = 30, pt = 14, pb = 24, y0 = 40, y1 = 100;
     function X(i) { return n <= 1 ? (pl + (Wd - pl - pr) / 2) : pl + i * (Wd - pl - pr) / (n - 1); }
     function Y(v) { return pt + (y1 - clamp(v, y0, y1)) / (y1 - y0) * (Ht - pt - pb); }
     var s = '<svg class="progress-svg" viewBox="0 0 ' + Wd + ' ' + Ht + '" aria-hidden="true">';
     [40, 60, 80, 100].forEach(function (v) {
       s += '<line class="g" x1="' + pl + '" x2="' + (Wd - pr + 6) + '" y1="' + f1(Y(v)) + '" y2="' + f1(Y(v)) + '"/>';
-      s += '<text class="ax" x="' + (pl - 8) + '" y="' + f1(Y(v) + 4) + '" text-anchor="end">' + v + '</text>';
+      s += '<text x="' + (pl - 8) + '" y="' + f1(Y(v) + 3.5) + '" text-anchor="end">' + v + '</text>';
     });
     var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + f1(X(i)) + ' ' + f1(Y(p.s)); }).join(' ');
-    var area = line + ' L' + f1(X(n - 1)) + ' ' + f1(Y(y0)) + ' L' + f1(X(0)) + ' ' + f1(Y(y0)) + ' Z';
-    s += '<path class="ar" d="' + area + '"/>';
     s += '<line class="cx" x1="0" x2="0" y1="' + pt + '" y2="' + (Ht - pb) + '"/>';
-    s += '<path class="ln" pathLength="1" d="' + line + '"/>';
-    pts.forEach(function (p, i) { s += '<circle class="d" data-i="' + i + '" cx="' + f1(X(i)) + '" cy="' + f1(Y(p.s)) + '" r="4"/>'; });
+    s += '<path class="ln" d="' + line + '"/>';
+    pts.forEach(function (p, i) { s += '<circle class="d" data-i="' + i + '" cx="' + f1(X(i)) + '" cy="' + f1(Y(p.s)) + '" r="3"/>'; });
     var last = pts[n - 1];
-    s += '<text class="end" x="' + f1(X(n - 1) + 9) + '" y="' + f1(Y(last.s) + 5) + '">' + last.s + '</text>';
+    s += '<text class="end" x="' + f1(X(n - 1) + 8) + '" y="' + f1(Y(last.s) + 4) + '">' + last.s + '</text>';
     var xi = [0, Math.floor((n - 1) / 2), n - 1].filter(function (v, i, a) { return a.indexOf(v) === i; });
     xi.forEach(function (i, k) {
       var anchor = k === 0 ? 'start' : (i === n - 1 ? 'end' : 'middle');
       var x = k === 0 ? X(i) - 4 : (i === n - 1 ? X(i) + 4 : X(i));
-      s += '<text class="ax" x="' + f1(x) + '" y="' + (Ht - 6) + '" text-anchor="' + anchor + '">' + shortDate(pts[i].t) + '</text>';
+      s += '<text x="' + f1(x) + '" y="' + (Ht - 6) + '" text-anchor="' + anchor + '">' + shortDate(pts[i].t) + '</text>';
     });
     s += '<rect class="hit" x="' + (pl - 14) + '" y="0" width="' + (Wd - pl - pr + 28) + '" height="' + Ht + '"/>';
     s += '</svg>';
@@ -2706,16 +2851,16 @@
       i = clamp(i, 0, n - 1); cur = i;
       var r = svg.getBoundingClientRect(), sc = r.width / Wd, p = pts[i];
       cxl.setAttribute('x1', f1(X(i))); cxl.setAttribute('x2', f1(X(i))); cxl.classList.add('on');
-      Array.prototype.forEach.call(dots, function (d, j) { d.setAttribute('r', j === i ? '6' : '4'); });
+      Array.prototype.forEach.call(dots, function (d, j) { d.setAttribute('r', j === i ? '4.5' : '3'); });
       tip.textContent = '';
       tip.appendChild(h('b', { text: p.s + ' bal' }));
-      tip.appendChild(h('span', { text: longDate(p.t) + ' · ' + (p.lv || '') }));
+      tip.appendChild(h('span', { text: longDate(p.t) + (p.lv ? ' · ' + p.lv : '') }));
       tip.appendChild(h('span', { text: p.title || 'Tapşırıq' }));
       tip.style.left = clamp(X(i) * sc, 70, r.width - 70) + 'px';
       tip.style.top = (Y(p.s) * sc) + 'px';
       tip.classList.add('on');
     }
-    function hide() { cur = -1; cxl.classList.remove('on'); tip.classList.remove('on'); Array.prototype.forEach.call(dots, function (d) { d.setAttribute('r', '4'); }); }
+    function hide() { cur = -1; cxl.classList.remove('on'); tip.classList.remove('on'); Array.prototype.forEach.call(dots, function (d) { d.setAttribute('r', '3'); }); }
     function idxAt(e) { var r = svg.getBoundingClientRect(); var vx = (e.clientX - r.left) / r.width * Wd; return n <= 1 ? 0 : Math.round((vx - pl) / ((Wd - pl - pr) / (n - 1))); }
     hitR.addEventListener('pointermove', function (e) { show(idxAt(e)); });
     hitR.addEventListener('pointerdown', function (e) { show(idxAt(e)); });
@@ -2727,47 +2872,69 @@
       else if (e.key === 'ArrowRight') { e.preventDefault(); show((cur < 0 ? n - 1 : cur) + 1); }
       else if (e.key === 'Escape') hide();
     });
-    var table = h('details', { class: 'progress-tbl' },
-      h('summary', null, ie('chevron'), 'Cədvəl kimi göstər'),
-      h('div', { class: 'table-wrap' }, h('table', { class: 'table compact' },
-        h('thead', null, h('tr', null, h('th', { text: 'Tarix' }), h('th', { text: 'Mətn' }), h('th', { class: 'num', text: 'Bal' }))),
-        h('tbody', null, pts.slice().reverse().map(function (p) { return h('tr', null, h('td', { class: 'muted', text: shortDate(p.t) }), h('td', { text: (p.lv ? p.lv + ' · ' : '') + (p.title || 'Tapşırıq') }), h('td', { class: 'num' }, h('b', { text: String(p.s) }))); })))));
-    return h('section', { class: 'card progress-card', 'aria-labelledby': 'progress-line-h' },
-      h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Ballar' }), h('h2', { id: 'progress-line-h', text: 'Son ' + n + ' tapşırıq' })),
-        h('div', { class: 'actions' }, badge('orta ' + avg, 'navy'), badge('ən yüksək ' + best, 'gold'))),
-      wrap,
-      h('div', { class: 'stats' },
-        h('div', { class: 'stat' }, h('b', { text: String(pts[0].s) }), h('span', { text: 'ilk bal · ' + shortDate(pts[0].t) })),
-        h('div', { class: 'stat' }, h('b', { text: String(last.s) }), h('span', { text: 'son bal · ' + shortDate(last.t) })),
-        h('div', { class: 'stat' }, h('b', null, (diff >= 0 ? '+' : '−') + Math.abs(diff)), h('span', { text: 'dəyişmə' }))),
-      table);
+    return h('section', { class: 'acad-sec', 'aria-labelledby': 'progress-line-h' },
+      h('div', { class: 'acad-sec-h' }, h('h2', { id: 'progress-line-h', text: 'Bal dinamikası' }), h('small', { text: 'son ' + n + ' yoxlama' })),
+      h('div', { class: 'acad-panel' },
+        wrap,
+        metaLine(['orta ' + avg, 'ən yüksək ' + best, 'ilk ' + pts[0].s + ' → son ' + last.s, h('span', { class: 'progress-d ' + (diff > 0 ? 'up' : diff < 0 ? 'dn' : 'eq'), text: (diff > 0 ? '+' : diff < 0 ? '−' : '±') + Math.abs(diff) })], 'acad-mono')));
   }
 
-  function errorMapCard() {
+  /* weak areas as an analytic table: area · errors · share · trend (rubric skill since the first check) */
+  function errorMapCard(now, base) {
     var lg = sget('academy:errlog', {}) || {};
     var rows = EMAP.map(function (m) { var c = 0; m.types.forEach(function (t) { c += Number(lg[t]) || 0; }); return { m: m, n: c }; })
       .filter(function (r) { return r.n > 0; })
       .sort(function (a, b) { return b.n - a.n; });
     if (!rows.length) return null;
     var total = rows.reduce(function (a, r) { return a + r.n; }, 0);
-    var maxN = rows[0].n;
-    var top = rows[0];
-    return h('section', { class: 'card progress-card', 'aria-labelledby': 'progress-emap-h' },
-      h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Zəif tərəflər' }), h('h2', { id: 'progress-emap-h', text: 'Səhvlərin xəritəsi' })),
-        h('span', { class: 'small muted', text: total + ' səhv' })),
-      h('div', { class: 'progress-emap' }, rows.map(function (r, i) {
-        var share = Math.round(r.n / total * 100), m = r.m;
-        var b = h('button', { class: 'progress-erow', type: 'button', 'aria-label': m.t + ': səhvlərin ' + share + '%-i, ' + r.n + ' səhv. Kartlara bax' },
-          h('span', { class: 'progress-erow-t' }, m.t, h('small', { text: m.s })),
-          h('span', { class: 'progress' + (i ? ' gold' : ''), 'aria-hidden': 'true' }, h('i', { style: 'width:' + Math.round(r.n / maxN * 100) + '%' })),
-          h('span', { class: 'progress-erow-v' }, share + '%'));
-        b.addEventListener('click', function () { App.go('cards', { tag: m.tag }); });
-        return b;
-      })),
-      h('div', { class: 'callout' }, ie('bulb'),
-        h('div', null, 'Ən çox səhv — ', h('b', { text: lower(top.m.t) }), '.')));
+    var B = base && now ? base : null;
+    return h('section', { class: 'acad-sec', 'aria-labelledby': 'progress-emap-h' },
+      h('div', { class: 'acad-sec-h' }, h('h2', { id: 'progress-emap-h', text: 'Zəif tərəflər' }), h('small', { text: total + ' səhv · ən çox: ' + lower(rows[0].m.t) })),
+      h('div', { class: 'progress-tw' }, h('table', { class: 'progress-t' },
+        h('thead', null, h('tr', null, h('th', { text: 'Mövzu' }), h('th', { class: 'num', text: 'Səhv' }), h('th', { class: 'num hide-sm', text: 'Pay' }), h('th', { class: 'hide-sm', text: '' }), h('th', { class: 'num', text: 'Dinamika' }), h('th', { class: 'num', text: '' }))),
+        h('tbody', null, rows.map(function (r) {
+          var share = Math.round(r.n / total * 100), m = r.m;
+          var d = now && B ? now[m.ax] - B[m.ax] : null;
+          var go = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': m.t + ' — kartlara bax' }, 'Kartlar', ie('chevron'));
+          go.addEventListener('click', function (e) { e.stopPropagation(); App.go('cards', { tag: m.tag }); });
+          var tr = h('tr', { class: 'clickable' },
+            h('td', null, m.t, h('small', { text: m.s })),
+            h('td', { class: 'num' }, h('b', { text: String(r.n) })),
+            h('td', { class: 'num hide-sm', text: share + '%' }),
+            h('td', { class: 'bar hide-sm' }, bar(share)),
+            h('td', { class: 'num', title: now ? AXES[m.ax] + ': ' + now[m.ax] + (B ? ' (başlanğıcda ' + B[m.ax] + ')' : '') : null }, delta(d)),
+            h('td', { class: 'num' }, go));
+          tr.addEventListener('click', function () { App.go('cards', { tag: m.tag }); });
+          return tr;
+        })))),
+      h('p', { class: 'acad-note', text: 'Dinamika — uyğun meyar üzrə bacarığın ilk yoxlamadan bəri dəyişməsi. Sətrə toxunun: həmin mövzunun səhv kartları açılır.' }));
+  }
+
+  function historyCard(hist) {
+    var all = hist.slice().reverse(), LIM = 8, open = false;
+    var tbody = h('tbody');
+    var more = all.length > LIM ? h('button', { class: 'btn btn-ghost btn-sm progress-more', type: 'button' }) : null;
+    function paint() {
+      tbody.textContent = '';
+      (open ? all : all.slice(0, LIM)).forEach(function (p) {
+        var g = gradeOf(p.s);
+        tbody.appendChild(h('tr', null,
+          h('td', { class: 'num', style: 'text-align:left', text: shortDate(p.t) }),
+          h('td', { text: p.title || 'Tapşırıq' }),
+          h('td', { class: 'hide-sm' }, p.lv ? lvTag(p.lv) : '—'),
+          h('td', { class: 'num' }, h('b', { text: String(p.s) })),
+          h('td', { class: 'num hide-sm', text: g.l + ' · ' + g.w })));
+      });
+      if (more) more.textContent = open ? 'Daha az göstər' : 'Hamısını göstər · ' + all.length;
+    }
+    if (more) more.addEventListener('click', function () { open = !open; paint(); });
+    paint();
+    return h('section', { class: 'acad-sec', 'aria-labelledby': 'progress-hist-h' },
+      h('div', { class: 'acad-sec-h' }, h('h2', { id: 'progress-hist-h', text: 'Tarixçə' }), h('small', { text: all.length + ' yoxlama' })),
+      h('div', { class: 'progress-tw' }, h('table', { class: 'progress-t' },
+        h('thead', null, h('tr', null, h('th', { text: 'Tarix' }), h('th', { text: 'Tapşırıq' }), h('th', { class: 'hide-sm', text: 'Səviyyə' }), h('th', { class: 'num', text: 'Bal' }), h('th', { class: 'num hide-sm', text: 'Qiymət' }))),
+        tbody)),
+      more);
   }
 
   function missionsCard() {
@@ -2776,14 +2943,14 @@
       var cur = msProgress(m), complete = cur >= m.max, claimed = complete && isClaimed(m);
       if (claimed) done++;
       var pct = Math.round(cur / m.max * 100);
-      var tx = h('span', { class: 'tx' },
+      var tx = h('span', { class: 'progress-ms-tx' },
         h('b', { text: m.t }),
-        h('small', { text: m.s + ' · ' + cur + ' / ' + m.max }),
-        h('span', { class: 'progress thin' + (complete ? ' green' : ' gold'), 'aria-hidden': 'true' }, h('i', { style: 'width:' + pct + '%' })));
-      var ic = icTile(complete ? 'check' : m.ic, complete ? 'green' : m.weekly ? 'progress-fir' : 'gold');
-      if (claimed) return h('div', { class: 'list-row' }, ic, tx, h('span', { class: 'end' }, badge('Alındı', 'green', 'check')));
+        h('small', { text: m.s }),
+        bar(pct));
+      var ic = h('span', { class: 'practice-ic' + (complete ? ' ok' : ''), html: App.icon(complete ? 'check' : m.ic), 'aria-hidden': 'true' });
+      if (claimed) return h('li', { class: 'progress-ms-row' }, ic, tx, h('span', { class: 'progress-ms-end' }, statusPill('Alındı', 'ok')));
       if (complete) {
-        var cb = h('button', { class: 'btn btn-primary btn-sm', type: 'button' }, ie('zap'), '+' + m.xp + ' XP al');
+        var cb = h('button', { class: 'btn btn-primary btn-sm', type: 'button' }, '+' + m.xp + ' XP al');
         cb.addEventListener('click', function () {
           if (isClaimed(m)) return;
           var c = sget(claimKey(m), {}) || {}; c[m.id] = true; sset(claimKey(m), c);
@@ -2793,16 +2960,16 @@
           var card = cb.closest('.progress-ms');
           if (card && card.parentNode) card.parentNode.replaceChild(missionsCard(), card);
         });
-        return h('div', { class: 'list-row' }, ic, tx, h('span', { class: 'end' }, cb));
+        return h('li', { class: 'progress-ms-row' }, ic, tx, h('span', { class: 'progress-ms-end' }, cb));
       }
-      return h('button', { class: 'list-row', type: 'button', onclick: function () { goFirst(m.go || ['task'], { mission: m.id }, 'Bu bölmə hazırlanır'); } },
-        ic, tx, h('span', { class: 'end' }, badge('+' + m.xp + ' XP', 'gold'), h('span', { html: App.icon('chevron'), 'aria-hidden': 'true', style: 'display:inline-flex' })));
+      return h('li', null, h('button', { class: 'progress-ms-row', type: 'button', onclick: function () { goFirst(m.go || ['task'], { mission: m.id }, 'Bu bölmə hazırlanır'); } },
+        ic, tx, h('span', { class: 'progress-ms-end' }, cur + ' / ' + m.max + ' · +' + m.xp + ' XP', h('span', { html: App.icon('chevron'), 'aria-hidden': 'true', style: 'display:inline-flex' }))));
     });
-    return h('section', { class: 'card progress-ms', 'aria-labelledby': 'progress-ms-h' },
-      h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Missiyalar' }), h('h2', { id: 'progress-ms-h', text: 'Bugünkü tapşırıqlar' })),
-        badge(done + ' / ' + MISSIONS.length, 'navy')),
-      h('div', { class: 'list' }, rows));
+    return h('section', { class: 'acad-panel progress-ms', 'aria-labelledby': 'progress-ms-h' },
+      h('div', { class: 'acad-panel-h' },
+        h('div', null, h('span', { class: 'acad-cap', text: 'Missiyalar' }), h('h3', { id: 'progress-ms-h', text: 'Bugünkü hədəflər' })),
+        h('span', { class: 'acad-count', text: done + ' / ' + MISSIONS.length })),
+      h('ul', { class: 'progress-ms-l' }, rows));
   }
 
   function weeklyCard() {
@@ -2821,34 +2988,368 @@
         if (card && card.parentNode) card.parentNode.replaceChild(weeklyCard(), card);
       });
     } else if (wk >= 5) {
-      action = badge('Çağırış tamamlandı', 'green', 'check');
+      action = statusPill('Çağırış tamamlandı', 'ok');
     } else {
-      action = h('button', { class: 'btn btn-primary', type: 'button' }, 'Növbəti hüquqi mətn', ie('arrow'));
+      action = h('button', { class: 'btn btn-secondary', type: 'button' }, 'Növbəti hüquqi mətn', ie('arrow'));
       action.addEventListener('click', function () { App.go('task', { domain: 'Hüquq', level: 'B2' }); });
     }
-    return h('section', { class: 'card lacquer pad-lg progress-week-card', 'aria-labelledby': 'progress-week-h' },
-      h('div', { class: 'progress-week' },
-        h('div', { class: 'progress-week-l' },
-          h('span', { class: 'eyebrow', text: 'Həftəlik çağırış' }),
-          h('h2', { id: 'progress-week-h', html: 'Hüquqi <em>həftə</em>' }),
-          h('p', { class: 'muted', text: 'Bazar gününədək 5 hüquqi mətni 85+ balla tərcümə edin. Möhürdar Mirzə hər rəqəmi yoxlayacaq.' }),
-          h('div', { class: 'progress progress-fir lg', role: 'progressbar', 'aria-label': 'Çağırış gedişi', 'aria-valuenow': wk * 20, 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: 'width:' + wk * 20 + '%' })),
-          h('div', { class: 'progress-week-meta' }, h('span', { text: wk + ' / 5 mətn' }), h('span', { text: dl === 0 ? 'bu gün bitir' : dl + ' gün qalıb' })),
-          h('div', { class: 'progress-reward' }, h('span', { class: 'medal sm', 'aria-hidden': 'true' }, h('b', { text: 'M' })),
-            h('span', null, h('b', { text: 'Mükafat: «Möhürdar» nişanı' }), h('small', { text: '+150 XP və profilinizdə möhür' }))),
-          action)));
+    return h('section', { class: 'acad-panel progress-week-card', 'aria-labelledby': 'progress-week-h' },
+      h('span', { class: 'acad-cap', text: 'Həftəlik çağırış' }),
+      h('h3', { id: 'progress-week-h', text: 'Hüquqi həftə' }),
+      h('p', { text: 'Bazar gününədək 5 hüquqi mətni 85+ balla tərcümə edin. Möhürdar Mirzə hər rəqəmi yoxlayacaq.' }),
+      bar(wk * 20, 'Çağırış gedişi'),
+      h('div', { class: 'progress-week-meta' }, h('span', { text: wk + ' / 5 mətn' }), h('span', { text: dl === 0 ? 'bu gün bitir' : dl + ' gün qalıb' })),
+      h('p', null, h('b', { text: 'Mükafat: ' }), '«Möhürdar» nişanı · +150 XP'),
+      action);
   }
 
   /* ------------------------------------------------------------------
-     9. REGISTER
+     9. LESSONS SCREEN ('lessons', «Dərslər») — theory lessons
+        (App.data.LESSONS) + every translation task grouped by domain and
+        level, with status from the score history. A row opens the task flow.
+        The desk's «Dərsə başla» lands here with { lesson } → lesson page.
      ------------------------------------------------------------------ */
-  var RENDER = { task: renderTask, practice: renderPractice, cards: renderCards, progress: renderProgress };
+  var LSF = { col: 'base', lv: '', st: '', q: '' }; /* filters, kept for the session */
+
+  function theoryList() { var L = (App.data && App.data.LESSONS) || []; return Array.isArray(L) ? L.filter(function (x) { return x && x.id && x.title; }) : []; }
+  function theoryDone() { var d = sget('home:lessons-done', {}); return d && typeof d === 'object' ? d : {}; }
+  function findTheory(id) {
+    if (!id) return null;
+    var s = sget('home:lesson', null);
+    if (s && s.lesson && s.lesson.id === id && s.lesson.title) return s.lesson; /* the lesson the desk prepared */
+    var L = theoryList();
+    for (var i = 0; i < L.length; i++) if (L[i].id === id) return L[i];
+    return null;
+  }
+  /* best / last score per task — scores keep title + level, which are unique per task */
+  function taskResults() {
+    var res = {};
+    scores().forEach(function (x) {
+      var k = x.title + '|' + x.lv, r = res[k] || { n: 0, best: 0, last: 0 };
+      r.n++; r.best = Math.max(r.best, Number(x.s) || 0); r.last = Number(x.s) || 0; res[k] = r;
+    });
+    return res;
+  }
+  function openTask(t) {
+    var st = sget('academy:task', null);
+    if (st && st.id === t.id && String(st.text || '').trim()) {
+      /* resume the draft: point the task screen at this task's collection and domain */
+      sset('academy:col', colOf(t)); sset('academy:dom', t.dkey || ''); sset('academy:tmode', 'tr');
+      App.go('task');
+    } else App.go('task', { id: t.id });
+  }
+  function lessonGroups(col) {
+    var list = TASKS.filter(function (t) { return colOf(t) === col; });
+    var groups = [];
+    function add(key, name, icon, items, why) { if (items.length) groups.push({ key: key, name: name, icon: icon, items: items, why: why || '' }); }
+    if (col === 'base') {
+      add('core', 'Əsas kurs', 'cap', list.filter(function (t) { return !t.dkey; }), 'Turizm, yazışma, biznes, hüquq, interfeys — qısa peşəkar mətnlər və simulyator sifarişi.');
+      DOMAINS.forEach(function (d) { add(d.key, d.name, d.icon, list.filter(function (t) { return t.dkey === d.key; }), d.why); });
+    } else {
+      var by = {}, order = [];
+      list.forEach(function (t) { var k = t.domain || 'Digər'; if (!by[k]) { by[k] = []; order.push(k); } by[k].push(t); });
+      order.forEach(function (k) { add(k, k, col === 'docs' ? 'file' : 'globe', by[k]); });
+    }
+    groups.forEach(function (g) { g.items = g.items.map(function (t, i) { return { t: t, i: i }; }).sort(function (a, b) { return levelIdx(a.t.level) - levelIdx(b.t.level) || a.i - b.i; }).map(function (x) { return x.t; }); });
+    return groups;
+  }
+
+  function renderLessons(page, params) {
+    var lid = params.lesson || (params.id && findTheory(params.id) ? params.id : null);
+    var L = lid ? findTheory(lid) : null;
+    if (L) { renderLessonPage(page, L); return; }
+    if (lid) later(function () { App.toast('Dərs tapılmadı', 'info', { sub: 'Siyahıdan başqa dərs seçin' }); }, 300);
+    if (!COLS.some(function (c) { return c.id === LSF.col; })) LSF.col = 'base';
+
+    var res = taskResults(), stDraft = sget('academy:task', null);
+    var draftId = stDraft && stDraft.id && String(stDraft.text || '').trim() ? stDraft.id : null;
+    var all = TASKS.length, doneN = TASKS.filter(function (t) { return res[t.title + '|' + t.level]; }).length;
+    page.appendChild(acadNav('lessons'));
+    page.appendChild(pageHead('Dərslər',
+      theoryList().length + ' nəzəri dərs · ' + all + ' tərcümə tapşırığı · ' + doneN + ' yoxlanılıb. Sahə və səviyyə üzrə qruplaşdırılıb — sətrə toxunun, tapşırıq açılır.', [
+        h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { App.go('task'); } }, ie('edit'), draftId ? 'Tapşırığa davam et' : 'Növbəti tapşırıq')]));
+
+    /* filters */
+    var colSeg = segBtns(COLS.map(function (c) { return { id: c.id, label: c.id === 'base' ? 'Mirzə kursu' : c.id === 'news' ? 'Xəbərlər' : 'Sənədlər', title: c.label }; }), LSF.col,
+      function (id) { LSF.col = id; colSeg._paint(id); paintList(); }, 'Mətn toplusu', 'sm');
+    var lvSel = h('select', { class: 'select sm', 'aria-label': 'Səviyyə' }, h('option', { value: '', text: 'Bütün səviyyələr' }),
+      LEVELS.map(function (l) { return h('option', { value: l.id, text: l.id + ' · ' + l.name }); }));
+    lvSel.value = LSF.lv;
+    lvSel.addEventListener('change', function () { LSF.lv = lvSel.value; paintList(); });
+    var stSel = h('select', { class: 'select sm', 'aria-label': 'Status' },
+      h('option', { value: '', text: 'Hamısı' }), h('option', { value: 'todo', text: 'Başlanmayıb' }), h('option', { value: 'prog', text: 'Davam edir' }), h('option', { value: 'done', text: 'Yoxlanılıb' }));
+    stSel.value = LSF.st;
+    stSel.addEventListener('change', function () { LSF.st = stSel.value; paintList(); });
+    var q = h('input', { class: 'input', type: 'search', placeholder: 'Başlıq, sifarişçi və ya sahə…', 'aria-label': 'Tapşırıq axtar', autocomplete: 'off', spellcheck: 'false', value: LSF.q });
+    q.addEventListener('input', function () { LSF.q = q.value; paintList(); });
+    var fCol = field('Toplu', colSeg, 'lessons-f-col');
+    if (COLS.length < 2) fCol.hidden = true;
+    page.appendChild(h('div', { class: 'lessons-bar', role: 'group', 'aria-label': 'Süzgəclər' },
+      fCol, field('Səviyyə', lvSel, 'lessons-f-sel'), field('Status', stSel, 'lessons-f-sel'),
+      h('label', { class: 'acad-field lessons-f-q' }, h('span', { text: 'Axtarış' }), h('span', { class: 'input-ic' }, ie('search'), q))));
+
+    /* theory lessons */
+    var TH = theoryList();
+    if (TH.length) {
+      var done = theoryDone();
+      page.appendChild(h('section', { class: 'acad-sec', 'aria-labelledby': 'lessons-th-h' },
+        h('div', { class: 'acad-sec-h' }, h('h2', { id: 'lessons-th-h', text: 'Nəzəri dərslər' }), h('small', { class: 'tnum', text: TH.filter(function (x) { return done[x.id]; }).length + ' / ' + TH.length + ' keçilib' })),
+        h('div', { class: 'lessons-grp' }, TH.map(function (x) {
+          var b = h('button', { class: 'lessons-row', type: 'button' },
+            h('span', { class: 'lessons-th-ic', html: App.icon('book'), 'aria-hidden': 'true' }),
+            h('span', { class: 'lessons-t' }, h('b', { text: x.title }), h('small', { text: [x.topic, x.level].filter(Boolean).join(' · ') })),
+            h('span', { class: 'lessons-len', text: (x.minutes || 5) + ' dəq · +' + (x.xp || 30) + ' XP' }),
+            done[x.id] ? h('span', { class: 'lessons-st done' }, ie('check'), 'Keçilib') : h('span', { class: 'lessons-st', text: 'Başlanmayıb' }),
+            h('span', { class: 'lessons-chev', html: App.icon('chevron'), 'aria-hidden': 'true' }));
+          b.addEventListener('click', function () { App.go('lessons', { lesson: x.id }); });
+          return b;
+        }))));
+    }
+
+    var listSec = h('section', { class: 'acad-sec', 'aria-labelledby': 'lessons-tasks-h' });
+    page.appendChild(listSec);
+    function statusOf(t) { return res[t.title + '|' + t.level] ? 'done' : t.id === draftId ? 'prog' : 'todo'; }
+    function paintList() {
+      listSec.textContent = '';
+      var f = fold(LSF.q.trim());
+      var groups = lessonGroups(LSF.col).map(function (g) {
+        return { g: g, rows: g.items.filter(function (t) {
+          if (LSF.lv && t.level !== LSF.lv) return false;
+          if (LSF.st && statusOf(t) !== LSF.st) return false;
+          return !f || fold(t.title + ' ' + t.client + ' ' + t.domain + ' ' + g.name).indexOf(f) >= 0;
+        }) };
+      }).filter(function (x) { return x.rows.length; });
+      var shown = groups.reduce(function (s, x) { return s + x.rows.length; }, 0);
+      var colObj = COLS.filter(function (c) { return c.id === LSF.col; })[0];
+      listSec.appendChild(h('div', { class: 'acad-sec-h' }, h('h2', { id: 'lessons-tasks-h', text: 'Tərcümə tapşırıqları' }), h('small', { class: 'tnum', text: (colObj ? colObj.label + ' · ' : '') + shown + ' tapşırıq' })));
+      if (!groups.length) {
+        listSec.appendChild(emptyNote('Uyğun tapşırıq yoxdur', 'Süzgəcləri dəyişin və ya axtarışı təmizləyin.', [
+          h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { LSF.lv = ''; LSF.st = ''; LSF.q = ''; lvSel.value = ''; stSel.value = ''; q.value = ''; paintList(); } }, 'Süzgəcləri sıfırla')]));
+        return;
+      }
+      groups.forEach(function (x) {
+        var g = x.g, dn = g.items.filter(function (t) { return statusOf(t) === 'done'; }).length;
+        listSec.appendChild(h('div', { class: 'lessons-grp', role: 'group', 'aria-label': g.name },
+          h('div', { class: 'lessons-gh', title: g.why || null }, ie(g.icon), h('h3', { text: g.name }),
+            h('span', { class: 'acad-count', text: dn + ' / ' + g.items.length }), bar(g.items.length ? dn / g.items.length * 100 : 0)),
+          x.rows.map(function (t) { return taskRow(t, res[t.title + '|' + t.level], t.id === draftId); })));
+      });
+    }
+    paintList();
+  }
+
+  function taskRow(t, r, inProg) {
+    var status;
+    if (r) status = h('span', { class: 'lessons-st done', title: r.n + ' yoxlama · son bal ' + r.last }, ie('check'), h('span', { class: 'lessons-sc', text: String(r.best) }), h('span', { class: 'lessons-gr', text: gradeOf(r.best).l }));
+    else if (inProg) status = h('span', { class: 'lessons-st prog', text: 'Davam edir' });
+    else status = h('span', { class: 'lessons-st', text: 'Başlanmayıb' });
+    var b = h('button', { class: 'lessons-row', type: 'button', 'aria-label': t.level + ' · ' + t.title + ' · ' + (r ? 'ən yaxşı bal ' + r.best : inProg ? 'davam edir' : 'başlanmayıb') },
+      lvTag(t.level),
+      h('span', { class: 'lessons-t' }, h('b', { text: t.title }), h('small', { text: [t.sim ? 'Simulyator' : null, t.client, t.domain !== t.client ? t.domain : null].filter(Boolean).join(' · ') })),
+      h('span', { class: 'lessons-len', text: words(t.src) + ' söz · ' + t.minutes + ' dəq' }),
+      status,
+      h('span', { class: 'lessons-chev', html: App.icon('chevron'), 'aria-hidden': 'true' }));
+    b.addEventListener('click', function () { openTask(t); });
+    return b;
+  }
+
+  /* one theory lesson as a page: rule, examples, typical mistakes, quiz, a short task
+     (same stores and XP rule as the desk's lesson sheet: home:lessondone:<day>, home:lessons-done) */
+  function renderLessonPage(page, L) {
+    var exs = (L.examples || []).filter(function (e) { return e && e.src && e.tgt; });
+    var pits = (L.pitfalls || []).filter(function (x) { return x && x.wrong && x.right; });
+    var qz = (L.quiz || []).filter(function (q) { return q && q.q && Array.isArray(q.options) && q.options.length >= 2 && q.answer >= 0 && q.answer < q.options.length; });
+    var task = L.task && L.task.src ? L.task : null;
+    var right = 0, answered = 0;
+    var passed = !!theoryDone()[L.id];
+    page.appendChild(acadNav('lessons'));
+    page.appendChild(h('button', { class: 'btn btn-ghost btn-sm lessons-back', type: 'button', onclick: function () { App.go('lessons'); } }, ie('back'), 'Bütün dərslər'));
+    page.appendChild(h('div', { class: 'page-h' },
+      h('div', null,
+        h('h1', { text: L.title }),
+        metaLine([L.topic || 'Dərs', L.level, (L.minutes || 5) + ' dəqiqə', '+' + (L.xp || 30) + ' XP', passed ? statusPill('Keçilib', 'ok') : null]))));
+    var ls = h('div', { class: 'lessons-ls' });
+    page.appendChild(ls);
+    function sec(title, kids) { return h('section', { class: 'lessons-ls-sec' }, h('h2', { text: title }), kids); }
+    if (L.intro) ls.appendChild(h('p', { class: 'task-src-tx', text: L.intro }));
+    if (L.rule) ls.appendChild(h('div', { class: 'lessons-rule' }, h('span', { class: 'acad-cap', text: 'Qayda' }), h('p', { text: L.rule })));
+    if (exs.length) ls.appendChild(sec('Nümunələr', h('div', null, exs.map(function (e) {
+      return h('div', { class: 'lessons-ex' }, h('p', { class: 'src', lang: L.from || 'en', text: e.src }), h('p', { lang: L.to || 'az', text: e.tgt }), e.note ? h('small', { text: e.note }) : null);
+    }))));
+    if (pits.length) ls.appendChild(sec('Tipik səhvlər', h('div', null, pits.map(function (x) {
+      return h('div', { class: 'lessons-pit' }, h('span', null, h('s', { class: 'acad-was', text: x.wrong }), h('span', { class: 'acad-count', text: '→' }), h('b', { class: 'acad-now', text: x.right })), x.why ? h('small', { text: x.why }) : null);
+    }))));
+    if (qz.length) {
+      var status = h('p', { class: 'acad-count', 'aria-live': 'polite', text: qz.length + ' sual · hər birində bir cavab seçin' });
+      var quizDone = function (el) {
+        var key = 'home:lessondone:' + dayKey(), done = sget(key, {}) || {};
+        if (done[L.id] != null) { App.toast('Dərs təkrarlandı', 'info', { sub: right + ' / ' + qz.length + ' düzgün · XP yalnız ilk dəfə verilir' }); return; }
+        done[L.id] = right; sset(key, done);
+        var allDone = theoryDone(); allDone[L.id] = true; sset('home:lessons-done', allDone);
+        var xp = Math.max(5, Math.round((L.xp || 30) * (qz.length ? 0.5 + 0.5 * right / qz.length : 1)));
+        addXP(xp, pointOf(el));
+        nz(right === qz.length ? 'celebrate' : 'success', right === qz.length ? 'Hamısı düzdür.' : right + ' / ' + qz.length + '. Səhv olanlara bir də baxın.', 2600);
+      };
+      ls.appendChild(sec('Suallar', [status].concat(qz.map(function (q, i) {
+        var fb = h('div', { 'aria-live': 'polite' });
+        var wrap = h('div', { class: 'practice-opts', role: 'group', 'aria-label': 'Sual ' + (i + 1) + ' — variantlar' });
+        var btns = q.options.map(function (o, k) {
+          var b = h('button', { class: 'choice practice-opt', type: 'button' },
+            h('span', { class: 'practice-opt-k', 'aria-hidden': 'true', text: 'ABCDE'.charAt(k) }), h('span', null, h('b', { text: o })));
+          b.addEventListener('click', function () {
+            if (wrap.classList.contains('locked')) return;
+            wrap.classList.add('locked');
+            var ok = k === q.answer;
+            btns.forEach(function (x, j) { x.setAttribute('aria-disabled', 'true'); x.classList.add(j === q.answer ? 'right' : j === k ? 'wrong' : 'dim'); });
+            fb.appendChild(h('div', { class: 'practice-fb' + (ok ? '' : ' bad') }, h('b', { text: ok ? 'Düzdür. ' : 'Düzgün cavab: ' + 'ABCDE'.charAt(q.answer) + '. ' }), q.explain || ''));
+            answered++; if (ok) right++;
+            status.textContent = right + ' / ' + qz.length + ' düzgün' + (answered < qz.length ? ' · ' + (qz.length - answered) + ' sual qalıb' : '');
+            if (answered === qz.length) quizDone(status);
+          });
+          wrap.appendChild(b);
+          return b;
+        });
+        return h('div', { class: 'lessons-q' }, h('p', { text: (i + 1) + '. ' + q.q }), wrap, fb);
+      }))));
+    }
+    if (task) ls.appendChild(lessonTask(L, task));
+    if (L.summary) ls.appendChild(h('div', { class: 'lessons-sum' }, h('span', { class: 'acad-cap', text: 'Yadda saxlayın' }), h('p', { text: L.summary })));
+    ls.appendChild(h('div', { class: 'acad-act' },
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { App.go('lessons'); } }, ie('back'), 'Bütün dərslər'),
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { App.go('task'); } }, 'Tərcümə tapşırığı', ie('arrow'))));
+  }
+
+  function lessonTask(L, task) {
+    var ta = h('textarea', { class: 'textarea', id: 'lessons-ta', rows: '3', lang: L.to || 'az', placeholder: 'Tərcüməniz…' });
+    var hintsBox = h('ol', { class: 'task-hints-l' }), res = h('div', { class: 'lessons-res', 'aria-live': 'polite' }), shown = 0;
+    var hints = task.hints || [];
+    var hintBtn = hints.length ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, ie('bulb'), 'İpucu') : null;
+    if (hintBtn) hintBtn.addEventListener('click', function () {
+      if (shown >= hints.length) return;
+      hintsBox.appendChild(h('li', { text: hints[shown++] }));
+      if (shown >= hints.length) hintBtn.disabled = true;
+    });
+    var modelBtn = task.model ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, ie('eye'), 'Nümunə') : null;
+    if (modelBtn) modelBtn.addEventListener('click', function () {
+      modelBtn.disabled = true;
+      res.appendChild(h('div', { class: 'acad-srcblk' }, h('span', { class: 'acad-rv-lbl', text: 'Nümunə tərcümə' }), h('p', { lang: L.to || 'az', style: 'color:var(--text)', text: task.model })));
+    });
+    var check = h('button', { class: 'btn btn-primary btn-sm', type: 'button' }, ie('check'), 'Yoxla');
+    check.addEventListener('click', function () {
+      var text = ta.value.trim();
+      if (isBusy(check)) return;
+      if (text.split(/\s+/).length < 2) { ta.setAttribute('aria-invalid', 'true'); focusSoft(ta); return; }
+      ta.removeAttribute('aria-invalid');
+      busy(check, true);
+      res.textContent = '';
+      res.appendChild(h('div', { class: 'sk-stack', role: 'status' }, h('span', { class: 'skeleton text' }), h('span', { class: 'skeleton text', style: 'width:70%' })));
+      App.fakeAI('grade', { src: task.src, text: text, model: task.model || '', level: L.level, from: L.from, to: L.to }, 600).then(function (r) {
+        busy(check, false);
+        if (!res.isConnected) return;
+        res.textContent = '';
+        if (!r || r.ok === false || r.score == null) {
+          res.appendChild(h('div', { class: 'practice-fb bad' }, (r && r.error) || 'Yoxlama tamamlanmadı — bağlantını yoxlayın və yenidən cəhd edin.'));
+          return;
+        }
+        var errs = r.errors || [];
+        res.appendChild(metaLine([h('b', { class: 'acad-mono', text: r.score + ' / 100' }), errs.length ? errs.length + ' qeyd' : 'Qeyd yoxdur', r.summary || null]));
+        if (errs.length) res.appendChild(reviewList(errs.slice(0, 3).map(function (e) {
+          var miss = isMissing({ was: String(e.was == null ? '' : e.was) });
+          return reviewRow({ sev: e.severity || SEV[e.type] || 'mid', type: e.type || 'Məna', was: miss ? 'Tərcümədə yoxdur' : String(e.was), missing: miss, now: e.now || '—', why: e.why || '', who: e.elder || TYPE_ELDER[e.type] || 'Mənaçı Mirzə' });
+        }), false, 'Qeydlər'));
+        if (task.model && modelBtn && !modelBtn.disabled) modelBtn.click();
+      }, function () { busy(check, false); res.textContent = ''; });
+    });
+    return h('section', { class: 'lessons-ls-sec' }, h('h2', { text: 'Tapşırıq' }),
+      h('div', { class: 'acad-srcblk' }, h('span', { class: 'acad-rv-lbl', text: 'Mənbə · ' + upper(L.from || 'en') }), h('p', { lang: L.from || 'en', style: 'color:var(--text)', text: task.src })),
+      h('div', { class: 'field' }, h('label', { class: 'sr-only', for: 'lessons-ta', text: 'Tərcüməniz' }), ta),
+      h('div', { class: 'task-hints' }, hintsBox),
+      h('div', { class: 'acad-act' }, check, hintBtn, modelBtn),
+      res);
+  }
+
+  /* ------------------------------------------------------------------
+     10. GLOSSARY SCREEN ('glossary', «Lüğət») — the domain glossaries as a
+         page: domain filter + search + term · translation · note table.
+         Same data as App.academyGlossary (the quick sheet).
+     ------------------------------------------------------------------ */
+  var GF = { dom: '', q: '' };
+
+  function renderGlossary(page, params) {
+    if (params.dom != null && (params.dom === '' || domByKey(params.dom))) GF.dom = params.dom;
+    if (GF.dom && !domByKey(GF.dom)) GF.dom = '';
+    var groups = DOMAINS.filter(function (d) { return d.glossary.length; });
+    var total = groups.reduce(function (s, d) { return s + d.glossary.length; }, 0);
+    page.appendChild(acadNav('glossary'));
+    page.appendChild(pageHead('Lüğət', groups.length + ' peşəkar sahə · ' + total + ' termin. İngiliscə termin, Azərbaycan dilində qəbul olunmuş qarşılığı və istifadə qeydi.', [
+      h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { App.go('task', GF.dom ? { dom: GF.dom } : {}); } }, ie('edit'), 'Bu sahədən tapşırıq')]));
+    if (!total) { page.appendChild(emptyNote('Lüğət yüklənmədi', 'Sahə lüğətləri hələ hazır deyil. Səhifəni yeniləyin.')); return; }
+
+    var side = h('nav', { class: 'glossary-doms', 'aria-label': 'Sahələr' });
+    var sideBtns = [];
+    var items = [{ key: '', name: 'Bütün sahələr', icon: 'grid', n: total }].concat(groups.map(function (d) { return { key: d.key, name: d.name, icon: d.icon, n: d.glossary.length }; }));
+    items.forEach(function (it) {
+      var b = h('button', { class: 'glossary-dom', type: 'button', 'aria-pressed': 'false' }, ie(it.icon), h('span', { text: it.name }), h('small', { text: String(it.n) }));
+      b.addEventListener('click', function () { setDomG(it.key); });
+      side.appendChild(b); sideBtns.push(b);
+    });
+    var sel = h('select', { class: 'select sm', 'aria-label': 'Sahə' }, items.map(function (it) { return h('option', { value: it.key, text: it.name + ' · ' + it.n }); }));
+    sel.addEventListener('change', function () { setDomG(sel.value); });
+    var q = h('input', { class: 'input', type: 'search', placeholder: 'İngiliscə və ya azərbaycanca axtarın…', 'aria-label': 'Termin axtar', autocomplete: 'off', spellcheck: 'false', value: GF.q });
+    q.addEventListener('input', function () { GF.q = q.value; paint(); });
+    var why = h('p', { class: 'glossary-why' });
+    var count = h('span', { class: 'acad-count', 'aria-live': 'polite' });
+    var tbody = h('tbody');
+    var table = h('div', { class: 'progress-tw' }, h('table', { class: 'progress-t glossary-t' },
+      h('thead', null, h('tr', null, h('th', { text: 'Termin · EN' }), h('th', { text: 'Azərbaycanca' }), h('th', { text: 'Qeyd' }))),
+      tbody));
+    var emptySlot = h('div');
+    function setDomG(k) { GF.dom = k; paint(); }
+    function paint() {
+      var cur = GF.dom || '';
+      sideBtns.forEach(function (b, i) { b.setAttribute('aria-pressed', items[i].key === cur ? 'true' : 'false'); });
+      sel.value = cur;
+      var d = domByKey(cur);
+      why.textContent = d && d.why ? d.why : '';
+      why.hidden = !why.textContent;
+      var f = fold(GF.q.trim()), n = 0;
+      tbody.textContent = '';
+      (d ? [d] : groups).forEach(function (g) {
+        var rows = g.glossary.filter(function (x) { return !f || fold(x.en + ' ' + x.az + ' ' + x.note).indexOf(f) >= 0; });
+        if (!rows.length) return;
+        n += rows.length;
+        if (!d) tbody.appendChild(h('tr', { class: 'grp' }, h('td', { colspan: '3' }, g.name, h('span', { text: String(rows.length) }))));
+        rows.forEach(function (x) {
+          tbody.appendChild(h('tr', null, h('td', { class: 'en', lang: 'en', text: x.en }), h('td', { class: 'az', lang: 'az', text: x.az }), h('td', { class: 'nt', text: x.note || '' })));
+        });
+      });
+      table.hidden = !n;
+      emptySlot.textContent = '';
+      if (!n) emptySlot.appendChild(emptyNote('Heç nə tapılmadı', 'Başqa sözlə axtarın və ya bütün sahələrə baxın.', [
+        h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { GF.q = ''; q.value = ''; GF.dom = ''; paint(); } }, 'Axtarışı təmizlə')]));
+      count.textContent = f ? n + ' termin tapıldı' : n + ' termin' + (d ? '' : ' · ' + groups.length + ' sahə');
+    }
+    page.appendChild(h('div', { class: 'glossary-layout' },
+      side,
+      h('div', { class: 'glossary-main' },
+        h('div', { class: 'glossary-tools' },
+          field('Sahə', sel, 'glossary-sel'),
+          h('label', { class: 'acad-field', style: 'flex:1 1 260px' }, h('span', { text: 'Axtarış' }), h('span', { class: 'input-ic' }, ie('search'), q))),
+        h('div', { class: 'acad-sec-h' }, why, count),
+        table, emptySlot)));
+    paint();
+  }
+
+  /* ------------------------------------------------------------------
+     11. REGISTER
+     ------------------------------------------------------------------ */
+  var RENDER = { task: renderTask, practice: renderPractice, cards: renderCards, progress: renderProgress, lessons: renderLessons, glossary: renderGlossary };
   function start(id) {
     return function (el, params) {
       cleanup(); gen++;
       T = null; P = null; C = null;
       App.css('academy', CSS);
-      var page = h('div', { class: 'page ' + id + '-page' });
+      var page = h('div', { class: 'page acad-page ' + id + '-page' });
       el.appendChild(page);
       RENDER[id](page, params || {});
     };
@@ -2863,4 +3364,6 @@
     render: start('cards'), leave: leave
   });
   App.register('progress', { title: 'Mənim inkişafım', icon: 'chart', group: 'Akademiya', mode: 'academy', render: start('progress'), leave: leave });
+  App.register('lessons', { title: 'Dərslər', icon: 'list', group: 'Akademiya', mode: 'academy', render: start('lessons'), leave: leave });
+  App.register('glossary', { title: 'Lüğət', icon: 'book', group: 'Akademiya', mode: 'academy', render: start('glossary'), leave: leave });
 })();

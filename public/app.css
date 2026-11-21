@@ -277,7 +277,7 @@ button:not(:disabled){cursor:pointer}
   box-shadow:none;transition:opacity var(--t-fast);
 }
 button.avatar:hover,a.avatar:hover{opacity:.88}
-.avatar.face{background:var(--surface2);color:inherit;box-shadow:inset 0 0 0 1px var(--line)}
+.avatar.face{background:transparent;color:inherit;box-shadow:none}
 .avatar.face > svg{display:block;width:100%;height:100%}
 .avatar.sm{width:24px;height:24px;font-size:.625rem}
 .avatar.lg{width:40px;height:40px;font-size:.875rem}

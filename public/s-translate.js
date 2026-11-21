@@ -1,6 +1,9 @@
 /* =====================================================================
    NUANZA — s-translate.js
-   Screen 'translate' («Tərcüməçi», both modes).
+   Screen 'translate' («Tərcümə», both modes) — tez tərcümə aləti.
+     • Yığcam alət paneli: dil cütü + dəyiş, üslub (Avto/Danışıq/Neytral/Rəsmi/Hüquqi), keyfiyyət
+     • Mənbə | tərcümə — geniş ekranda yan-yana, telefonda alt-alta
+     • Nəticə: əminlik xətləri, qeydlər, alternativlər, terminlər cədvəli, Məclis rəyi sətirlərlə
      • Dil cütü (EN · RU · TR · AZ) + dəyişmə düyməsi, avtomatik dil tanıma
      • Üslub: Avtomatik / Danışıq / Neytral / Rəsmi / Hüquqi + dəyişən izah sətri
      • Keyfiyyət: Sürətli / Dəqiq / Mirzə Məclisi
@@ -323,199 +326,237 @@
      4. CSS (tokens only, prefixed .translate-)
      ------------------------------------------------------------------ */
   var CSS = [
-    /* controls card */
-    '.translate-ctrl{display:grid;gap:18px}',
-    '.translate-ctrl-top{display:grid;gap:18px}',
-    '@media (min-width:760px){.translate-ctrl-top{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:28px;align-items:start}}',
-    '.translate-lab{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0;font-size:var(--fs-sm);font-weight:600;color:var(--ink)}',
-    '.translate-lab small{font-size:var(--fs-xs);font-weight:500;color:var(--soft);text-align:right}',
-    '.translate-pair{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:8px}',
-    '.translate-lang{display:grid;gap:4px;min-width:0;cursor:pointer}',
-    '.translate-lang > span{font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}',
-    '.translate-lang .select{padding-left:12px;padding-right:32px;font-weight:600;text-overflow:ellipsis;background-position:calc(100% - 17px) 52%,calc(100% - 12px) 52%}',
-    '.translate-swap{width:40px;height:40px;color:var(--soft)}',
-    '.translate-swap svg{transition:transform .3s var(--ease-out)}',
-    '@media (hover:hover){.translate-swap:hover{color:var(--ink)}}',
-    '.translate-quality .chips{gap:6px}',
-    '.translate-qhint{display:flex;align-items:flex-start;gap:6px;font-size:.78rem;line-height:1.45;color:var(--soft)}',
-    '.translate-qhint svg{width:14px;height:14px;margin-top:1px;flex:none;color:var(--firuze)}',
-    '.translate-reg .seg button{flex:1 1 auto;padding:6px 10px}',
-    /* register chips: the chosen one carries the firuzə accent, the detected one a small göl mark */
-    '.translate-reg .seg button.detected::after{width:6px;height:6px;border-radius:50%;background:var(--firuze)}',
-    '.translate-auto-ic{display:inline-grid;color:var(--firuze)}',
-    '.translate-auto-ic svg{width:14px;height:14px}',
+    '.translate-page{--tr-ease:cubic-bezier(.2,.8,.2,1)}',
+    '.translate-head h1{font:600 var(--t-h1,1.375rem)/1.27 var(--f-display);letter-spacing:-.01em}',
+    '.translate-head p{font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft))}',
+    '.translate-head .actions .btn{min-height:32px}',
+    /* one bordered workspace: toolbar · info line · source | target */
+    '.translate-work{min-width:0;background:var(--panel,var(--surface));border:1px solid var(--border,var(--line));border-radius:8px}',
+    '.translate-tb{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:8px 12px;border-bottom:1px solid var(--border,var(--line))}',
+    '.translate-pair{display:flex;align-items:center;gap:4px;min-width:0}',
+    '.translate-lang{display:block;min-width:0;cursor:pointer}',
+    '.translate-lang > span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}',
+    '.translate-lang .select,.translate-qsel{height:32px;min-height:32px;padding-block:0;padding-left:10px;padding-right:30px;font-size:var(--t-body,.875rem);font-weight:500;background-color:transparent;border-color:transparent;background-position:calc(100% - 16px) 52%,calc(100% - 11px) 52%}',
+    '.translate-lang .select{width:128px}',
+    '@media (hover:hover){.translate-lang .select:hover,.translate-qsel:hover{background-color:var(--hover);border-color:transparent}}',
+    '.translate-lang .select:focus,.translate-qsel:focus{border-color:var(--accent,var(--firuze))}',
+    '.translate-swap{width:32px;height:32px;border-color:transparent;color:var(--text-2,var(--soft))}',
+    '.translate-swap svg{width:16px;height:16px;transition:transform 160ms var(--tr-ease)}',
+    '@media (hover:hover){.translate-swap:hover{color:var(--text,var(--ink))}}',
+    '.translate-sep{flex:none;width:1px;height:20px;background:var(--border,var(--line))}',
+    '.translate-reg{min-width:0}',
+    '.translate-reg .seg button{min-height:26px;padding:3px 10px;font-size:var(--t-small,.8125rem)}',
+    '.translate-reg .seg button.detected::after{width:5px;height:5px;background:var(--accent,var(--firuze))}',
+    '.translate-quality{display:flex;align-items:center;gap:4px;margin-left:auto;min-width:0}',
+    '.translate-quality > span{font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft))}',
+    '.translate-qsel{width:auto}',
     '.translate-short{display:none}',
-    '@media (max-width:479px){.translate-reg .seg button{padding:6px 6px;gap:4px;font-size:.75rem}.translate-full{display:none}.translate-short{display:inline}',
-    '  .translate-reg .seg button.detected::after{width:5px;height:5px}',
-    '  .translate-pair{gap:6px}.translate-swap{width:38px;height:38px;margin-bottom:3px}',
-    '  .translate-lang .select{padding-left:10px;padding-right:26px;background-position:calc(100% - 14px) 52%,calc(100% - 9px) 52%}',
-    '  .translate-ta{min-height:112px}}',
-    '.translate-explain{display:flex;align-items:flex-start;gap:8px;min-height:2.9em;font-size:var(--fs-sm);line-height:1.45;color:var(--soft)}',
-    '.translate-explain-ic{display:inline-grid;flex:none;margin-top:1px;color:var(--firuze)}',
-    '.translate-explain-ic svg{width:16px;height:16px}',
-    '.translate-explain b{color:var(--ink);font-weight:600}',
-    '.translate-cue{color:var(--ink);font-weight:500;white-space:nowrap}',
-    '.translate-explain.swap > span:last-child{animation:translate-fade .3s var(--ease-out)}',
-
-    /* work area: source | result */
-    '.translate-work{display:grid;gap:16px}',
-    '@media (min-width:760px){.translate-work{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}}',
-    '.translate-pane{display:flex;flex-direction:column;gap:12px;min-width:0}',
-    '@media (min-width:760px){.translate-pane{min-height:340px}}',
-    '.translate-pane-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;min-width:0;min-height:28px}',
+    '.translate-info{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 24px;padding:8px 16px;border-bottom:1px solid var(--border,var(--line));font-size:var(--t-caption,.75rem);line-height:16px;color:var(--text-2,var(--soft))}',
+    '.translate-explain{flex:1 1 320px;min-width:0}',
+    '.translate-explain b{color:var(--text,var(--ink));font-weight:600}',
+    '.translate-cue{color:var(--text,var(--ink));font-family:var(--f-mono);font-size:.6875rem}',
+    '.translate-explain.swap > span{animation:translate-fade 160ms var(--tr-ease)}',
+    '.translate-qhint{flex:0 1 auto;color:var(--text-3,var(--faint))}',
+    '@media (max-width:759px){.translate-quality{margin-left:0}.translate-sep{display:none}.translate-pair{flex:1 1 100%}.translate-pair .translate-lang{flex:1 1 0}.translate-lang .select{width:100%}.translate-reg,.translate-reg .seg{width:100%}.translate-reg .seg button{flex:1 1 0;min-width:0;padding-inline:4px}.translate-full{display:none}.translate-short{display:inline}}',
+    /* panes */
+    '.translate-panes{display:grid;grid-template-columns:minmax(0,1fr)}',
+    '@media (min-width:760px){.translate-panes{grid-template-columns:repeat(2,minmax(0,1fr))}.translate-out{border-left:1px solid var(--border,var(--line))}}',
+    '@media (max-width:759px){.translate-out{border-top:1px solid var(--border,var(--line))}}',
+    '.translate-pane{display:flex;flex-direction:column;min-width:0}',
+    '@media (min-width:760px){.translate-pane{min-height:380px}}',
+    '.translate-pane-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;min-width:0;min-height:40px;padding:8px 16px 0}',
     '.translate-pane-h > label{cursor:text}',
-    '.translate-badges{display:flex;flex-wrap:wrap;gap:6px}',
+    '.translate-pane-h .eyebrow{font:600 var(--t-caption,.75rem)/16px var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--text-2,var(--soft))}',
+    '.translate-badges{display:flex;flex-wrap:wrap;gap:4px}',
     '.translate-detect{display:inline-flex;min-width:0}',
-    '.translate-detect .chip{min-height:24px;padding:0 8px;font-size:var(--fs-xs);border-color:var(--line);background:var(--surface2);color:var(--soft)}',
-    '.translate-src{transition:border-color var(--t-fast)}',
-    '.translate-src:focus-within{border-color:var(--firuze)}',
-    '.translate-src.translate-shake{animation:translate-shake .42s var(--ease-out)}',
-    '.translate-ta{flex:1;min-height:150px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;font-size:1rem;line-height:1.7;resize:none}',
+    '.translate-detect .chip{min-height:24px;padding:0 8px;font-size:var(--t-caption,.75rem)}',
+    '.translate-src.translate-shake .translate-ta::placeholder{color:var(--danger,var(--nar))}',
+    '.translate-ta{flex:1;min-height:200px;padding:8px 16px 16px;border:0;border-radius:0;background:transparent;box-shadow:none;font-size:1rem;line-height:1.65;resize:none}',
     '.translate-ta:hover,.translate-ta:focus{border:0;box-shadow:none;background:transparent}',
-    '.translate-src-f{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:12px;border-top:1px solid var(--line)}',
-    '.translate-count{margin-right:auto;font-size:var(--fs-xs);color:var(--soft);font-variant-numeric:tabular-nums}',
-    '.translate-count.warn{color:var(--zafaran-ink);font-weight:600}',
+    '.translate-src-f{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:8px 12px 8px 16px;border-top:1px solid var(--border,var(--line))}',
+    '.translate-count{margin-right:auto;font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft));font-variant-numeric:tabular-nums}',
+    '.translate-count.warn{color:var(--warning,var(--zafaran-ink));font-weight:600}',
+    '.translate-src-f .icon-btn{width:32px;height:32px}',
     '.translate-go{flex:none;margin-left:4px}',
-    '@media (max-width:479px){.translate-go{flex:1 1 100%;margin-left:0}}',
-    '.translate-kbd{display:none;gap:3px;margin-left:4px}',
+    '@media (max-width:479px){.translate-go{flex:1 1 100%;margin-left:0;margin-top:4px}}',
+    '.translate-kbd{display:none;gap:2px;margin-left:2px}',
     '@media (hover:hover) and (pointer:fine){.translate-kbd{display:inline-flex}}',
-    '.translate-go .kbd{background:color-mix(in srgb,currentColor 12%,transparent);border-color:color-mix(in srgb,currentColor 28%,transparent);color:inherit}',
+    '.translate-go .kbd{min-width:18px;height:18px;background:transparent;border-color:color-mix(in srgb,currentColor 35%,transparent);color:inherit;opacity:.85}',
     '.translate-go[aria-busy="true"] .translate-kbd{visibility:hidden}',
-    '.translate-go.translate-pulse{animation:none}',
-
     /* result */
-    '.translate-out-b{flex:1;display:grid;align-content:start;gap:14px;min-width:0}',
-    '.translate-text{font-size:1.0625rem;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);transition:opacity var(--t-base)}',
+    '.translate-out-b{flex:1;display:grid;align-content:start;gap:16px;min-width:0;padding:8px 16px 16px}',
+    '.translate-text{font-size:1rem;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text,var(--ink));transition:opacity 160ms ease}',
     '.translate-out.is-stale .translate-text{opacity:.5}',
-    '.translate-s{padding:2px 0;border-radius:4px;cursor:pointer;-webkit-box-decoration-break:clone;box-decoration-break:clone;outline:none}',
+    '.translate-s{padding:1px 0;border-radius:2px;cursor:pointer;-webkit-box-decoration-break:clone;box-decoration-break:clone;outline:none;text-underline-offset:.28em}',
     '.translate-s:focus-visible{box-shadow:0 0 0 2px var(--focus)}',
     '.translate-text .conf-high{text-decoration-color:transparent}',
-    '.translate-text .conf-high:hover{background:var(--surface2)}',
-    '.translate-text .conf-mid,.translate-legend .conf-mid{text-decoration-style:dotted;text-decoration-thickness:2.5px}',
-    '.translate-s[aria-expanded="true"]{background:var(--surface2)}',
-    '.translate-s.conf-mid[aria-expanded="true"]{background:var(--zaf-t)}',
-    '.translate-s.conf-low[aria-expanded="true"]{background:var(--nar-t)}',
-    '.translate-text.reveal .translate-s{animation:translate-in .3s var(--ease-out) both;animation-delay:calc(var(--i,0) * 40ms)}',
-    '.translate-text .translate-s.is-fixed{text-decoration-line:underline;text-decoration-style:solid;text-decoration-color:color-mix(in srgb,var(--ok) 70%,transparent);text-decoration-thickness:2px;animation:translate-fixed 2.8s var(--ease-out) .25s both}',
-    '.translate-meta{display:grid;gap:10px}',
-    '.translate-meta-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 16px}',
-    '.translate-legend .translate-leg-fix{text-decoration:underline solid color-mix(in srgb,var(--ok) 70%,transparent);text-decoration-thickness:2px;text-underline-offset:.3em}',
-    '.translate-stats{font-size:var(--fs-xs);color:var(--soft);font-variant-numeric:tabular-nums}',
-    '.translate-terms{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--soft)}',
-    '.translate-term{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:var(--r-xs);background:var(--ok-t);color:var(--ok);font-weight:600;font-size:.6875rem;white-space:nowrap}',
-    '.translate-term svg{width:12px;height:12px}',
-    '.translate-term.new{background:var(--fir-t);color:var(--firuze)}',
-    '.translate-out .callout{font-size:var(--fs-sm)}',
+    '.translate-text .conf-high:hover{background:var(--hover)}',
+    '.translate-text .conf-mid,.translate-legend .conf-mid{text-decoration-style:dotted;text-decoration-thickness:2px}',
+    '.translate-s[aria-expanded="true"]{background:var(--sunken,var(--surface2))}',
+    '.translate-s.conf-mid[aria-expanded="true"]{background:var(--warning-t,var(--zaf-t))}',
+    '.translate-s.conf-low[aria-expanded="true"]{background:var(--danger-t,var(--nar-t))}',
+    '.translate-text.reveal .translate-s{animation:translate-in 160ms ease both}',
+    '.translate-text .translate-s.is-fixed{text-decoration-line:underline;text-decoration-style:solid;text-decoration-color:color-mix(in srgb,var(--success,var(--ok)) 60%,transparent);text-decoration-thickness:1.5px}',
+    '.translate-meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 16px;padding-top:8px;border-top:1px solid var(--border,var(--line))}',
+    '.translate-legend{font-size:var(--t-caption,.75rem)}',
+    '.translate-legend .translate-leg-fix{text-decoration:underline solid color-mix(in srgb,var(--success,var(--ok)) 60%,transparent);text-decoration-thickness:1.5px;text-underline-offset:.3em}',
+    '.translate-stats{font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft));font-variant-numeric:tabular-nums}',
+    /* result blocks: annotations · alternatives · terms */
+    '.translate-block{display:grid;gap:6px;min-width:0}',
+    '.translate-block > h3{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font:600 var(--t-caption,.75rem)/16px var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--text-2,var(--soft))}',
+    '.translate-block > h3 .link{font-size:var(--t-caption,.75rem);letter-spacing:0;text-transform:none}',
+    '.translate-anns,.translate-alts{display:grid;min-width:0}',
+    '.translate-ann{display:grid;grid-template-columns:8px minmax(0,1fr);gap:2px 10px;align-items:baseline;width:100%;padding:6px 0;border:0;border-top:1px solid var(--border,var(--line));background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color 120ms ease}',
+    '.translate-ann:first-child{border-top:0}',
+    '@media (hover:hover){.translate-ann:hover b{text-decoration:underline;text-decoration-color:var(--border-2,var(--line-2));text-underline-offset:3px}}',
+    '.translate-ann > i{width:6px;height:6px;border-radius:50%;background:var(--border-2,var(--line-2));transform:translateY(-1px)}',
+    '.translate-ann.mid > i{background:var(--warning,var(--zafaran))}',
+    '.translate-ann.low > i{background:var(--danger,var(--nar))}',
+    '.translate-ann.fixed > i{background:var(--success,var(--ok))}',
+    '.translate-ann b{font-size:var(--t-small,.8125rem);font-weight:500;color:var(--text,var(--ink))}',
+    '.translate-ann small{grid-column:2;font-size:var(--t-caption,.75rem);line-height:16px;color:var(--text-2,var(--soft))}',
+    '.translate-alt{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:6px 0;border-top:1px solid var(--border,var(--line));font-size:var(--t-small,.8125rem)}',
+    '.translate-alt:first-child{border-top:0}',
+    '.translate-alt .cur{color:var(--text-2,var(--soft))}',
+    '.translate-alt .arr{color:var(--text-3,var(--faint))}',
+    '.translate-alt .alt{color:var(--text,var(--ink));font-weight:500}',
+    '.translate-alt .btn{margin-left:auto}',
+    '.translate-tt{width:100%;border-collapse:collapse;font-size:var(--t-small,.8125rem)}',
+    '.translate-tt th{padding:0 8px 4px 0;text-align:left;font:500 var(--t-caption,.75rem)/16px var(--f-body);color:var(--text-3,var(--faint))}',
+    '.translate-tt td{padding:6px 8px 6px 0;border-top:1px solid var(--border,var(--line));vertical-align:baseline;overflow-wrap:anywhere}',
+    '.translate-tt td:last-child,.translate-tt th:last-child{padding-right:0;text-align:right;white-space:nowrap}',
+    '.translate-tt .st{font-size:var(--t-caption,.75rem);color:var(--success,var(--ok))}',
+    '.translate-tt .st.new{color:var(--accent,var(--firuze))}',
+    '.translate-out .callout{font-size:var(--t-small,.8125rem)}',
     '.translate-out .callout .link{font-size:inherit}',
-    '.translate-actions{display:flex;flex-wrap:wrap;gap:6px;padding-top:12px;border-top:1px solid var(--line)}',
+    '.translate-actions{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:8px 12px;border-top:1px solid var(--border,var(--line))}',
     '.translate-actions .btn{min-width:0}',
     '.translate-actions .translate-deep{margin-left:auto}',
     '@media (max-width:479px){.translate-actions .translate-deep{margin-left:0}}',
-    '.translate-actions .btn:disabled{opacity:.42}',
-    '.translate-actions .btn.is-done{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,var(--line-2))}',
-
-    /* loading */
-    '.translate-load{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}',
+    '.translate-actions .btn.is-done{color:var(--success,var(--ok))}',
+    /* calm inline loading */
+    '.translate-load{display:grid;gap:12px}',
     '.translate-load-art{display:none}',
-    '.translate-load-art .nz[data-size="mini"]{--nz-w:62px}',
-    '.translate-load-cap{display:flex;align-items:center;flex-wrap:wrap;font-size:var(--fs-sm);font-weight:600;color:var(--ink)}',
-    '.translate-dots{display:inline-flex;gap:3px;margin-left:6px}',
-    '.translate-dots i{width:4px;height:4px;border-radius:50%;background:var(--soft);animation:translate-dot 1.1s var(--ease-in-out) infinite}',
-    '.translate-dots i:nth-child(2){animation-delay:.15s}',
-    '.translate-dots i:nth-child(3){animation-delay:.3s}',
-    '.translate-steps{display:flex;flex-wrap:wrap;gap:6px}',
-    '.translate-step{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:var(--r-xs);background:var(--surface2);color:var(--faint);font-size:.6875rem;font-weight:600;transition:background var(--t-base),color var(--t-base)}',
-    '.translate-step-ic{display:inline-grid;opacity:.25;transition:opacity var(--t-base)}',
+    '.translate-load-cap{display:flex;align-items:center;gap:8px;font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft))}',
+    '.translate-load-cap .spinner{width:12px;height:12px;border-width:1.5px;color:var(--accent,var(--firuze))}',
+    '.translate-dots{display:none}',
+    '.translate-steps{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:var(--t-caption,.75rem);color:var(--text-3,var(--faint))}',
+    '.translate-step{display:inline-flex;align-items:center;gap:4px;transition:color 160ms ease}',
+    '.translate-step-ic{display:inline-grid;opacity:0;transition:opacity 160ms ease}',
     '.translate-step-ic svg{width:12px;height:12px}',
-    '.translate-step.on{background:var(--fir-t);color:var(--firuze)}',
-    '.translate-step.done{background:var(--ok-t);color:var(--ok)}',
-    '.translate-step.done .translate-step-ic{opacity:1}',
-
-    /* empty */
-    '.translate-out .empty{flex:1;align-content:center;border:0;padding:12px 8px 18px;background:transparent}',
-    '.translate-out .empty p .kbd{margin:0 2px}',
-
+    '.translate-step.on{color:var(--text,var(--ink))}',
+    '.translate-step.done{color:var(--text-2,var(--soft))}',
+    '.translate-step.done .translate-step-ic{opacity:1;color:var(--success,var(--ok))}',
+    /* empty / error — small, contextual */
+    '.translate-note{display:grid;gap:6px;justify-items:start;padding:8px 0;max-width:46ch}',
+    '.translate-note h3{font:600 var(--t-h3,.9375rem)/20px var(--f-body)}',
+    '.translate-note p{font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft))}',
+    '.translate-note .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}',
+    '.translate-note.err h3{color:var(--text,var(--ink))}',
+    '.translate-note.err h3::before{content:"";display:inline-block;width:6px;height:6px;margin-right:8px;border-radius:50%;background:var(--danger,var(--nar));vertical-align:2px}',
+    '.translate-note .kbd{margin:0 2px}',
     /* note popover (appended to body) */
-    '.translate-pop{position:fixed;left:0;top:0;z-index:50;width:min(320px,calc(100vw - 24px));display:grid;gap:8px;padding:10px 14px 14px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);box-shadow:var(--sh-3);animation:translate-pop .16s var(--ease-out) both;transform-origin:var(--ax,50%) 0}',
-    '.translate-pop.above{transform-origin:var(--ax,50%) 100%}',
-    '.translate-pop::before{content:"";position:absolute;top:-7px;left:calc(var(--ax,50%) - 6px);width:12px;height:12px;background:var(--surface);border:1px solid var(--line);border-right:0;border-bottom:0;border-radius:3px 0 0 0;transform:rotate(45deg)}',
-    '.translate-pop.above::before{top:auto;bottom:-7px;transform:rotate(225deg)}',
-    '.translate-pop-h{display:flex;align-items:center;gap:8px;margin-right:-6px;font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}',
-    '.translate-pop-h > i{width:8px;height:8px;flex:none;border-radius:50%;background:var(--conf-high)}',
+    '.translate-pop{position:fixed;left:0;top:0;z-index:50;width:min(320px,calc(100vw - 24px));display:grid;gap:8px;padding:10px 12px 12px;border:1px solid var(--border-2,var(--line-2));border-radius:8px;background:var(--panel,var(--surface));color:var(--text,var(--ink));box-shadow:var(--sh-3);animation:translate-pop 120ms ease both}',
+    '.translate-pop-h{display:flex;align-items:center;gap:8px;margin-right:-6px;font:600 var(--t-caption,.75rem)/16px var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--text-2,var(--soft))}',
+    '.translate-pop-h > i{width:6px;height:6px;flex:none;border-radius:50%;background:var(--conf-high)}',
     '.translate-pop.mid .translate-pop-h > i{background:var(--conf-mid)}',
     '.translate-pop.low .translate-pop-h > i{background:var(--conf-low)}',
     '.translate-pop-h .icon-btn{margin-left:auto}',
-    '.translate-pop > p{font-size:.9rem;line-height:1.55}',
-    '.translate-pop > p.translate-pop-src{font-size:var(--fs-xs);color:var(--soft)}',
-    '.translate-pop-f{display:flex;flex-wrap:wrap;gap:6px;padding-top:4px}',
-    '.translate-pop-f .btn{white-space:normal;text-align:left;height:auto;padding-block:6px}',
-
-    /* council review panel */
-    '.translate-review{display:grid;gap:14px;padding-top:16px;border-top:1px solid var(--line);animation:fade-in .25s var(--ease-out) both}',
-    '.translate-review-h{display:flex;align-items:center;gap:14px;min-width:0}',
-    '.translate-review-h .ring{--size:76px}',
-    '.translate-review-h .ring-txt b{font-size:1.375rem}',
-    '.translate-review-t{font-size:var(--fs-sm);color:var(--ink);line-height:1.5}',
-    '.translate-review-h .badge{justify-self:start}',
-    '.translate-review-sub{font-family:var(--f-body);font-size:var(--fs-sm);font-weight:700;letter-spacing:.02em}',
-    '.translate-fixes{display:grid;gap:10px}',
-    '.translate-fix{display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface2)}',
-    '.translate-elder{width:36px;height:36px;display:block;border-radius:50%;overflow:hidden;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}',
-    '.translate-elder svg{display:block;width:100%;height:100%}',
-    '.translate-fix-who{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--soft)}',
-    '.translate-fix-who b{color:var(--ink);font-size:var(--fs-sm)}',
-    '.translate-wn{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.92rem;line-height:1.4}',
-    '.translate-wn svg{width:14px;height:14px;color:var(--faint)}',
-    '.translate-was{padding:1px 7px;border-radius:6px;background:var(--nar-t);color:var(--nar);text-decoration:line-through;text-decoration-thickness:1.5px;overflow-wrap:anywhere}',
-    '.translate-now{padding:1px 7px;border-radius:6px;background:var(--ok-t);color:var(--ok);font-weight:600;overflow-wrap:anywhere}',
-    '.translate-fix p{font-size:var(--fs-sm);color:var(--soft);line-height:1.5}',
-    '.translate-checks{display:flex;flex-wrap:wrap;gap:6px}',
-
-    /* example compare card */
-    '.translate-ex-src{font-family:var(--f-body);font-style:normal;font-weight:500;font-size:.9375rem;line-height:1.5;color:var(--soft)}',
-    '.translate-ex{display:grid;gap:10px}',
-    '@media (min-width:760px){.translate-ex{grid-template-columns:repeat(2,minmax(0,1fr))}}',
-    '.translate-ex-row{display:grid;gap:8px;align-content:start;width:100%;min-width:0;padding:14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);text-align:left;font:inherit;cursor:pointer;transition:border-color var(--t-fast),background var(--t-fast) var(--ease-out)}',
-    '@media (hover:hover){.translate-ex-row:hover{border-color:var(--line-2)}}',
-    '.translate-ex-row:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.translate-ex-row[aria-pressed="true"]{border-color:var(--firuze);background:linear-gradient(var(--fir-t),var(--fir-t)),var(--surface)}',
-    '.translate-ex-row .t{font-family:var(--f-body);font-weight:500;font-size:1rem;line-height:1.5}',
-    '.translate-ex-row small{color:var(--soft);font-size:var(--fs-xs)}',
-    '.translate-ex-diff{display:flex;align-items:flex-start;gap:8px;font-size:var(--fs-sm);color:var(--soft);line-height:1.5}',
-    '.translate-ex-diff svg{width:16px;height:16px;flex:none;margin-top:2px;color:var(--firuze)}',
-
-    /* history + situation */
-    '.translate-hist-end{flex-direction:column;align-items:flex-end;gap:4px}',
-    '.translate-hist-end small{font-size:.72rem;color:var(--faint)}',
-    '.translate-sit .kv dd{text-align:right}',
-
+    '.translate-pop > p{font-size:var(--t-small,.8125rem);line-height:1.5}',
+    '.translate-pop > p.translate-pop-src{font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft))}',
+    '.translate-pop-f{display:flex;flex-wrap:wrap;gap:6px;padding-top:2px}',
+    '.translate-pop-f .btn{white-space:normal;text-align:left;height:auto;padding-block:4px}',
+    /* Mirzə Məclisi review: reviewer rows */
+    '.translate-review{display:grid;gap:10px;padding-top:12px;border-top:1px solid var(--border,var(--line));animation:translate-in 160ms ease both}',
+    '.translate-review-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;min-width:0}',
+    '.translate-review-h .eyebrow{font:600 var(--t-caption,.75rem)/16px var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--text-2,var(--soft))}',
+    '.translate-score{font:600 var(--t-h2,1.0625rem)/1 var(--f-body);font-variant-numeric:tabular-nums}',
+    '.translate-score small{font-size:var(--t-caption,.75rem);font-weight:400;color:var(--text-3,var(--faint))}',
+    '.translate-seal{font-size:var(--t-caption,.75rem);font-weight:600}',
+    '.translate-seal.ok{color:var(--success,var(--ok))}.translate-seal.mid{color:var(--warning,var(--zafaran-ink))}.translate-seal.bad{color:var(--danger,var(--nar))}',
+    '.translate-review-t{font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft));line-height:1.5}',
+    '.translate-fixes{display:grid;border:1px solid var(--border,var(--line));border-radius:6px}',
+    '.translate-fix{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:4px 12px;align-items:start;padding:10px 12px}',
+    '.translate-fix + .translate-fix{border-top:1px solid var(--border,var(--line))}',
+    '.translate-sev{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-caption,.75rem);font-weight:600;line-height:20px;color:var(--text-2,var(--soft))}',
+    '.translate-sev::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}',
+    '.translate-sev.high{color:var(--danger,var(--nar))}.translate-sev.mid{color:var(--warning,var(--zafaran-ink))}',
+    '.translate-fix-b{display:grid;gap:2px;min-width:0}',
+    '.translate-fix-type{font-size:var(--t-caption,.75rem);color:var(--text-3,var(--faint))}',
+    '.translate-wn{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 6px;font-size:var(--t-small,.8125rem);line-height:20px}',
+    '.translate-wn svg{width:12px;height:12px;color:var(--text-3,var(--faint));align-self:center}',
+    '.translate-was{color:var(--text-2,var(--soft));text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--danger,var(--nar)) 55%,transparent);overflow-wrap:anywhere}',
+    '.translate-now{color:var(--text,var(--ink));font-weight:500;overflow-wrap:anywhere}',
+    '.translate-fix p{font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft));line-height:16px}',
+    '.translate-who{display:flex;align-items:center;gap:6px;font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft));white-space:nowrap}',
+    '.translate-mono{flex:none;width:18px;height:18px;display:grid;place-items:center;border-radius:50%;box-shadow:inset 0 0 0 1px var(--border-2,var(--line-2));font:600 .625rem/1 var(--f-body);color:var(--text,var(--ink))}',
+    '@media (max-width:559px){.translate-fix{grid-template-columns:minmax(0,1fr) auto}.translate-fix-b{grid-column:1 / -1;grid-row:2}}',
+    '.translate-checks{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft))}',
+    '.translate-checks span b{font-weight:600;color:var(--warning,var(--zafaran-ink))}',
+    '.translate-checks span.ok::before{content:"✓ ";color:var(--success,var(--ok))}',
+    '.translate-review .row .btn{min-height:28px}',
+    /* lower sections: example · context · history */
+    '.translate-sec{display:grid;gap:8px;min-width:0}',
+    '.translate-sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:0 4px}',
+    '.translate-sec-h h2{font:600 var(--t-caption,.75rem)/16px var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--text-2,var(--soft))}',
+    '.translate-box{min-width:0;background:var(--panel,var(--surface));border:1px solid var(--border,var(--line));border-radius:8px}',
+    '.translate-lower{display:grid;gap:24px;grid-template-columns:minmax(0,1fr)}',
+    '@media (min-width:900px){.translate-lower.two{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}}',
+    '.translate-sit dl{display:grid;grid-template-columns:minmax(0,96px) minmax(0,1fr);margin:0}',
+    '.translate-sit dt,.translate-sit dd{margin:0;padding:8px 16px;border-top:1px solid var(--border,var(--line));font-size:var(--t-small,.8125rem)}',
+    '.translate-sit dt{padding-right:0;color:var(--text-2,var(--soft))}',
+    '.translate-sit dd{overflow-wrap:anywhere}',
+    '.translate-sit dt:first-of-type,.translate-sit dd:first-of-type{border-top:0}',
+    '.translate-sit .empty-tx{padding:12px 16px;font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft))}',
+    '.translate-hrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:baseline;gap:2px 12px;width:100%;padding:8px 16px;border:0;border-top:1px solid var(--border,var(--line));background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color 120ms ease}',
+    '.translate-hrow:first-child{border-top:0;border-radius:8px 8px 0 0}',
+    '.translate-hrow:last-child{border-radius:0 0 8px 8px}',
+    '.translate-hrow:only-child{border-radius:8px}',
+    '@media (hover:hover){.translate-hrow:hover{background:var(--hover)}}',
+    '.translate-hrow:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    '.translate-hrow .pair{font:500 .6875rem/16px var(--f-mono);color:var(--text-2,var(--soft))}',
+    '.translate-hrow .tx{display:grid;gap:1px;min-width:0}',
+    '.translate-hrow .tx b{font-size:var(--t-small,.8125rem);font-weight:500}',
+    '.translate-hrow .tx small{font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft))}',
+    '.translate-hrow .meta{font-size:var(--t-caption,.75rem);color:var(--text-3,var(--faint));white-space:nowrap}',
+    '.translate-ex-src{padding:10px 16px;font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft))}',
+    '.translate-ex{display:grid;grid-template-columns:minmax(0,1fr);border-top:1px solid var(--border,var(--line))}',
+    '@media (min-width:760px){.translate-ex{grid-template-columns:repeat(2,minmax(0,1fr))}.translate-ex-row + .translate-ex-row{border-left:1px solid var(--border,var(--line))}}',
+    '@media (max-width:759px){.translate-ex-row + .translate-ex-row{border-top:1px solid var(--border,var(--line))}}',
+    '.translate-ex-row{position:relative;display:grid;gap:4px;align-content:start;width:100%;min-width:0;padding:12px 16px;border:0;background:none;color:var(--text,var(--ink));text-align:left;font:inherit;cursor:pointer;transition:background-color 120ms ease}',
+    '@media (hover:hover){.translate-ex-row:hover{background:var(--hover)}}',
+    '.translate-ex-row:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    '.translate-ex-row[aria-pressed="true"]{background:var(--selected,var(--fir-t))}',
+    '.translate-ex-row[aria-pressed="true"]::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent,var(--firuze))}',
+    '.translate-ex-row .t{font-size:var(--t-body,.875rem);line-height:1.5}',
+    '.translate-ex-row small{color:var(--text-2,var(--soft));font-size:var(--t-caption,.75rem)}',
+    '.translate-ex-row .reg{font-size:var(--t-caption,.75rem);font-weight:600;color:var(--text,var(--ink))}',
+    '.translate-ex-diff{padding:10px 16px;border-top:1px solid var(--border,var(--line));font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft));line-height:1.5}',
     /* sheets */
-    '.translate-styles{display:grid;gap:10px}',
+    '.translate-styles{display:grid;gap:8px}',
     '.translate-style-tx{display:grid;gap:2px;min-width:0}',
-    '.translate-style-pv{display:block;margin-top:6px;font-family:var(--f-body);font-weight:500;font-size:.95rem;line-height:1.45;color:var(--ink)}',
+    '.translate-style-pv{display:block;margin-top:4px;font-size:var(--t-small,.8125rem);line-height:1.45;color:var(--text,var(--ink))}',
     '.translate-style-pv .skeleton{width:100%}',
-    '.translate-vars{display:grid;gap:12px}',
-    '@media (min-width:700px){.translate-vars{grid-template-columns:repeat(3,minmax(0,1fr))}}',
-    '.translate-var{display:flex;flex-direction:column;gap:10px;min-width:0;padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}',
-    '.translate-var.rec{border-color:color-mix(in srgb,var(--firuze) 55%,var(--line));background:linear-gradient(var(--fir-t),var(--fir-t)),var(--surface)}',
-    '.translate-var.cur{border-color:var(--firuze)}',
-    '.translate-var-t{font-family:var(--f-body);font-weight:500;font-size:1.0625rem;line-height:1.55}',
-    '.translate-var-n{font-size:var(--fs-xs);color:var(--soft);line-height:1.5}',
+    '.translate-vars{display:grid;gap:0;border:1px solid var(--border,var(--line));border-radius:8px}',
+    '@media (min-width:700px){.translate-vars{grid-template-columns:repeat(3,minmax(0,1fr))}.translate-var + .translate-var{border-left:1px solid var(--border,var(--line))}}',
+    '@media (max-width:699px){.translate-var + .translate-var{border-top:1px solid var(--border,var(--line))}}',
+    '.translate-var{display:flex;flex-direction:column;gap:10px;min-width:0;padding:14px 16px}',
+    '.translate-var.rec .eyebrow{color:var(--accent,var(--firuze))}',
+    '.translate-var.cur{background:var(--selected,var(--fir-t))}',
+    '.translate-var-t{font-size:var(--t-body,.875rem);line-height:1.6}',
+    '.translate-var-n{font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft));line-height:1.5}',
     '.translate-var .row{margin-top:auto}',
-    '.translate-bar{display:grid;grid-template-columns:minmax(0,1fr) 38px;gap:4px 8px;align-items:center;font-size:.72rem;color:var(--soft)}',
-    '.translate-bar .progress{grid-column:1 / -1;grid-row:2}',
-    '.translate-bar b{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}',
-    '.translate-var-src{display:grid;gap:4px;padding:12px 14px;border-radius:var(--r-md);background:var(--surface2);font-size:var(--fs-sm)}',
-    '.translate-sample .tx b{font-size:var(--fs-base)}',
-
+    '.translate-bar{display:grid;grid-template-columns:minmax(0,1fr) 38px;gap:4px 8px;align-items:center;font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft))}',
+    '.translate-bar .progress{grid-column:1 / -1;grid-row:2;height:3px}',
+    '.translate-bar .progress > i{background:var(--text-3,var(--faint))}',
+    '.translate-bar b{text-align:right;color:var(--text,var(--ink));font-weight:500;font-variant-numeric:tabular-nums}',
+    '.translate-var-src{display:grid;gap:4px;padding:10px 12px;border-radius:6px;background:var(--sunken,var(--surface2));font-size:var(--t-small,.8125rem)}',
+    '.translate-sample .tx b{font-size:var(--t-body,.875rem)}',
     /* keyframes */
-    '@keyframes translate-fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}',
+    '@keyframes translate-fade{from{opacity:0}to{opacity:1}}',
     '@keyframes translate-in{from{opacity:0}to{opacity:1}}',
-    '@keyframes translate-fixed{0%{background:color-mix(in srgb,var(--ok) 30%,transparent)}100%{background:transparent}}',
     '@keyframes translate-pop{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}',
-    '@keyframes translate-dot{0%,80%,100%{opacity:.25;transform:rotate(45deg)}40%{opacity:1;transform:translateY(-3px) rotate(45deg)}}',
-    '@keyframes translate-shake{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}',
-    '@keyframes translate-pulse{from{opacity:1}to{opacity:1}}'
+    '@media (prefers-reduced-motion:reduce){.translate-text.reveal .translate-s,.translate-review,.translate-pop,.translate-explain.swap > span{animation:none}}'
   ].join('\n');
 
   /* ------------------------------------------------------------------
@@ -663,17 +704,16 @@
      ------------------------------------------------------------------ */
   function header() {
     var acad = App.mode && App.mode() === 'academy';
-    return h('div', { class: 'page-h' },
+    return h('div', { class: 'page-h translate-head' },
       h('div', null,
-        h('h1', { text: 'Tərcüməçi' }),
+        h('h1', { text: 'Tərcümə' }),
         h('p', { text: acad ?
           'Tərcümə edin, işarələnmiş yerlərə toxunun və səbəbini öyrənin. Dərin yoxlama +15 XP verir.' :
-          'Üslub avtomatik tanınır, əminlik aşağı olan yerlər xətlə işarələnir. Son qərar sizindir.' })),
+          'Üslub avtomatik tanınır; əminliyi aşağı olan yerlər xətlə işarələnir. Son qərar sizindir.' })),
       h('div', { class: 'actions' },
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: openSamples }, ie('layers'), 'Nümunələr'),
-        h('button', { class: 'btn btn-secondary', type: 'button', onclick: docUpload }, ie('upload'), 'Sənəd yüklə')));
+        h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: openSamples }, 'Nümunələr'),
+        h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: docUpload }, ie('upload'), 'Sənəd yüklə')));
   }
-
   function langSelect(side) {
     var id = 'tr-' + side;
     var sel = h('select', {
@@ -687,116 +727,103 @@
 
   function ctrlCard() {
     var swap = h('button', { class: 'icon-btn translate-swap', type: 'button', 'aria-label': 'Dilləri yerdəyiş et', title: 'Dilləri yerdəyiş et', html: SWAP_SVG, onclick: swapLangs });
-    V.seg = h('div', { class: 'seg block', role: 'group', 'aria-label': 'Üslub' }, REGS.map(function (r) {
+    V.seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Üslub' }, REGS.map(function (r) {
       return h('button', {
         type: 'button', 'data-reg': r.id, 'aria-pressed': String(S.reg === r.id), 'aria-label': r.id === 'auto' ? 'Avtomatik' : null,
+        title: r.id === 'auto' ? 'Üslub mətndən tanınsın' : REG_EXPLAIN[r.id],
         onclick: function () { setRegister(r.id, true); }
       }, r.id === 'auto' ? [
-        h('span', { class: 'translate-auto-ic', html: App.icon('sparkle'), 'aria-hidden': 'true' }),
-        h('span', { class: 'translate-full', text: 'Avtomatik' }),
+        h('span', { class: 'translate-full', text: 'Avto' }),
         h('span', { class: 'translate-short', text: 'Avto', 'aria-hidden': 'true' })
       ] : REG_LABEL[r.id]);
     }));
     V.explain = h('p', { class: 'translate-explain', 'aria-live': 'polite' });
-    V.chips = h('div', { class: 'chips', role: 'group', 'aria-label': 'Keyfiyyət rejimi' }, QUALITY.map(function (q) {
-      return h('button', { class: 'chip', type: 'button', 'data-q': q.id, 'aria-pressed': String(S.quality === q.id), onclick: function () { setQuality(q.id, true); } }, q.label);
-    }));
+    V.chips = h('select', { class: 'select translate-qsel', id: 'tr-quality', 'aria-label': 'Keyfiyyət rejimi', onchange: function (e) { setQuality(e.target.value, true); } },
+      QUALITY.map(function (q) { return h('option', { value: q.id, text: q.label }); }));
+    V.chips.value = S.quality;
     V.qhint = h('p', { class: 'translate-qhint' });
-    return h('section', { class: 'card translate-ctrl', 'aria-label': 'Tərcümə ayarları' },
-      h('div', { class: 'translate-ctrl-top' },
-        h('div', { class: 'stack-sm' },
-          h('div', { class: 'translate-lab' }, h('span', { text: 'Dil cütü' }), h('small', { text: 'AZ ↔ EN · RU · TR' })),
-          h('div', { class: 'translate-pair' }, langSelect('from'), swap, langSelect('to'))),
-        h('div', { class: 'stack-sm translate-quality' },
-          h('div', { class: 'translate-lab' }, h('span', { text: 'Keyfiyyət' }), h('small', { text: 'Sürət və dərinlik' })),
-          V.chips, V.qhint)),
-      h('div', { class: 'stack-sm translate-reg' },
-        h('div', { class: 'translate-lab' }, h('span', { text: 'Üslub' }), h('small', { text: 'Mətndən avtomatik tanınır' })),
-        V.seg, V.explain));
+    V.ctrl = h('div', { class: 'translate-ctrl' },
+      h('div', { class: 'translate-tb', role: 'toolbar', 'aria-label': 'Tərcümə ayarları' },
+        h('div', { class: 'translate-pair' }, langSelect('from'), swap, langSelect('to')),
+        h('span', { class: 'translate-sep', 'aria-hidden': 'true' }),
+        h('div', { class: 'translate-reg' }, V.seg),
+        h('label', { class: 'translate-quality', for: 'tr-quality' }, h('span', { text: 'Keyfiyyət' }), V.chips)),
+      h('div', { class: 'translate-info' }, V.explain, V.qhint));
+    return V.ctrl;
   }
-
   function srcPane() {
     V.srcEyebrow = h('span', { class: 'eyebrow' });
     V.detect = h('span', { class: 'translate-detect' });
     V.ta = h('textarea', {
       class: 'textarea translate-ta', id: 'tr-src', maxlength: '5000', rows: '4', spellcheck: 'true', lang: S.from,
-      placeholder: 'Mətni yazın və ya yapışdırın… Məsələn: «Please find attached the signed copy of the contract.»',
+      placeholder: 'Mətni yazın və ya yapışdırın — məsələn: «Please find attached the signed copy of the contract.»',
       value: S.src, oninput: onInput, onkeydown: onKey
     });
     V.count = h('span', { class: 'translate-count', 'aria-live': 'off' });
     V.paste = h('button', { class: 'icon-btn ghost', type: 'button', 'aria-label': 'Buferdən yapışdır', title: 'Yapışdır', html: CLIP_SVG, onclick: pasteText });
-    V.clear = h('button', { class: 'icon-btn ghost', type: 'button', 'aria-label': 'Mətni təmizlə', title: 'Təmizlə', html: App.icon('trash'), onclick: clearSource });
+    V.clear = h('button', { class: 'icon-btn ghost', type: 'button', 'aria-label': 'Mətni təmizlə', title: 'Təmizlə', html: App.icon('x'), onclick: clearSource });
     V.go = h('button', { class: 'btn btn-primary translate-go', type: 'button', onclick: function () { translate({ reason: 'button' }); } },
-      ie('translate'), h('span', { text: 'Tərcümə et' }),
+      h('span', { text: 'Tərcümə et' }),
       h('span', { class: 'translate-kbd', 'aria-hidden': 'true' }, h('kbd', { class: 'kbd', text: MOD }), h('kbd', { class: 'kbd', text: '↵' })));
-    V.srcCard = h('section', { class: 'card translate-pane translate-src', 'aria-label': 'Mənbə mətn' },
+    V.srcCard = h('section', { class: 'translate-pane translate-src', 'aria-label': 'Mənbə mətn' },
       h('div', { class: 'translate-pane-h' }, h('label', { for: 'tr-src' }, V.srcEyebrow), V.detect),
       V.ta,
       h('div', { class: 'translate-src-f' }, V.count, V.paste, V.clear, V.go));
     return V.srcCard;
   }
-
   function outPane() {
     V.outEyebrow = h('span', { class: 'eyebrow' });
     V.outBadges = h('div', { class: 'translate-badges' });
     V.outBody = h('div', { class: 'translate-out-b' });
     V.acts = {
       copy: h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: function (e) { copyResult(e.currentTarget); } }, ie('copy'), 'Kopyala'),
-      vars: h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: openVariants }, ie('layers'), '3 variant'),
-      style: h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: function () { openStyle(); } }, ie('sliders'), 'Üslub'),
-      gloss: h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: function () { openGlossary(); } }, ie('book'), 'Lüğətə əlavə et'),
-      deep: h('button', { class: 'btn btn-sm btn-secondary translate-deep', type: 'button', onclick: deepReview }, ie('shield'), 'Dərin yoxlama')
+      vars: h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: openVariants }, '3 variant'),
+      style: h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: function () { openStyle(); } }, 'Üslub'),
+      gloss: h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: function () { openGlossary(); } }, 'Lüğətə əlavə et'),
+      deep: h('button', { class: 'btn btn-sm btn-secondary translate-deep', type: 'button', onclick: deepReview }, 'Dərin yoxlama')
     };
-    V.out = h('section', { class: 'card translate-pane translate-out', 'aria-label': 'Tərcümə nəticəsi' },
+    V.out = h('section', { class: 'translate-pane translate-out', 'aria-label': 'Tərcümə nəticəsi' },
       h('div', { class: 'translate-pane-h' }, V.outEyebrow, V.outBadges),
       V.outBody,
       h('div', { class: 'translate-actions' }, V.acts.copy, V.acts.vars, V.acts.style, V.acts.gloss, V.acts.deep));
     return V.out;
   }
-
   function exampleCard() {
     var rows = [
-      { reg: 'danisiq', badge: '', who: 'Həmkara · çatda' },
-      { reg: 'resmi', badge: 'fir', who: 'Müştəriyə · e-poçtda' }
+      { reg: 'danisiq', who: 'Həmkara · çatda' },
+      { reg: 'resmi', who: 'Müştəriyə · e-poçtda' }
     ];
     V.exRows = rows.map(function (r) {
       return h('button', {
         class: 'translate-ex-row', type: 'button', 'data-reg': r.reg, 'aria-pressed': 'false',
         onclick: function () { setRegister(r.reg, false); translate({ reason: 'example' }); if (!wide()) scrollToEl(V.out); }
       },
-        h('span', { class: 'row between' }, h('span', { class: 'badge ' + r.badge, text: REG_LABEL[r.reg] }), h('small', { text: r.who })),
+        h('span', { class: 'row between' }, h('span', { class: 'reg', text: REG_LABEL[r.reg] }), h('small', { text: r.who })),
         h('span', { class: 't', lang: 'az', text: joinSegs(EX.reg[r.reg].segs) }));
     });
-    V.exCard = h('section', { class: 'card translate-excard' },
-      h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Canlı nümunə' }), h('h2', { text: 'Bir cümlə — iki üslub' })),
-        h('div', { class: 'actions' }, h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: function () { openStyle(); } }, ie('sliders'), 'Dördü də'))),
-      h('div', { class: 'stack' },
+    V.exCard = h('section', { class: 'translate-sec translate-excard' },
+      h('div', { class: 'translate-sec-h' }, h('h2', { text: 'Nümunə · bir cümlə, iki üslub' }),
+        h('button', { class: 'link small', type: 'button', onclick: function () { openStyle(); } }, 'Dörd üslubu müqayisə et')),
+      h('div', { class: 'translate-box' },
         h('p', { class: 'translate-ex-src', lang: 'en', text: '«' + EX.src + '»' }),
         h('div', { class: 'translate-ex' }, V.exRows),
-        h('p', { class: 'translate-ex-diff' }, h('span', { html: App.icon('bulb'), 'aria-hidden': 'true', style: 'display:inline-grid' }),
-          h('span', null, 'Fərq: «sən» → «siz», «ASAP» → «ən qısa müddətdə», sual → nəzakətli xahiş. Sətirə toxunun — tərcümə həmin üslubda yenidən yazılacaq.'))));
+        h('p', { class: 'translate-ex-diff', text: 'Fərq: «sən» → «siz», «ASAP» → «ən qısa müddətdə», sual → nəzakətli xahiş. Sətri seçin — tərcümə həmin üslubda yenidən yazılacaq.' })));
     return V.exCard;
   }
-
   function lowerGrid() {
-    V.sitBody = h('div');
-    var sit = h('section', { class: 'card translate-sit' },
-      h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Situasiya' }), h('h2', { text: 'Kimə, nə üçün?' })),
-        h('div', { class: 'actions' }, h('button', { class: 'btn btn-sm', type: 'button', onclick: function () { openStyle(); } }, ie('sliders'), 'Dəyiş'))),
+    V.sitBody = h('div', { class: 'translate-box translate-sit' });
+    var sit = h('section', { class: 'translate-sec' },
+      h('div', { class: 'translate-sec-h' }, h('h2', { text: 'Kontekst' }),
+        h('button', { class: 'link small', type: 'button', onclick: function () { openStyle(); } }, 'Üslubu dəyiş')),
       V.sitBody);
-    V.hist = h('div', { class: 'list' });
+    V.hist = h('div', { class: 'translate-box' });
     V.histClear = h('button', { class: 'link small', type: 'button', onclick: clearHistory }, 'Təmizlə');
-    V.histCard = h('section', { class: 'card', hidden: true },
-      h('div', { class: 'card-h' },
-        h('div', null, h('span', { class: 'eyebrow', text: 'Tarixçə' }), h('h2', { text: 'Son tərcümələr' })),
-        h('div', { class: 'actions' }, V.histClear)),
+    V.histCard = h('section', { class: 'translate-sec', hidden: true },
+      h('div', { class: 'translate-sec-h' }, h('h2', { text: 'Son tərcümələr' }), V.histClear),
       V.hist);
-    V.lower = h('div', { class: 'grid-2' }, sit, V.histCard);
+    V.lower = h('div', { class: 'translate-lower' }, sit, V.histCard);
     return V.lower;
   }
-
   /* ------------------------------------------------------------------
      9. CONTROLS — register, quality, languages
      ------------------------------------------------------------------ */
@@ -804,21 +831,20 @@
     var el = V.explain; if (!el) return;
     var d = V.det, kids;
     if (S.reg === 'auto') {
-      if (!d) kids = ['Üslubu mətnin özündən tanıyıram: müraciət formasına, sözlərə və durğu işarələrinə baxıram.'];
+      if (!d) kids = ['Üslub mətnin özündən tanınır: müraciət formasına, sözlərə və durğu işarələrinə baxılır.'];
       else if (d.cues.length) {
         kids = ['Mətndə '];
-        d.cues.forEach(function (c, i) { if (i) kids.push(i === d.cues.length - 1 ? ' və ' : ', '); kids.push(h('span', { class: 'translate-cue', text: '«' + c + '»' })); });
+        d.cues.forEach(function (c, i) { if (i) kids.push(i === d.cues.length - 1 ? ' və ' : ', '); kids.push(h('span', { class: 'translate-cue', text: c })); });
         kids.push(' var — ', h('b', { text: d.label }), ' ' + regWord(d.id) + ' tanındı · ' + Math.round(d.confidence * 100) + '% əmin.');
       } else kids = [h('b', { text: d.label }), ' üslub tanındı — xüsusi işarə tapılmadı. Lazım olsa, əl ilə seçin.'];
     } else {
-      kids = [REG_EXPLAIN[S.reg]];
+      kids = [h('b', { text: REG_LABEL[S.reg] + ': ' }), REG_EXPLAIN[S.reg]];
       if (d && d.id !== S.reg) kids.push(' Mətnin özü ', h('b', { text: d.label }), ' ' + regWord(d.id, 'dat') + ' oxşayır.');
     }
     var sig = S.reg + '|' + (d ? d.id + d.cues.join(',') : '');
     if (el._sig === sig) return;
     el._sig = sig;
     el.textContent = '';
-    el.appendChild(h('span', { class: 'translate-explain-ic', html: App.icon(S.reg === 'auto' ? 'sparkle' : 'info'), 'aria-hidden': 'true' }));
     el.appendChild(h('span', null, kids));
     el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap');
   }
@@ -842,15 +868,13 @@
   }
   function renderQHint() {
     var q = QMAP[S.quality]; if (!V.qhint || !q) return;
-    V.qhint.textContent = '';
-    V.qhint.appendChild(frag(App.icon(q.ic)));
-    V.qhint.appendChild(h('span', { text: q.hint }));
+    V.qhint.textContent = q.label + ': ' + q.hint;
   }
   function setQuality(id, user) {
     if (!QMAP[id]) return;
     var changed = S.quality !== id;
     S.quality = id; saveState();
-    if (V.chips) Array.prototype.forEach.call(V.chips.querySelectorAll('.chip'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-q') === id)); });
+    if (V.chips) { if (V.chips.tagName === 'SELECT') V.chips.value = id; else Array.prototype.forEach.call(V.chips.querySelectorAll('.chip'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-q') === id)); }); }
     renderQHint();
     if (!user || !changed) return;
     if (id === 'meclis') nz('point', 'Məclis rejimi: tərcümədən sonra beş mirzə yoxlayıb düzəldəcək.', 3000);
@@ -903,8 +927,8 @@
     V.detect.textContent = '';
     var dl = text.length >= 4 ? detectLang(text) : null;
     if (!dl) return;
-    if (dl === S.from) V.detect.appendChild(h('span', { class: 'badge' }, ie('sparkle'), 'Avtomatik: ' + LANG_NAME[dl]));
-    else V.detect.appendChild(h('button', { class: 'chip', type: 'button', title: 'Mənbə dilini dəyiş', onclick: function () { fixLang(dl, true); if (V.showing === 'result') translate({ reason: 'lang' }); } }, ie('sparkle'), LANG_LIKE[dl] + ' · dəyiş'));
+    if (dl === S.from) V.detect.appendChild(h('span', { class: 'badge', text: 'Dil tanındı' }));
+    else V.detect.appendChild(h('button', { class: 'chip', type: 'button', title: 'Mənbə dilini dəyiş', onclick: function () { fixLang(dl, true); if (V.showing === 'result') translate({ reason: 'lang' }); } }, LANG_LIKE[dl] + ' · dəyiş'));
   }
 
   /* ------------------------------------------------------------------
@@ -1015,7 +1039,7 @@
       if (res && res.ok === false) {
         renderEmpty('error');
         /* In live mode App.fakeAI has already shown this error as a toast. */
-        if (!(App.isLive && App.isLive())) App.toast(res.error || 'Mühərrik cavab vermədi', 'err');
+        if (!(App.isLive && App.isLive())) App.toast('Tərcümə alınmadı', 'err', { sub: 'Bağlantını yoxlayın və yenidən cəhd edin.' });
         nz('sad', 'Alınmadı… bir də cəhd edək?');
         return;
       }
@@ -1064,7 +1088,7 @@
     body.setAttribute('aria-busy', 'true');
     V.outEyebrow.textContent = 'Tərcümə · ' + LANG_NAME[S.to];
     V.outBadges.textContent = '';
-    V.outBadges.appendChild(h('span', { class: 'badge fir', text: REG_LABEL[reg] }));
+    V.outBadges.appendChild(h('span', { class: 'badge', text: REG_LABEL[reg] }));
     var names = S.quality === 'fast' ? ['Üslub', 'Tərcümə'] :
       S.quality === 'meclis' ? ['Üslub tanınır', 'Lüğət və yaddaş', 'Qaralama', 'Məclisə hazırlıq'] :
         ['Üslub tanınır', 'Lüğət və yaddaş', 'Cümlələr yazılır', 'Əminlik ölçülür'];
@@ -1072,13 +1096,12 @@
     var art = h('div', { class: 'translate-load-art', 'aria-hidden': 'true' });
     body.appendChild(h('div', { class: 'translate-load', role: 'status' },
       art,
-      h('div', { class: 'stack' },
-        h('p', { class: 'translate-load-cap' }, h('span', { text: 'Tərcümə edilir · ' + REG_LABEL[reg] + ' ' + regWord(reg) }), h('span', { class: 'translate-dots', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'))),
-        h('div', { class: 'sk-stack' },
-          h('span', { class: 'skeleton text', style: 'width:96%' }),
-          h('span', { class: 'skeleton text', style: 'width:88%' }),
-          h('span', { class: 'skeleton text', style: 'width:61%' })),
-        h('div', { class: 'translate-steps' }, steps))));
+      h('p', { class: 'translate-load-cap' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }), h('span', { text: 'Tərcümə edilir · ' + REG_LABEL[reg] + ' ' + regWord(reg) })),
+      h('div', { class: 'sk-stack' },
+        h('span', { class: 'skeleton text', style: 'width:96%' }),
+        h('span', { class: 'skeleton text', style: 'width:88%' }),
+        h('span', { class: 'skeleton text', style: 'width:61%' })),
+      h('div', { class: 'translate-steps' }, steps)));
     V.outMini = mountMini(art, 'write');
     var k = 0;
     steps[0].classList.add('on');
@@ -1099,30 +1122,29 @@
     body.removeAttribute('aria-busy');
     V.outEyebrow.textContent = 'Tərcümə · ' + LANG_NAME[S.to];
     V.outBadges.textContent = '';
-    var art = h('div', { class: 'empty-art', 'aria-hidden': 'true' });
+    var art = h('div', { class: 'translate-load-art', 'aria-hidden': 'true' });
     var box;
     if (kind === 'ready') {
-      box = h('div', { class: 'empty' }, art,
-        h('h3', { text: 'Hazırdır' }),
+      box = h('div', { class: 'translate-note' }, art,
+        h('h3', { text: 'Tərcüməyə hazırdır' }),
         h('p', null, '«Tərcümə et» düyməsinə basın', finePointer() ? [' və ya ', kbdEl(MOD), '+', kbdEl('Enter')] : null, '. Üslub avtomatik tanınacaq.'));
     } else if (kind === 'error') {
-      box = h('div', { class: 'empty' }, art,
-        h('h3', { text: 'Mühərrik cavab vermədi' }),
-        h('p', { text: 'Mətniniz yerindədir. Bir də cəhd edin — adətən ikinci dəfə alınır.' }),
-        h('div', { class: 'actions' }, h('button', { class: 'btn btn-sm', type: 'button', onclick: function () { translate({ reason: 'retry' }); } }, ie('refresh'), 'Yenidən cəhd et')));
+      box = h('div', { class: 'translate-note err', role: 'alert' }, art,
+        h('h3', { text: 'Tərcümə alınmadı' }),
+        h('p', { text: 'Bağlantını yoxlayın və yenidən cəhd edin. Mətniniz yerindədir.' }),
+        h('div', { class: 'actions' }, h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: function () { translate({ reason: 'retry' }); } }, ie('refresh'), 'Yenidən cəhd et')));
     } else {
-      box = h('div', { class: 'empty' }, art,
+      box = h('div', { class: 'translate-note' }, art,
         h('h3', { text: 'Tərcümə burada görünəcək' }),
-        h('p', { text: 'Mətni yazın və ya yapışdırın. Əminlik aşağı olan yerlər sarı və qırmızı xətlə işarələnəcək.' }),
+        h('p', { text: 'Mətni yazın və ya yapışdırın. Əminliyi aşağı olan yerlər nöqtəli və ya dalğalı xətlə işarələnəcək.' }),
         h('div', { class: 'actions' },
-          h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: loadExample }, ie('file'), 'Nümunəni yüklə'),
+          h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: loadExample }, 'Nümunəni yüklə'),
           h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: openSamples }, 'Başqa nümunələr')));
     }
     body.appendChild(box);
     V.outMini = mountMini(art, kind === 'ready' ? 'point' : kind === 'error' ? 'sad' : 'idle');
     syncExampleCard();
   }
-
   function renderResult(r, o) {
     o = o || {};
     V.showing = 'result';
@@ -1134,10 +1156,9 @@
 
     V.outEyebrow.textContent = 'Tərcümə · ' + LANG_NAME[r.to];
     V.outBadges.textContent = '';
-    V.outBadges.appendChild(h('span', { class: 'badge navy', text: REG_LABEL[r.reg] || 'Neytral' }));
-    if (r.auto) V.outBadges.appendChild(h('span', { class: 'badge fir' }, ie('sparkle'), 'avtomatik'));
+    V.outBadges.appendChild(h('span', { class: 'badge', text: (REG_LABEL[r.reg] || 'Neytral') + (r.auto ? ' · avtomatik' : '') }));
     if (r.variant && VAR_META[r.variant]) V.outBadges.appendChild(h('span', { class: 'badge', text: VAR_META[r.variant].label + ' variant' }));
-    if (r.reviewed) V.outBadges.appendChild(h('span', { class: 'badge green' }, ie('stamp'), 'Məclis'));
+    if (r.reviewed) V.outBadges.appendChild(h('span', { class: 'badge green', text: 'Məclis yoxladı' }));
 
     if (r.warn) {
       body.appendChild(h('div', { class: 'callout red', role: 'note' }, ie('alert'),
@@ -1162,6 +1183,9 @@
     V.text = tx;
     body.appendChild(tx);
     body.appendChild(metaRow(r));
+    var alts = altBlock(r); if (alts) body.appendChild(alts);
+    var anns = annBlock(r); if (anns) body.appendChild(anns);
+    var terms = termBlock(r); if (terms) body.appendChild(terms);
     if (r.reviewed && r.review) body.appendChild(reviewPanel(r));
 
     setActs(true);
@@ -1175,19 +1199,54 @@
     var legend = h('div', { class: 'conf-legend translate-legend' },
       h('span', { class: 'conf-mid', text: 'Yoxlayın' }),
       h('span', { class: 'conf-low', text: 'Şübhəli' }),
-      h('span', { text: 'Xəttsiz — əmin' }),
       st.fixed ? h('span', { class: 'translate-leg-fix', text: 'Düzəldildi' }) : null);
     var parts = [num(st.words) + ' söz', 'əminlik ' + st.pct + '%'];
+    if (r.tm) parts.push('yaddaş ' + r.tm + '%');
     if (r.ms) parts.push(secs(r.ms));
-    var top = h('div', { class: 'translate-meta-top' }, legend, h('span', { class: 'translate-stats', text: parts.join(' · ') }));
-    var chips = [];
-    (r.terms || []).forEach(function (t) {
-      chips.push(h('span', { class: 'translate-term' + (t.fresh ? ' new' : ''), title: t.fresh ? 'Yeni əlavə olundu' : 'Lüğətə uyğundur' }, t.a + ' → ' + t.b, ie('check')));
-    });
-    if (r.tm) chips.push(h('span', { class: 'badge navy' }, ie('database'), 'Yaddaş ' + r.tm + '%'));
-    return h('div', { class: 'translate-meta' }, top, chips.length ? h('div', { class: 'translate-terms' }, h('span', { text: 'Lüğət qorundu:' }), chips) : null);
+    return h('div', { class: 'translate-meta' }, legend, h('span', { class: 'translate-stats', text: parts.join(' · ') }));
   }
-
+  /* alternatives: segments that carry another wording — a compact list with «Tətbiq et» */
+  function altBlock(r) {
+    var rows = [];
+    r.segs.forEach(function (sg, i) {
+      if (!sg.alt || sg.fixed) return;
+      rows.push(h('div', { class: 'translate-alt' },
+        h('span', { class: 'cur', text: String(sg.t).trim() }), h('span', { class: 'arr', 'aria-hidden': 'true', text: '→' }),
+        h('span', { class: 'alt', lang: r.to, text: String(sg.alt).trim() }),
+        h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: function () { applyAlt(i); } }, 'Tətbiq et')));
+    });
+    if (!rows.length) return null;
+    return h('div', { class: 'translate-block' },
+      h('h3', null, h('span', { text: 'Alternativlər' }), h('button', { class: 'link', type: 'button', onclick: openVariants }, 'Bütöv variantlar')),
+      h('div', { class: 'translate-alts' }, rows));
+  }
+  /* translator notes: quiet annotations, one per marked span (technique, doubt, fix) */
+  function annBlock(r) {
+    var rows = [];
+    r.segs.forEach(function (sg, i) {
+      var t = String(sg.t == null ? '' : sg.t).trim();
+      if (!t || !sg.note) return;
+      if (sg.c === 'high' && !sg.fixed && !r.example) return;
+      rows.push(h('button', { class: 'translate-ann ' + (sg.fixed ? 'fixed' : sg.c), type: 'button', onclick: function () {
+        var sp = V.text && V.text.querySelector('.translate-s[data-i="' + i + '"]');
+        if (sp) openNote(sp, i, false);
+      } }, h('i', { 'aria-hidden': 'true' }), h('b', { lang: r.to, text: short(t, 60) }), h('small', { text: sg.note })));
+    });
+    if (!rows.length) return null;
+    return h('div', { class: 'translate-block' }, h('h3', { text: 'Qeydlər · ' + rows.length }), h('div', { class: 'translate-anns' }, rows.slice(0, 8)));
+  }
+  /* terminology kept in this translation: a small table */
+  function termBlock(r) {
+    var terms = r.terms || [];
+    if (!terms.length) return null;
+    return h('div', { class: 'translate-block' }, h('h3', { text: 'Terminlər' }),
+      h('table', { class: 'translate-tt' },
+        h('thead', null, h('tr', null, h('th', { text: 'Mənbə · ' + (CODE[r.from] || '') }), h('th', { text: 'Tərcümə · ' + (CODE[r.to] || '') }), h('th', { text: 'Status' }))),
+        h('tbody', null, terms.map(function (t) {
+          return h('tr', null, h('td', { lang: r.from, text: t.a }), h('td', { lang: r.to, text: t.b }),
+            h('td', null, h('span', { class: 'st' + (t.fresh ? ' new' : ''), text: t.fresh ? 'Yeni əlavə olundu' : 'Lüğətə uyğun' })));
+        }))));
+  }
   function markStale() {
     if (V.showing !== 'result' || !R || !V.out) return;
     var stale = norm(V.ta.value) !== norm(R.src);
@@ -1219,15 +1278,14 @@
     b.textContent = '';
     var s = r && r.situation;
     if (!s) {
-      b.appendChild(h('p', { class: 'muted small', text: 'Tərcümədən sonra məqsəd, oxucu və üslub avtomatik doldurulacaq. Lazım olsa, «Dəyiş» ilə düzəldin.' }));
+      b.appendChild(h('p', { class: 'empty-tx', text: 'Tərcümədən sonra sahə, məqsəd, oxucu və ton avtomatik doldurulacaq.' }));
       return;
     }
     function kv(k, v) { return [h('dt', { text: k }), h('dd', { text: v || '—' })]; }
-    b.appendChild(h('dl', { class: 'kv' },
+    b.appendChild(h('dl', null,
       kv('Sahə', s.domain), kv('Məqsəd', s.purpose), kv('Oxucu', s.audience),
       kv('Üslub', (REG_LABEL[r.reg] || s.register) + (r.auto ? ' · avtomatik' : '')), kv('Ton', s.tone)));
   }
-
   /* ------------------------------------------------------------------
      13. CONFIDENCE NOTE POPOVER
      ------------------------------------------------------------------ */
@@ -1444,14 +1502,14 @@
         grid.appendChild(h('article', { class: 'translate-var' + (v.rec ? ' rec' : '') + (isCur ? ' cur' : '') },
           h('div', { class: 'row between' }, h('span', { class: 'eyebrow', text: M.label }),
             h('span', { class: 'row', style: 'gap:4px' },
-              v.rec ? h('span', { class: 'badge fir' }, ie('check'), 'Tövsiyə') : null,
-              isCur ? h('span', { class: 'badge navy', text: 'Hazırkı' }) : null)),
+              v.rec ? h('span', { class: 'badge', text: 'Tövsiyə' }) : null,
+              isCur ? h('span', { class: 'badge', text: 'Hazırkı' }) : null)),
           h('p', { class: 'translate-var-t', lang: r.to, text: v.t }),
           v.near != null ? bar('Mənbəyə yaxınlıq', v.near, 'navy') : null,
           v.nat != null ? bar('Təbiilik', v.nat, '') : null,
           h('p', { class: 'translate-var-n', text: M.note }),
           h('div', { class: 'row' },
-            h('button', { class: 'btn btn-sm' + (v.rec ? ' btn-secondary' : ''), type: 'button', disabled: isCur, onclick: function () { chooseVariant(r, v); s.close(); } }, ie('check'), isCur ? 'Seçilib' : 'Bunu seç'),
+            h('button', { class: 'btn btn-sm btn-secondary', type: 'button', disabled: isCur, onclick: function () { chooseVariant(r, v); s.close(); } }, isCur ? 'Seçilib' : 'Bunu seç'),
             h('button', { class: 'icon-btn sm ghost', type: 'button', 'aria-label': M.label + ' variantı kopyala', title: 'Kopyala', html: App.icon('copy'), onclick: function () { copyText(v.t, M.label + ' variant kopyalandı'); } }))));
       });
       if (vs.failed) {
@@ -1488,13 +1546,11 @@
       }, 140);
     }
     var autoRow = h('button', { class: 'choice', type: 'button', 'aria-pressed': String(S.reg === 'auto'), onclick: function () { pick('auto'); } },
-      h('span', { class: 'ic fir', html: App.icon('sparkle') }),
       h('span', { class: 'translate-style-tx' }, h('b', { text: 'Avtomatik' }), h('small', { text: 'Mətnə görə seçilsin' + (V.det ? ' · indi: ' + V.det.label : '') })));
     var list = h('div', { class: 'translate-styles' }, AUD.map(function (a) {
       var pv = h('span', { class: 'translate-style-pv', lang: S.to }, h('span', { class: 'skeleton text', style: 'width:94%' }), h('span', { class: 'skeleton text', style: 'width:66%' }));
       previews[a.id] = pv;
       return h('button', { class: 'choice', type: 'button', 'aria-pressed': String(S.reg !== 'auto' && cur === a.id), onclick: function () { pick(a.id); } },
-        h('span', { class: 'ic' + a.cls, html: App.icon(a.ic) }),
         h('span', { class: 'translate-style-tx' }, h('b', { text: REG_LABEL[a.id] + (S.reg === 'auto' && cur === a.id ? ' · indi' : '') }), h('small', { text: a.aud }), pv));
     }));
     s = App.sheet({
@@ -1550,7 +1606,7 @@
         c = c || {};
         return {
           score: c.score != null ? c.score : 92, text: c.summary || 'Məclis işini bitirdi.', seal: (c.verdict && c.verdict.seal) || null,
-          fixes: (c.errors || []).map(function (e) { return { was: e.was, now: e.now, type: e.type, why: e.why }; })
+          fixes: (c.errors || []).map(function (e) { return { was: e.was, now: e.now, type: e.type, why: e.why, severity: e.severity, elder: e.elder }; })
         };
       });
     p.then(function (rv) {
@@ -1598,40 +1654,44 @@
     if (svg) return h('span', { class: 'translate-elder', html: svg, 'aria-hidden': 'true' });
     return h('span', { class: 'avatar sm ' + ELD[i].av, 'aria-hidden': 'true', text: ELD[i].short });
   }
+  /* severity: from the check engine (high/mid/low, critical/major/minor) or from the error type */
+  var SEV_OF = { critical: 'high', high: 'high', major: 'mid', mid: 'mid', minor: 'low', low: 'low' };
+  var SEV_LABEL = { high: 'Kritik', mid: 'Əsas', low: 'Kiçik' };
+  var SEV_BY_TYPE = { 'Məna': 'mid', 'Termin': 'mid', 'Terminologiya': 'mid', 'Rəqəm': 'high', 'Buraxılma': 'high', 'Ad': 'mid', 'Tarix': 'mid' };
+  function sevOf(f) { return SEV_OF[f.severity] || SEV_BY_TYPE[f.type] || 'low'; }
   function reviewPanel(r) {
     var rv = r.review;
     var sc = rv.score;
     var head = h('div', { class: 'translate-review-h' },
-      App.ring(sc, 'bal', null, { size: 'sm' }),
-      h('div', { class: 'stack-sm' },
-        h('span', { class: 'eyebrow', text: 'Mirzə Məclisinin rəyi' }),
-        h('p', { class: 'translate-review-t', text: rv.text }),
-        h('span', { class: 'badge ' + (sc >= 85 ? 'green' : sc >= 70 ? 'gold' : 'red') }, ie('stamp'), rv.seal)));
+      h('span', { class: 'eyebrow', text: 'Mirzə Məclisinin rəyi' }),
+      h('span', { class: 'translate-score' }, String(sc), h('small', { text: ' / 100' })),
+      h('span', { class: 'translate-seal ' + (sc >= 85 ? 'ok' : sc >= 70 ? 'mid' : 'bad'), text: rv.seal }));
     var fixes = rv.fixes || [];
     var list = fixes.length ?
-      h('div', { class: 'translate-fixes' }, fixes.map(function (f, i) {
-        var ei = elderIdx(f.type);
-        return h('div', { class: 'translate-fix', style: '--i:' + i },
-          elderFace(ei),
-          h('div', { class: 'stack-sm' },
-            h('div', { class: 'translate-fix-who' }, h('b', { text: ELD[ei].name }), h('span', { class: 'badge', text: f.type || 'Qeyd' })),
+      h('div', { class: 'translate-fixes', role: 'list' }, fixes.map(function (f, i) {
+        var ei = elderIdx(f.type), sv = sevOf(f);
+        var who = f.elder || ELD[ei].name;
+        return h('div', { class: 'translate-fix', role: 'listitem', style: '--i:' + i },
+          h('span', { class: 'translate-sev ' + sv, text: SEV_LABEL[sv] }),
+          h('div', { class: 'translate-fix-b' },
             h('div', { class: 'translate-wn' }, h('span', { class: 'translate-was', text: f.was || '—' }), ie('arrow'), h('span', { class: 'translate-now', text: f.now || '—' })),
-            f.why ? h('p', { text: f.why }) : null));
+            f.why ? h('p', { text: f.why }) : null,
+            h('span', { class: 'translate-fix-type', text: f.type || 'Qeyd' })),
+          h('span', { class: 'translate-who' }, h('span', { class: 'translate-mono', 'aria-hidden': 'true', text: String(who).charAt(0) }), who));
       })) :
-      h('div', { class: 'callout green' }, ie('check'), h('div', null, h('b', { text: 'Düzəliş lazım olmadı. ' }), 'Beş mirzə mətni yoxladı — terminlər, məna, üslub və yazılış qaydasındadır.'));
+      h('p', { class: 'translate-review-t' }, h('b', { text: 'Düzəliş lazım olmadı. ' }), 'Terminlər, məna, üslub, yazılış, rəqəm və adlar yoxlanıldı.');
     var checks = h('div', { class: 'translate-checks', 'aria-label': 'Yoxlamalar' }, ELD.map(function (e, i) {
       var n = fixes.filter(function (f) { return elderIdx(f.type) === i; }).length;
-      return h('span', { class: 'badge ' + (n ? 'gold' : 'green'), title: e.name }, ie(n ? 'edit' : 'check'), e.check + (n ? ' · ' + n : ''));
+      return h('span', { class: n ? '' : 'ok', title: e.name }, e.check, n ? [' · ', h('b', { text: String(n) })] : null);
     }));
     var foot = h('div', { class: 'row' },
-      fixes.length && r.prevSegs ? h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: undoReview }, ie('back'), 'Geri qaytar') : null,
-      h('button', { class: 'btn btn-sm', type: 'button', onclick: function (e) { copyText(textOf(R).trim(), 'Yekun mətn kopyalandı', null); } }, ie('copy'), 'Yekun mətni kopyala'));
+      fixes.length && r.prevSegs ? h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: undoReview }, 'Düzəlişləri geri qaytar') : null,
+      h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: function () { copyText(textOf(R).trim(), 'Yekun mətn kopyalandı', null); } }, ie('copy'), 'Yekun mətni kopyala'));
     return h('div', { class: 'translate-review' },
       head,
-      fixes.length ? h('h3', { class: 'translate-review-sub', text: 'Düzəldildi · ' + fixes.length }) : null,
+      h('p', { class: 'translate-review-t', text: rv.text }),
       list, checks, foot);
   }
-
   /* glossary */
   function glossSuggestions() {
     var out = [];
@@ -1737,7 +1797,6 @@
       if (!txt) return null;
       var l = detectLang(txt) || 'en';
       return h('button', { class: 'list-row translate-sample', type: 'button', onclick: function () { if (s) s.close(); setTimeout(function () { loadSample(txt); }, 120); } },
-        h('span', { class: 'ic' + it.cls, html: App.icon(it.ic) }),
         h('span', { class: 'tx' }, h('b', { text: it.t }), h('small', { class: 'truncate', text: it.s })),
         h('span', { class: 'end' }, h('span', { class: 'badge', text: CODE[l] + ' → ' + (l === 'az' ? 'EN' : 'AZ') }), App.icon ? frag(App.icon('chevron')) : null));
     }));
@@ -1780,19 +1839,17 @@
   }
   function renderHistory() {
     if (!V.hist) return;
-    /* only the user's own translations — the card stays hidden until there is one */
+    /* only the user's own translations — the section stays hidden until there is one */
     var items = histList().filter(function (x) { return x && x.src; }).slice(0, 4);
     if (V.histCard) V.histCard.hidden = !items.length;
-    if (V.lower) V.lower.className = items.length ? 'grid-2' : 'stack';
+    if (V.lower) V.lower.className = 'translate-lower' + (items.length ? ' two' : '');
     V.hist.textContent = '';
     items.forEach(function (it) {
       if (!it || !it.src) return;
-      V.hist.appendChild(h('button', { class: 'list-row', type: 'button', onclick: function () { loadHistory(it); } },
-        h('span', { class: 'ic' + (it.reg === 'huquqi' ? ' fir' : it.reg === 'resmi' ? ' gold' : ' navy'), html: App.icon('translate') }),
+      V.hist.appendChild(h('button', { class: 'translate-hrow', type: 'button', onclick: function () { loadHistory(it); } },
+        h('span', { class: 'pair', text: (CODE[it.from] || '?') + '→' + (CODE[it.to] || '?') }),
         h('span', { class: 'tx' }, h('b', { class: 'truncate', lang: it.from, text: it.src }), h('small', { class: 'truncate', lang: it.to, text: it.out })),
-        h('span', { class: 'end translate-hist-end' },
-          h('span', { class: 'badge', text: (CODE[it.from] || '?') + ' → ' + (CODE[it.to] || '?') }),
-          h('small', { text: (REG_LABEL[it.reg] || '') + ' · ' + rel(it.at) }))));
+        h('span', { class: 'meta', text: (REG_LABEL[it.reg] || '') + ' · ' + rel(it.at) })));
     });
     V.histClear.hidden = !items.length;
   }
@@ -1824,7 +1881,7 @@
      16. REGISTER
      ------------------------------------------------------------------ */
   App.register('translate', {
-    title: 'Tərcüməçi',
+    title: 'Tərcümə',
     icon: 'translate',
     group: 'Peşəkar',
     mode: 'both',
@@ -1850,8 +1907,7 @@
       var page = h('div', { class: 'page translate-page' });
       V.page = page;
       page.appendChild(header());
-      page.appendChild(ctrlCard());
-      page.appendChild(h('div', { class: 'translate-work' }, srcPane(), outPane()));
+      page.appendChild(h('section', { class: 'translate-work', 'aria-label': 'Tərcümə' }, ctrlCard(), h('div', { class: 'translate-panes' }, srcPane(), outPane())));
       page.appendChild(exampleCard());
       page.appendChild(lowerGrid());
       el.appendChild(page);

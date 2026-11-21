@@ -1,6 +1,9 @@
 /* =====================================================================
    NUANZA — s-library.js
-   Screen 'library' («Kitabxana», both modes).
+   Screen 'library' («Kitabxana», both modes) — redaksiya üslublu oxu aləti.
+     • Axtarış sətri + dil seçimi (AZ/EN), nəticələr sıx siyahı kimi
+     • Oxu: ~68 simvolluq sətir, 1.6 sətir aralığı, nəzmdə sətirlər qorunur
+     • Seçim əməliyyatları sakit yapışqan paneldə; mənbə və lisenziya kiçik sətirdə
      • Vikimənbə (az/en.wikisource.org) axtarışı Worker-in GET /lib proksisi ilə
        (?op=search|cat|page&lang=az|en) — başlıq x-access-code (App.store 'code')
      • Mövzu çipləri: Füzuli, Nəsimi, Nizami Gəncəvi, Sabir, Mirzə Cəlil,
@@ -136,52 +139,87 @@
      2. CSS (tokens only)
      ------------------------------------------------------------------ */
   var CSS = [
-    '.library-page{padding-bottom:calc(var(--s-12) + var(--s-12))}',
-    '.library-search{display:grid;gap:var(--s-3)}',
-    '.library-search-row{display:flex;gap:var(--s-2);align-items:stretch;flex-wrap:wrap}',
-    '.library-search-row .input-ic{flex:1 1 220px;min-width:0}',
+    '.library-page{padding-bottom:calc(var(--s-12,48px) + var(--s-12,48px))}',
+    '.library-head h1{font:600 var(--t-h1,1.375rem)/1.27 var(--f-display);letter-spacing:-.01em}',
+    '.library-head p{font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft));max-width:68ch}',
+    /* search: one row, quiet topic links below */
+    '.library-search{display:grid;gap:10px}',
+    '.library-search-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}',
+    '.library-search-row .input-ic{flex:1 1 240px;min-width:0}',
+    '.library-search-row .input{height:36px;min-height:36px;padding-block:0;font-size:var(--t-body,.875rem);background-color:var(--panel,var(--surface))}',
     '.library-search-row .seg{flex:none}',
-    '.library-chips{margin-top:var(--s-1)}',
-    '.library-sec{margin-top:var(--s-6)}',
-    '.library-sec > h2{font-size:var(--fs-md);margin:0 0 var(--s-2)}',
-    '.library-res .list-row .tx small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
-    '.library-res .list-row .ic,.library-recent .list-row .ic{flex:none;width:36px;height:36px;display:grid;place-items:center;border-radius:var(--r-sm);background:var(--fir-t);color:var(--firuze)}',
-    '.library-res .list-row .ic svg,.library-recent .list-row .ic svg{width:18px;height:18px}',
-    '.library-sk{display:grid;gap:var(--s-3);padding:var(--s-2) 0}',
-    '.library-sk-row{display:flex;gap:var(--s-3);align-items:center}',
-    '.library-sk-row .skeleton.circle{width:36px;height:36px;flex:none;border-radius:var(--r-sm)}',
-    '.library-sk-row > div{flex:1;min-width:0}',
-    '.library-state{margin-top:var(--s-4)}',
-    '.library-state .empty p{max-width:42ch;margin-inline:auto}',
-    '.library-state .empty-art svg{width:22px;height:22px;color:var(--soft)}',
-    '.library-reader-h{display:flex;align-items:flex-start;gap:var(--s-3);margin-bottom:var(--s-3)}',
-    '.library-reader-h h1{font-size:var(--fs-xl);line-height:var(--lh-snug);margin:0;overflow-wrap:anywhere}',
-    '.library-reader-h .meta{display:flex;flex-wrap:wrap;gap:var(--s-2);margin-top:var(--s-2)}',
-    '.library-hint{font-size:var(--fs-sm);color:var(--soft);margin:0 0 var(--s-3)}',
-    '.library-text{display:grid;gap:var(--s-2)}',
-    '.library-p{position:relative;padding:var(--s-3) var(--s-4) var(--s-3) var(--s-6);border:1px solid transparent;border-radius:var(--r-md);',
-    '  white-space:pre-line;overflow-wrap:anywhere;font-size:var(--fs-md);line-height:1.7;color:var(--ink);cursor:pointer;',
-    '  transition:background var(--t-fast),border-color var(--t-fast);-webkit-tap-highlight-color:transparent}',
-    '.library-p::before{content:"";position:absolute;left:var(--s-2);top:var(--s-3);bottom:var(--s-3);width:3px;border-radius:var(--r-pill);background:var(--line);transition:background var(--t-fast)}',
-    '@media (hover:hover){.library-p:hover{background:var(--surface2)}}',
-    '.library-p:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.library-p[aria-checked="true"]{background:var(--fir-t);border-color:var(--firuze)}',
-    '.library-p[aria-checked="true"]::before{background:var(--firuze)}',
-    '.library-p .n{position:absolute;right:var(--s-2);top:var(--s-2);min-width:22px;height:22px;padding:0 6px;border-radius:var(--r-pill);background:var(--firuze);color:var(--on-firuze);font:700 var(--fs-xs)/22px var(--f-body);text-align:center}',
-    '.library-p.verse{font-style:normal}',
-    '.library-more{display:flex;justify-content:center;margin-top:var(--s-3)}',
-    '.library-src{margin-top:var(--s-6);padding-top:var(--s-4);border-top:1px solid var(--line);font-size:var(--fs-sm);color:var(--soft);display:grid;gap:var(--s-1)}',
-    '.library-src a{color:var(--firuze);text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere}',
-    '.library-src a svg{width:14px;height:14px;vertical-align:-2px;margin-left:4px}',
-    '.library-bar{position:sticky;bottom:var(--s-3);z-index:5;margin-top:var(--s-4);display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-2);',
-    '  padding:var(--s-3);border:1px solid var(--line-2);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh-2)}',
+    '.library-search-row .seg button{min-height:28px;padding:3px 12px;font-family:var(--f-mono);font-size:.75rem}',
+    '.library-search-row .btn{min-height:36px}',
+    '.library-chips{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;font-size:var(--t-small,.8125rem)}',
+    '.library-chips > span{font-size:var(--t-caption,.75rem);color:var(--text-3,var(--faint))}',
+    '.library-chips .chip{min-height:0;padding:0;border:0;background:none;color:var(--text-2,var(--soft));font-weight:500;font-size:var(--t-small,.8125rem)}',
+    '@media (hover:hover){.library-chips .chip:hover{background:none;color:var(--text,var(--ink));text-decoration:underline;text-underline-offset:3px}}',
+    '.library-chips .chip[aria-pressed="true"]{background:none;color:var(--accent,var(--firuze))}',
+    '.library-chips .chip[aria-pressed="true"]::before{content:none}',
+    /* sections: caption + dense bordered list */
+    '.library-sec{display:grid;gap:8px;margin-top:8px}',
+    '.library-sec > h2{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:0 4px;margin:0;font:600 var(--t-caption,.75rem)/16px var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--text-2,var(--soft))}',
+    '.library-list{min-width:0;background:var(--panel,var(--surface));border:1px solid var(--border,var(--line));border-radius:8px}',
+    '.library-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 16px;width:100%;min-height:44px;padding:8px 16px;border:0;border-top:1px solid var(--border,var(--line));background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color 120ms ease}',
+    '.library-row:first-child{border-top:0;border-radius:8px 8px 0 0}',
+    '.library-row:last-child{border-radius:0 0 8px 8px}',
+    '.library-row:only-child{border-radius:8px}',
+    '@media (hover:hover){.library-row:hover{background:var(--hover)}}',
+    '.library-row:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    '.library-row .tx{display:grid;gap:2px;min-width:0}',
+    '.library-row .tx b{font-size:var(--t-body,.875rem);font-weight:500;line-height:20px;overflow-wrap:anywhere}',
+    '.library-row .tx small{font-size:var(--t-caption,.75rem);line-height:16px;color:var(--text-2,var(--soft));display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
+    '.library-row .kind{font:500 .6875rem/16px var(--f-mono);color:var(--text-3,var(--faint));text-transform:uppercase;letter-spacing:.04em}',
+    '.library-row .end{display:flex;align-items:center;gap:8px;color:var(--text-3,var(--faint));font-size:var(--t-caption,.75rem);white-space:nowrap}',
+    '.library-row .end svg{width:16px;height:16px}',
+    '.library-sk{display:grid}',
+    '.library-sk-row{display:grid;gap:6px;padding:12px 16px;border-top:1px solid var(--border,var(--line))}',
+    '.library-sk-row:first-child{border-top:0}',
+    '.library-sk-row .skeleton{margin:0}',
+    /* states: small and contextual */
+    '.library-state{display:grid;gap:6px;justify-items:start;padding:16px;background:var(--panel,var(--surface));border:1px solid var(--border,var(--line));border-radius:8px}',
+    '.library-state h3{display:flex;align-items:center;gap:8px;font:600 var(--t-h3,.9375rem)/20px var(--f-body)}',
+    '.library-state h3 svg{width:16px;height:16px;color:var(--text-3,var(--faint))}',
+    '.library-state p{font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft));max-width:60ch}',
+    '.library-state .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}',
+    /* reader: editorial column */
+    '.library-reader{width:100%;max-width:calc(68ch + 48px);margin-inline:auto;display:grid;gap:16px;min-width:0}',
+    '.library-reader-h{display:grid;gap:6px}',
+    '.library-back{justify-self:start;margin-left:-8px}',
+    '.library-reader-h .eyebrow{font:600 var(--t-caption,.75rem)/16px var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--text-2,var(--soft))}',
+    '.library-reader-h h1{font:600 var(--t-display,1.75rem)/1.22 var(--f-display);letter-spacing:-.015em;margin:0;overflow-wrap:anywhere}',
+    '.library-reader-h .meta{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft));font-variant-numeric:tabular-nums}',
+    '.library-reader-h .meta .warn{color:var(--warning,var(--zafaran-ink))}',
+    '.library-hint{font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft));margin:0;padding-bottom:12px;border-bottom:1px solid var(--border,var(--line))}',
+    '.library-text{display:grid;gap:2px;min-width:0}',
+    '.library-p{position:relative;max-width:calc(68ch + 48px);margin:0 -16px;padding:8px 40px 8px 16px;border-radius:6px;white-space:pre-line;overflow-wrap:anywhere;font-size:1.0625rem;line-height:1.6;color:var(--text,var(--ink));cursor:pointer;',
+    '  transition:background-color 120ms ease;-webkit-tap-highlight-color:transparent;font-feature-settings:"kern","liga"}',
+    '.library-p + .library-p{margin-top:6px}',
+    '.library-p.verse{line-height:1.6}',
+    '.library-p.verse + .library-p.verse{margin-top:14px}',
+    '@media (hover:hover){.library-p:hover{background:var(--hover)}}',
+    '.library-p:focus-visible{outline:2px solid var(--focus);outline-offset:0}',
+    '.library-p[aria-checked="true"]{background:var(--selected,var(--fir-t))}',
+    '.library-p[aria-checked="true"]::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:1px;background:var(--accent,var(--firuze))}',
+    '.library-p .n{position:absolute;right:8px;top:8px;min-width:18px;height:18px;padding:0 4px;border-radius:4px;background:var(--accent,var(--firuze));color:var(--on-accent,var(--on-firuze));font:600 .6875rem/18px var(--f-mono);text-align:center}',
+    '@media (max-width:639px){.library-p{margin:0 -8px;padding:8px 32px 8px 12px;font-size:1rem}.library-bar{margin-right:64px}}',
+    '.library-more{display:flex;justify-content:center;margin-top:8px}',
+    '.library-src{display:flex;flex-wrap:wrap;gap:2px 16px;padding-top:12px;border-top:1px solid var(--border,var(--line));font-size:var(--t-caption,.75rem);line-height:16px;color:var(--text-2,var(--soft))}',
+    '.library-src a{color:var(--text-2,var(--soft));text-decoration:underline;text-decoration-color:var(--border-2,var(--line-2));text-underline-offset:2px;overflow-wrap:anywhere}',
+    '.library-src a:hover{color:var(--text,var(--ink))}',
+    '.library-src a svg{width:12px;height:12px;vertical-align:-1px;margin-left:3px}',
+    /* selection actions: a quiet sticky bar */
+    '.library-bar{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;',
+    '  padding:8px 8px 8px 16px;border:1px solid var(--border-2,var(--line-2));border-radius:8px;background:var(--panel,var(--surface));box-shadow:var(--sh-2);animation:library-in 160ms ease both}',
     '.library-bar[hidden]{display:none}',
-    '.library-bar .cnt{flex:1 1 100%;font-size:var(--fs-sm);color:var(--soft);display:flex;justify-content:space-between;gap:var(--s-2)}',
-    '.library-bar .cnt b{color:var(--ink)}',
-    '.library-bar .btn{flex:1 1 auto}',
-    '.library-bar .btn-ghost{flex:0 0 auto}',
-    '@media (min-width:640px){.library-bar .cnt{flex:1 1 auto}.library-bar .btn{flex:0 0 auto}}',
-    '.library-links .list-row{min-height:44px}'
+    '.library-bar .cnt{flex:1 1 auto;min-width:0;display:flex;flex-wrap:wrap;gap:0 12px;font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft));font-variant-numeric:tabular-nums}',
+    '.library-bar .cnt b{color:var(--text,var(--ink));font-weight:600}',
+    '.library-bar .cnt .warn{color:var(--warning,var(--zafaran-ink))}',
+    '.library-bar .btn{flex:0 0 auto}',
+    '@media (max-width:479px){.library-bar .cnt{flex:1 1 100%}.library-bar .btn:not(.btn-ghost){flex:1 1 0}}',
+    '.library-links .library-row{min-height:40px}',
+    '@keyframes library-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}',
+    '@media (prefers-reduced-motion:reduce){.library-bar{animation:none}}'
   ].join('\n');
 
   /* ------------------------------------------------------------------
@@ -192,16 +230,15 @@
   function alive(g) { return V && g === gen; }
 
   function header() {
-    return h('div', { class: 'page-h' },
+    return h('div', { class: 'page-h library-head' },
       h('div', null,
-        h('span', { class: 'eyebrow', text: 'Kitabxana · Vikimənbə' }),
-        h('h1', { html: 'Klassik <em>mətnlər</em>' }),
-        h('p', { text: 'Füzuli, Nəsimi, Sabir, Konstitusiya və qanunlar — oxuyun, bir parçanı seçin və tərcümə tapşırığına çevirin.' })));
+        h('h1', { text: 'Kitabxana' }),
+        h('p', { text: 'Vikimənbədən klassik ədəbiyyat, qanunlar və sənədlər. Oxuyun, bir parça seçin və tərcüməyə və ya tapşırığa göndərin.' })));
   }
 
   function searchCard() {
-    var input = h('input', { class: 'input', type: 'search', name: 'q', placeholder: V.lang === 'az' ? 'Müəllif, əsər və ya qanun…' : 'Author, work or document…', 'aria-label': 'Kitabxanada axtar', autocomplete: 'off', enterkeyhint: 'search', maxlength: '200', value: V.q || '' });
-    var seg = h('div', { class: 'seg sm', role: 'group', 'aria-label': 'Vikimənbə dili' },
+    var input = h('input', { class: 'input', type: 'search', name: 'q', placeholder: V.lang === 'az' ? 'Müəllif, əsər və ya qanun' : 'Author, work or document', 'aria-label': 'Kitabxanada axtar', autocomplete: 'off', enterkeyhint: 'search', maxlength: '200', value: V.q || '' });
+    var seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'Vikimənbə dili' },
       Object.keys(LANGS).map(function (l) {
         return h('button', { type: 'button', 'aria-pressed': String(V.lang === l), title: LANGS[l], onclick: function () {
           if (V.lang === l) return;
@@ -215,16 +252,17 @@
         seg,
         h('button', { class: 'btn btn-primary', type: 'submit' }, 'Axtar')),
       h('div', { class: 'chips library-chips', role: 'group', 'aria-label': 'Tez mövzular' },
+        h('span', { text: 'Tez mövzular' }),
         (TOPICS[V.lang] || []).map(function (t) {
           return h('button', { class: 'chip', type: 'button', 'aria-pressed': String(V.q === t.q), onclick: function () { input.value = t.q; search(t.q); } }, t.label);
         })));
     V.input = input;
-    return h('section', { class: 'card', 'aria-label': 'Axtarış' }, form);
+    return h('section', { 'aria-label': 'Axtarış' }, form);
   }
 
   function skeletonList(n) {
     var rows = [];
-    for (var i = 0; i < n; i++) rows.push(h('div', { class: 'library-sk-row' }, h('span', { class: 'skeleton circle' }), h('div', null, h('span', { class: 'skeleton text', style: 'width:' + (40 + (i * 17) % 40) + '%' }), h('span', { class: 'skeleton text', style: 'width:' + (70 + (i * 11) % 25) + '%' }))));
+    for (var i = 0; i < n; i++) rows.push(h('div', { class: 'library-sk-row' }, h('span', { class: 'skeleton text', style: 'width:' + (30 + (i * 17) % 35) + '%' }), h('span', { class: 'skeleton text', style: 'width:' + (60 + (i * 11) % 30) + '%;height:.7em' })));
     return h('div', { class: 'library-sk', 'aria-busy': 'true', 'aria-label': 'Yüklənir' }, rows);
   }
 
@@ -236,17 +274,15 @@
     else if (code === 'not_found') { title = 'Səhifə tapılmadı'; ic = 'search'; }
     else title = 'Kitabxana cavab vermədi';
     var actions = [];
-    if (code === 'bad_code') actions.push(h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { App.go('settings', { s: 'account', opt: 'code' }); } }, ie('settings'), 'Ayarlar'));
-    if (retry && code !== 'unavailable' && code !== 'not_found') actions.push(h('button', { class: code === 'bad_code' ? 'btn' : 'btn btn-primary', type: 'button', onclick: retry }, ie('refresh'), 'Yenidən cəhd et'));
+    if (code === 'bad_code') actions.push(h('button', { class: 'btn btn-sm btn-primary', type: 'button', onclick: function () { App.go('settings', { s: 'account', opt: 'code' }); } }, 'Ayarlarda kodu daxil et'));
+    if (retry && code !== 'unavailable' && code !== 'not_found') actions.push(h('button', { class: code === 'bad_code' ? 'btn btn-sm btn-secondary' : 'btn btn-sm btn-primary', type: 'button', onclick: retry }, ie('refresh'), 'Yenidən cəhd et'));
     var p = code === 'unavailable'
-      ? 'Mətnlər Vikimənbədən Nuanza serveri vasitəsilə gətirilir. Bu ünvan statik baxışdır — saytın canlı versiyasını açın.' + (recent().length ? ' Son açdığınız səhifələr aşağıdadır.' : '')
+      ? 'Mətnlər Vikimənbədən Mirzə serveri vasitəsilə gətirilir; bu ünvan statik baxışdır. Saytın canlı versiyasını açın.' + (recent().length ? ' Son açdığınız səhifələr aşağıda oflayn oxunur.' : '')
       : errText(e);
     return h('div', { class: 'library-state', role: 'status' },
-      h('div', { class: 'empty' },
-        h('div', { class: 'empty-art', html: App.icon(ic) }),
-        h('h3', { text: title }),
-        h('p', { text: p }),
-        actions.length ? h('div', { class: 'actions' }, actions) : null));
+      h('h3', null, h('span', { html: App.icon(ic), 'aria-hidden': 'true', style: 'display:inline-grid' }), title),
+      h('p', { text: p }),
+      actions.length ? h('div', { class: 'actions' }, actions) : null);
   }
 
   function recentSection() {
@@ -254,12 +290,11 @@
     if (!list.length) return null;
     return h('section', { class: 'library-sec library-recent', 'aria-labelledby': 'library-recent-h' },
       h('h2', { id: 'library-recent-h', text: 'Son açdıqlarınız' }),
-      h('div', { class: 'card' }, h('div', { class: 'list' }, list.map(function (x) {
-        return h('button', { class: 'list-row', type: 'button', onclick: function () { openPage(x.lang, x.title); } },
-          h('span', { class: 'ic', html: App.icon('book') }),
+      h('div', { class: 'library-list' }, list.map(function (x) {
+        return h('button', { class: 'library-row', type: 'button', onclick: function () { openPage(x.lang, x.title); } },
           h('span', { class: 'tx' }, h('b', { text: x.displaytitle || x.title }), h('small', { text: LANGS[x.lang] + ' · ' + num(words(x.text)) + ' söz · oflayn oxunur' })),
           h('span', { class: 'end', html: App.icon('chevron', 'chev') }));
-      }))));
+      })));
   }
 
   function paintHome(focusInput) {
@@ -289,7 +324,7 @@
     var g = gen, lang = V.lang, slot = V.results;
     slot.textContent = '';
     slot.appendChild(h('h2', { text: 'Axtarılır…' }));
-    slot.appendChild(h('div', { class: 'card' }, skeletonList(5)));
+    slot.appendChild(h('div', { class: 'library-list' }, skeletonList(5)));
     var isCat = /^(kateqoriya|category)\s*:/i.test(q);
     lib(isCat ? { op: 'cat', lang: lang, title: q } : { op: 'search', lang: lang, q: q }).then(function (items) {
       if (!alive(g) || V.results !== slot) return;
@@ -307,25 +342,22 @@
     slot.textContent = '';
     if (!R.items.length) {
       slot.appendChild(h('div', { class: 'library-state', role: 'status' },
-        h('div', { class: 'empty' },
-          h('div', { class: 'empty-art' }),
-          h('h3', { text: 'Heç nə tapılmadı' }),
-          h('p', { text: '«' + short(R.q, 60) + '» üzrə ' + (R.lang === 'az' ? 'azərbaycanca' : 'ingiliscə') + ' Vikimənbədə nəticə yoxdur. Yazılışı yoxlayın, daha qısa söz yazın və ya digər dildə axtarın.' }),
-          h('div', { class: 'actions' },
-            h('button', { class: 'btn', type: 'button', onclick: function () { V.lang = R.lang === 'az' ? 'en' : 'az'; sset('library:lang', V.lang); paintHome(false); search(R.q); } }, ie('globe'), (R.lang === 'az' ? 'EN' : 'AZ') + ' Vikimənbədə axtar')))));
+        h('h3', { text: 'Heç nə tapılmadı' }),
+        h('p', { text: '«' + short(R.q, 60) + '» üzrə ' + (R.lang === 'az' ? 'azərbaycanca' : 'ingiliscə') + ' Vikimənbədə nəticə yoxdur. Yazılışı yoxlayın, daha qısa söz yazın və ya digər dildə axtarın.' }),
+        h('div', { class: 'actions' },
+          h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: function () { V.lang = R.lang === 'az' ? 'en' : 'az'; sset('library:lang', V.lang); paintHome(false); search(R.q); } }, (R.lang === 'az' ? 'EN' : 'AZ') + ' Vikimənbədə axtar'))));
       return;
     }
-    slot.appendChild(h('h2', { text: (R.cat ? 'Kateqoriya' : 'Nəticələr') + ' · ' + num(R.items.length) }));
-    slot.appendChild(h('div', { class: 'card' }, h('div', { class: 'list' }, R.items.map(function (it) {
+    slot.appendChild(h('h2', null, h('span', { text: (R.cat ? 'Kateqoriya' : 'Nəticələr') + ' · ' + num(R.items.length) }), h('span', { style: 'text-transform:none;letter-spacing:0;font-weight:400', text: '«' + short(R.q, 40) + '»' })));
+    slot.appendChild(h('div', { class: 'library-list' }, R.items.map(function (it) {
       var isCat = it.ns === 14;
-      return h('button', { class: 'list-row', type: 'button', onclick: function () {
+      return h('button', { class: 'library-row', type: 'button', onclick: function () {
         if (isCat) { if (V.input) V.input.value = it.title; search(it.title); }
         else openPage(R.lang, it.title);
       } },
-        h('span', { class: 'ic', html: App.icon(isCat ? 'folder' : 'book') }),
-        h('span', { class: 'tx' }, h('b', { text: it.title }), it.snippet ? h('small', { text: it.snippet }) : (isCat ? h('small', { text: 'Alt kateqoriya' }) : null)),
+        h('span', { class: 'tx' }, isCat ? h('span', { class: 'kind', text: 'Kateqoriya' }) : null, h('b', { text: it.title }), it.snippet ? h('small', { text: it.snippet }) : null),
         h('span', { class: 'end', html: App.icon('chevron', 'chev') }));
-    }))));
+    })));
   }
 
   function openPage(lang, title) {
@@ -333,17 +365,19 @@
     V.view = 'reader';
     V.sel = [];
     V.page.textContent = '';
-    var back = h('button', { class: 'icon-btn ghost', type: 'button', 'aria-label': 'Nəticələrə qayıt', html: App.icon('back'), onclick: function () { paintHome(false); } });
-    V.page.appendChild(h('div', { class: 'library-reader-h' }, back, h('div', { style: 'flex:1;min-width:0' },
-      h('span', { class: 'eyebrow', text: 'Kitabxana · ' + LANGS[lang] }),
+    var back = h('button', { class: 'btn btn-ghost btn-sm library-back', type: 'button', 'aria-label': 'Nəticələrə qayıt', onclick: function () { paintHome(false); } }, ie('back'), 'Kitabxana');
+    var reader = h('article', { class: 'library-reader' });
+    V.page.appendChild(reader);
+    reader.appendChild(h('header', { class: 'library-reader-h' }, back, h('div', { style: 'display:grid;gap:6px;min-width:0' },
+      h('span', { class: 'eyebrow', text: 'Vikimənbə · ' + LANGS[lang] }),
       h('h1', { text: title }))));
-    var body = h('div', { 'aria-live': 'polite' });
-    V.page.appendChild(body);
-    try { back.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+    var body = h('div', { 'aria-live': 'polite', style: 'display:grid;gap:16px;min-width:0' });
+    reader.appendChild(body);
+    try { back.focus({ preventScroll: true, focusVisible: false }); } catch (e) { /* ignore */ }
     var hit = cachedPage(lang, title);
     if (hit) { paintReader(lang, hit, body); return; }
-    body.appendChild(h('div', { class: 'card', 'aria-busy': 'true', 'aria-label': 'Mətn yüklənir' },
-      h('div', { class: 'sk-stack' }, [80, 92, 64, 0, 88, 76, 95, 58, 0, 84, 70].map(function (w) { return w ? h('span', { class: 'skeleton text', style: 'width:' + w + '%' }) : h('span', { style: 'display:block;height:var(--s-3)' }); }))));
+    body.appendChild(h('div', { 'aria-busy': 'true', 'aria-label': 'Mətn yüklənir' },
+      h('div', { class: 'sk-stack' }, [80, 92, 64, 0, 88, 76, 95, 58, 0, 84, 70].map(function (w) { return w ? h('span', { class: 'skeleton text', style: 'width:' + w + '%' }) : h('span', { style: 'display:block;height:var(--s-3,12px)' }); }))));
     lib({ op: 'page', lang: lang, title: title }).then(function (d) {
       if (!alive(g) || V.view !== 'reader') return;
       if (d && d.text) remember(lang, d);
@@ -352,7 +386,7 @@
       if (!alive(g) || V.view !== 'reader') return;
       body.textContent = '';
       body.appendChild(stateView(e, function () { openPage(lang, title); }));
-      body.appendChild(h('div', { class: 'library-more' }, h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { paintHome(false); } }, ie('back'), 'Axtarışa qayıt')));
+      body.appendChild(h('div', null, h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: function () { paintHome(false); } }, ie('back'), 'Axtarışa qayıt')));
     });
   }
 
@@ -367,15 +401,15 @@
     var meta = V.page.querySelector('.library-reader-h .meta');
     if (!meta && blocks.length) {
       meta = h('div', { class: 'meta' },
-        h('span', { class: 'badge fir', text: verse ? 'Nəzm' : 'Nəsr' }),
-        h('span', { class: 'badge', text: num(words(d.text)) + ' söz' }),
-        h('span', { class: 'badge', text: num(blocks.length) + (verse ? ' bənd' : ' abzas') }),
-        d.truncated ? h('span', { class: 'badge gold', text: 'Qısaldılıb' }) : null);
+        h('span', { text: verse ? 'Nəzm' : 'Nəsr' }),
+        h('span', { text: num(words(d.text)) + ' söz' }),
+        h('span', { text: num(blocks.length) + (verse ? ' bənd' : ' abzas') }),
+        d.truncated ? h('span', { class: 'warn', text: 'Qısaldılıb' }) : null);
       V.page.querySelector('.library-reader-h > div').appendChild(meta);
     }
 
     if (blocks.length) {
-      body.appendChild(h('p', { class: 'library-hint', text: 'Tərcümə üçün 1–' + MAX_SEL + ' ' + (verse ? 'bəndə' : 'abzasa') + ' toxunub seçin.' }));
+      body.appendChild(h('p', { class: 'library-hint', text: 'Tərcümə və ya tapşırıq üçün 1–' + MAX_SEL + ' ' + (verse ? 'bəndə' : 'abzasa') + ' toxunub seçin.' }));
       var wrap = h('div', { class: 'library-text', role: 'group', 'aria-label': 'Mətn — seçmək üçün abzasa toxunun' });
       body.appendChild(wrap);
       var shown = 0, STEP = 120;
@@ -385,7 +419,7 @@
         for (var i = shown; i < end; i++) wrap.appendChild(para(blocks[i], i, verse));
         shown = end;
         more.textContent = '';
-        if (shown < blocks.length) more.appendChild(h('button', { class: 'btn', type: 'button', onclick: addMore }, 'Davamını göstər (' + num(blocks.length - shown) + ')'));
+        if (shown < blocks.length) more.appendChild(h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: addMore }, 'Davamını göstər (' + num(blocks.length - shown) + ')'));
       };
       addMore();
       body.appendChild(more);
@@ -395,18 +429,18 @@
     if (links.length && blocks.length < 40) {
       body.appendChild(h('section', { class: 'library-sec library-links', 'aria-labelledby': 'library-links-h' },
         h('h2', { id: 'library-links-h', text: 'Bu səhifədəki əsərlər' }),
-        h('div', { class: 'card' }, h('div', { class: 'list' }, links.slice(0, 60).map(function (t) {
-          return h('button', { class: 'list-row', type: 'button', onclick: function () { openPage(lang, t); } },
+        h('div', { class: 'library-list' }, links.slice(0, 60).map(function (t) {
+          return h('button', { class: 'library-row', type: 'button', onclick: function () { openPage(lang, t); } },
             h('span', { class: 'tx' }, h('b', { text: t })), h('span', { class: 'end', html: App.icon('chevron', 'chev') }));
-        })))));
+        }))));
     }
     if (!blocks.length && !links.length) {
-      body.appendChild(h('div', { class: 'empty' }, h('div', { class: 'empty-art' }), h('h3', { text: 'Bu səhifədə mətn yoxdur' }),
+      body.appendChild(h('div', { class: 'library-state' }, h('h3', { text: 'Bu səhifədə mətn yoxdur' }),
         h('p', { text: 'Bəzən Vikimənbə səhifəsi yalnız başlıq və ya keçidlərdən ibarət olur. Səhifəni Vikimənbədə açıb baxın.' })));
     }
 
     var src = h('div', { class: 'library-src' },
-      h('span', null, 'Mənbə: ', h('a', { href: V.doc.url || '#', target: '_blank', rel: 'noopener noreferrer' }, (lang === 'az' ? 'az' : 'en') + '.wikisource.org — ' + V.doc.title, ie('external'))),
+      h('span', null, 'Mənbə: ', h('a', { href: V.doc.url || '#', target: '_blank', rel: 'noopener noreferrer' }, (lang === 'az' ? 'az' : 'en') + '.wikisource.org — ' + (V.doc.title || ''), ie('external'))),
       h('span', { text: 'Lisenziya: ' + V.doc.licence }),
       d.truncated ? h('span', { text: 'Səhifə çox uzundur — ilk 60 000 simvol göstərilir.' }) : null);
     V.bar = h('div', { class: 'library-bar', hidden: true, role: 'region', 'aria-label': 'Seçilmiş parça' });
@@ -464,12 +498,13 @@
     bar.hidden = !parts.length;
     if (!parts.length) return;
     var long = text.length > MAX_SEL_CHARS;
+    var acad = App.mode && App.mode() === 'academy';
     bar.appendChild(h('div', { class: 'cnt' },
       h('span', null, h('b', { text: parts.length + ' / ' + MAX_SEL }), ' seçildi'),
-      h('span', { text: num(words(text)) + ' söz' + (long ? ' · çox uzundur' : '') })));
-    bar.appendChild(h('button', { class: 'btn btn-primary', type: 'button', disabled: long, onclick: function () { toTask(text); } }, ie('cap'), 'Tapşırığa çevir'));
-    bar.appendChild(h('button', { class: 'btn', type: 'button', disabled: long, onclick: function () { toTranslate(text); } }, ie('translate'), 'Tərcüməçidə aç'));
-    bar.appendChild(h('button', { class: 'btn btn-ghost', type: 'button', 'aria-label': 'Seçimi təmizlə', onclick: function () { V.sel = []; paintSel(); } }, ie('x')));
+      h('span', { class: long ? 'warn' : null, text: num(words(text)) + ' söz' + (long ? ' · çox uzundur' : '') })));
+    bar.appendChild(h('button', { class: 'btn btn-sm ' + (acad ? 'btn-primary' : 'btn-secondary'), type: 'button', disabled: long, onclick: function () { toTask(text); } }, 'Tapşırığa çevir'));
+    bar.appendChild(h('button', { class: 'btn btn-sm ' + (acad ? 'btn-secondary' : 'btn-primary'), type: 'button', disabled: long, onclick: function () { toTranslate(text); } }, 'Tərcümədə aç'));
+    bar.appendChild(h('button', { class: 'btn btn-sm btn-ghost', type: 'button', 'aria-label': 'Seçimi təmizlə', title: 'Seçimi təmizlə', onclick: function () { V.sel = []; paintSel(); } }, ie('x')));
   }
 
   function toTask(text) {

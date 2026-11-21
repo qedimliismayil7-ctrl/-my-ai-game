@@ -1,10 +1,10 @@
 /* =====================================================================
-   NUANZA — s-home.js
-   Screen 'home' for both modes — a new user's real, empty workspace:
-     • Peşəkar  → «İş masası»: salam, bir əsas əməliyyat (tərcümə), «Son işlər»
-                  (yalnız real layihələr varsa), kiçik alətlər şəbəkəsi.
-     • Akademiya → «Masa»: salam, bugünkü dərs, real XP-dən rütbə kartı
-                  (0 XP-də «İlk dərsinizi edin»), alətlər.
+   MIRZƏ — s-home.js
+   Screen 'home' for both modes, built only from the user's real data:
+     • İş masası  → greeting + one question; «Davam et» (the last edited project, one primary
+                    action), «Son layihələr» (list-table), «Yoxlama növbəsi» (open QA notes / not yet
+                    checked), «Akademiya vəziyyəti» (one progress line, weak areas), compact tools.
+     • Akademiya → greeting; next lesson, progress line, weak areas (analytic list), cards due, practice.
    Plain browser JS. Uses App.* from app.js and app.css components.
    ===================================================================== */
 (function () {
@@ -126,72 +126,110 @@
      3. CSS (screen-scoped, tokens only)
      ------------------------------------------------------------------ */
   var CSS = [
-    '.home-swap{animation:home-swap .24s var(--ease-out) both}',
-
-    /* KPI strip — real numbers only */
-    '.home-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--line);overflow:hidden}',
-    '@media (min-width:760px){.home-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}',
-    '.home-kpi{display:grid;gap:2px;align-content:start;padding:14px 16px;min-width:0;background:var(--surface)}',
-    '.home-kpi span{font-size:var(--fs-xs);color:var(--soft)}',
-    '.home-kpi b{font-size:1.375rem;font-weight:700;line-height:1.2;letter-spacing:-.01em;font-variant-numeric:tabular-nums lining-nums}',
-    '.home-kpi small{font-size:var(--fs-xs);color:var(--faint)}',
-
-    /* projects table (grid rows → stacked on phones) */
-    '.home-pj{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);overflow:hidden}',
-    '.home-pj-head,.home-pj-row{display:grid;grid-template-columns:minmax(0,1fr) 88px 72px 132px 104px;gap:16px;align-items:center;padding:0 16px}',
-    '.home-pj-head{min-height:34px;background:var(--surface2);border-bottom:1px solid var(--line);color:var(--soft);font:600 .6875rem/1.2 var(--f-body);letter-spacing:.06em;text-transform:uppercase}',
-    '.home-pj-head .r,.home-pj-row .r{text-align:right}',
-    '.home-pj-row{width:100%;min-height:52px;padding-block:8px;border:0;border-bottom:1px solid var(--line);background:none;color:inherit;text-align:left;font:inherit;cursor:pointer;transition:background var(--t-fast)}',
-    '.home-pj-row:last-child{border-bottom:0}',
-    '.home-pj-row:hover{background:var(--hover)}',
-    '.home-pj-row:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
-    '.home-pj-name{display:grid;gap:1px;min-width:0}',
-    '.home-pj-name b{font-size:.875rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.home-pj-name small{font-size:var(--fs-xs);color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.home-pj-cell{font-size:var(--fs-sm);color:var(--soft);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '.home-pj-prog{display:flex;align-items:center;gap:8px}',
-    '.home-pj-prog .progress{flex:1}',
-    '.home-pj-prog span{width:34px;text-align:right;font-size:var(--fs-xs);color:var(--soft);font-variant-numeric:tabular-nums}',
-    '.home-pj-due.late{color:var(--nar);font-weight:600}',
-    '.home-pj-due.soon{color:var(--zafaran-ink);font-weight:600}',
-    '@media (max-width:719px){',
-    '  .home-pj-head{display:none}',
-    '  .home-pj-row{grid-template-columns:minmax(0,1fr) 92px;gap:4px 12px}',
-    '  .home-pj-row .c-pair,.home-pj-row .c-words{display:none}',
-    '  .home-pj-row .home-pj-due{grid-column:1;grid-row:2;font-size:var(--fs-xs)}',
-    '  .home-pj-row .home-pj-prog{grid-column:2;grid-row:1 / span 2}',
-    '}',
-    '.home-pj-foot{display:flex;justify-content:flex-end;padding:8px 16px;border-top:1px solid var(--line);background:var(--surface)}',
-
-    /* empty state */
-    '.home-empty{display:flex;align-items:center;gap:14px;padding:16px;border:1px dashed var(--line-2);border-radius:var(--r-lg);background:var(--surface)}',
-    '.home-empty .tx{flex:1;min-width:0;display:grid;gap:2px}',
-    '.home-empty .tx b{font-size:.875rem;font-weight:600}',
-    '.home-empty .tx small{color:var(--soft);font-size:var(--fs-sm)}',
+    '.home-page{container-type:inline-size;gap:0}',
+    '.home-swap{animation:fade-in var(--t-slow) var(--ease-out) both}',
+    /* hero — a greeting and one question, nothing else */
+    '.home-hero{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding:8px 0 24px}',
+    '.home-hero-tx{display:grid;gap:4px;min-width:0}',
+    '.home-hello{font-family:var(--f-display);font-size:var(--t-h1);line-height:1.2727;font-weight:600;letter-spacing:-.016em;color:var(--ink)}',
+    '@media (min-width:768px){.home-hello{font-size:var(--t-display);line-height:1.2143}}',
+    '.home-q{font-size:var(--t-h3);line-height:1.3333;color:var(--soft)}',
+    '.home-hero-acts{display:flex;flex-wrap:wrap;gap:8px}',
+    /* layout: main column + side column on wide containers */
+    '.home-grid{display:grid;gap:28px;align-items:start}',
+    '@container (min-width:860px){.home-grid{grid-template-columns:minmax(0,1fr) 300px;gap:32px 40px}}',
+    '.home-col{display:grid;gap:28px;min-width:0;align-content:start}',
+    '.home-sec{display:grid;gap:10px;min-width:0}',
+    '.home-sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-width:0;padding-bottom:8px;border-bottom:1px solid var(--line)}',
+    '.home-sec-h h2{font:600 var(--t-caption)/1.3333 var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--soft)}',
+    '.home-sec-h .meta{font-size:var(--t-caption);color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.home-sec-h .link{font-size:var(--t-caption)}',
+    '.home-sec-h + .home-list,.home-sec-h + .home-tbl{margin-top:-10px}',
+    /* «Davam et» — the one card on the page */
+    '.home-cont{display:flex;flex-wrap:wrap;align-items:center;gap:16px 24px;padding:16px 20px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}',
+    '.home-cont-tx{flex:1 1 280px;min-width:0;display:grid;gap:6px}',
+    '.home-cont-tx h3{font-size:var(--t-h3);line-height:1.3333;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.home-cont-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;color:var(--soft);font-size:var(--t-small)}',
+    '.home-cont-meta .sep{width:3px;height:3px;border-radius:50%;background:var(--line-2)}',
+    '.home-cont-bar{display:flex;align-items:center;gap:10px;max-width:360px}',
+    '.home-cont-bar .progress{flex:1}',
+    '.home-cont-bar span{font-size:var(--t-caption);color:var(--soft);font-variant-numeric:tabular-nums;min-width:32px;text-align:right}',
+    '@media (max-width:520px){.home-cont{padding:14px 16px}.home-cont .btn{flex:1}}',
+    '.home-mono{font-family:var(--f-mono);font-size:var(--t-caption);letter-spacing:.01em}',
+    /* empty line */
+    '.home-empty{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:14px 16px;border:1px dashed var(--line-2);border-radius:var(--r-lg)}',
+    '.home-empty .tx{flex:1 1 260px;min-width:0;font-size:var(--t-small);color:var(--soft);line-height:1.5}',
+    '.home-empty .tx b{color:var(--ink);font-weight:600}',
     '.home-empty-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}',
-    '@media (max-width:560px){.home-empty{flex-wrap:wrap}.home-empty-acts{width:100%}}',
-
-    /* tools — compact list grid */
-    '.home-tools{grid-template-columns:repeat(2,minmax(0,1fr))}',
-    '@media (min-width:1180px){.home-tools{grid-template-columns:repeat(4,minmax(0,1fr))}}',
-    '@media (max-width:420px){.home-tools .tile small{display:none}}',
-
+    '.home-none{padding:10px 0 0;font-size:var(--t-small);color:var(--soft);line-height:1.5}',
+    '.home-none b{color:var(--ink);font-weight:500}',
+    /* list-table hybrid (recent projects) */
+    '.home-tbl{display:grid;min-width:0}',
+    '.home-tr{display:grid;grid-template-columns:minmax(0,1fr) 76px 64px 120px 92px;gap:16px;align-items:center;padding:0 8px;margin:0 -8px}',
+    '.home-th{min-height:32px;color:var(--faint);font:500 var(--t-micro)/1.2 var(--f-body);letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid var(--line)}',
+    '.home-th .r,.home-tr .r{text-align:right}',
+    'button.home-tr{width:calc(100% + 16px);min-height:48px;padding-block:6px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;color:inherit;text-align:left;font:inherit;cursor:pointer;transition:background var(--t-fast)}',
+    'button.home-tr:last-child{border-bottom:0}',
+    '@media (hover:hover){button.home-tr:hover{background:var(--hover)}}',
+    'button.home-tr:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;border-radius:var(--r-sm)}',
+    '.home-nm{display:grid;gap:1px;min-width:0}',
+    '.home-nm b{font-size:var(--t-body);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.home-nm small{font-size:var(--t-caption);color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.home-cell{font-size:var(--t-small);color:var(--soft);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.home-prog{display:flex;align-items:center;gap:8px}',
+    '.home-prog .progress{flex:1}',
+    '.home-prog span{width:32px;text-align:right;font-size:var(--t-caption);color:var(--soft);font-variant-numeric:tabular-nums}',
+    '.home-due.late{color:var(--danger);font-weight:500}',
+    '.home-due.soon{color:var(--zafaran-ink);font-weight:500}',
+    '@container (max-width:599px){',
+    '  .home-th{display:none}',
+    '  .home-tr{grid-template-columns:minmax(0,1fr) 84px;gap:2px 12px}',
+    '  .home-tr .c-pair,.home-tr .c-words{display:none}',
+    '  .home-tr .home-due{grid-column:1;grid-row:2;font-size:var(--t-caption)}',
+    '  .home-tr .home-prog{grid-column:2;grid-row:1 / span 2}',
+    '  button.home-tr .home-nm small{display:none}',
+    '}',
+    /* compact rows (queue, academy, tools) */
+    '.home-list{display:grid;min-width:0}',
+    '.home-row{position:relative;display:flex;align-items:center;gap:12px;width:calc(100% + 16px);min-width:0;min-height:44px;padding:6px 8px;margin:0 -8px;border:0;border-bottom:1px solid var(--line);background:none;color:inherit;text-align:left;font:inherit;transition:background var(--t-fast)}',
+    '.home-row:last-child{border-bottom:0}',
+    'button.home-row{cursor:pointer}',
+    '@media (hover:hover){button.home-row:hover{background:var(--hover)}}',
+    'button.home-row:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;border-radius:var(--r-sm)}',
+    '.home-row > svg{width:16px;height:16px;color:var(--soft);flex:none}',
+    '.home-row .tx{flex:1;min-width:0;display:grid;gap:1px}',
+    '.home-row .tx b{font-size:var(--t-small);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.home-row .tx small{font-size:var(--t-caption);color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.home-row .end{flex:none;display:flex;align-items:center;gap:8px;color:var(--soft);font-size:var(--t-caption);font-variant-numeric:tabular-nums}',
+    '.home-row .chev{width:14px;height:14px;color:var(--faint)}',
+    /* academy status line */
+    '.home-ac{display:grid;gap:8px;padding-top:2px}',
+    '.home-ac-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:var(--t-small)}',
+    '.home-ac-top b{font-weight:600}',
+    '.home-ac-top span{color:var(--soft);font-variant-numeric:tabular-nums}',
+    '.home-ac-sub{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;font-size:var(--t-caption);color:var(--soft);font-variant-numeric:tabular-nums}',
+    /* weak areas — an analytic list */
+    '.home-weak{display:grid;gap:8px;padding-top:4px}',
+    '.home-wk{display:grid;grid-template-columns:minmax(0,1fr) 88px 36px;align-items:center;gap:10px;font-size:var(--t-small)}',
+    '.home-wk > span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.home-wk b{font-weight:500;text-align:right;font-variant-numeric:tabular-nums;color:var(--soft)}',
+    /* tools */
+    '.home-tools{display:flex;flex-wrap:wrap;gap:8px}',
     /* sheets content */
     '.home-qt-out{min-height:92px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface2);display:grid;gap:10px;align-content:start}',
-    '.home-qt-text{font-size:1rem;line-height:1.9;overflow-wrap:anywhere;white-space:pre-wrap}',
-    '.home-qt-hint{display:flex;align-items:center;gap:10px;color:var(--soft);font-size:var(--fs-sm)}',
+    '.home-qt-text{font-size:var(--t-body);line-height:1.9;overflow-wrap:anywhere;white-space:pre-wrap}',
+    '.home-qt-hint{display:flex;align-items:center;gap:10px;color:var(--soft);font-size:var(--t-small)}',
     '.home-qt-hint svg{width:16px;height:16px;color:var(--soft)}',
     '.home-qa-top{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}',
-    '.home-qa-top p{font-size:var(--fs-sm);color:var(--soft)}',
-    '.home-file{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}',
+    '.home-qa-top p{font-size:var(--t-small);color:var(--soft)}',
+    '.home-file{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}',
     '.home-file .tx{flex:1;min-width:0;display:grid}',
-    '.home-file .tx b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.home-file .tx b{font-size:var(--t-small);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
     '.home-file .tx small{color:var(--soft)}',
     '.home-ex{display:grid;gap:6px;padding:12px 14px;border-radius:var(--r-md);background:var(--surface2)}',
-    '.home-ex-src{color:var(--soft);font-size:var(--fs-sm)}',
-    '.home-ex-tgt{font-family:var(--f-body);font-weight:600;font-size:1rem;line-height:1.45}',
-    '.home-risks{margin:0;padding-left:1.1em;display:grid;gap:4px;font-size:var(--fs-sm)}',
-    /* the whole lesson sheet */
+    '.home-ex-src{color:var(--soft);font-size:var(--t-small)}',
+    '.home-ex-tgt{font-weight:500;font-size:var(--t-body);line-height:1.5}',
+    '.home-risks{margin:0;padding-left:1.1em;display:grid;gap:4px;font-size:var(--t-small)}',
     '.home-ls{display:grid;gap:18px}',
     '.home-ls-sec{display:grid;gap:10px}',
     '.home-ls-pit{display:grid;gap:4px;padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--surface)}',
@@ -202,49 +240,15 @@
     '.home-lq-opts.locked .choice{pointer-events:none}',
     '.choice.home-lq-opt{align-items:center;padding-block:10px}',
     '.choice.home-lq-opt b{font-weight:500;line-height:1.45}',
-    '.home-lq-k{flex:none;width:24px;height:24px;display:grid;place-items:center;border-radius:6px;background:var(--surface2);color:var(--soft);font:700 var(--fs-xs)/1 var(--f-body)}',
-    '.choice.home-lq-opt.right{border-color:var(--ok);background:linear-gradient(var(--ok-t),var(--ok-t)),var(--surface)}',
+    '.home-lq-k{flex:none;width:22px;height:22px;display:grid;place-items:center;border-radius:var(--r-xs);background:var(--surface2);color:var(--soft);font:500 var(--t-micro)/1 var(--f-mono)}',
+    '.choice.home-lq-opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 7%,var(--surface))}',
     '.choice.home-lq-opt.right::after{background:var(--ok);border-color:var(--ok)}',
-    '.choice.home-lq-opt.wrong{border-color:var(--nar);background:linear-gradient(var(--nar-t),var(--nar-t)),var(--surface)}',
+    '.choice.home-lq-opt.wrong{border-color:var(--nar);background:color-mix(in srgb,var(--nar) 6%,var(--surface))}',
     '.choice.home-lq-opt.wrong::after{background:var(--nar);border-color:var(--nar)}',
     '.choice.home-lq-opt.dim{opacity:.55}',
-
-    /* academy — today’s lesson row (class kept: .home-cta) */
-    '.home-cta{display:flex;align-items:center;gap:14px;width:100%;min-width:0;padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);text-align:left;font:inherit;cursor:pointer;transition:border-color var(--t-fast),background var(--t-fast)}',
-    '@media (hover:hover){.home-cta:hover{border-color:var(--line-2);background:color-mix(in srgb,var(--surface) 92%,var(--ink))}}',
-    '.home-cta-ic{width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:var(--r-md);background:var(--surface2);color:var(--firuze);box-shadow:inset 0 0 0 1px var(--line)}',
-    '.home-cta-ic svg{width:20px;height:20px}',
-    '.home-cta-tx{flex:1;min-width:0;display:grid;gap:2px}',
-    '.home-cta-tx small{font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}',
-    '.home-cta-tx b{font-size:1rem;font-weight:600;line-height:1.35}',
-    '.home-cta-tx span{font-size:var(--fs-sm);color:var(--soft)}',
-    '.home-cta-go{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border:1px solid var(--line-2);border-radius:var(--r-sm);font-size:var(--fs-sm);font-weight:600;color:var(--ink)}',
-    '.home-cta-go svg{width:15px;height:15px;color:var(--soft)}',
-    '@media (max-width:479px){.home-cta-go .t{display:none}.home-cta-go{padding:0 8px}}',
-    '.home-cta[aria-busy="true"]{pointer-events:none}',
-    '.home-cta[aria-busy="true"] .home-cta-go svg{display:none}',
-    '.home-cta[aria-busy="true"] .home-cta-go::after{content:"";width:14px;height:14px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:spin .7s linear infinite}',
-
-    /* academy — first-lesson note and rank summary */
-    '.home-first{display:flex;align-items:center;gap:14px;padding:16px}',
-    '.home-first .tx{flex:1;min-width:0;display:grid;gap:2px}',
-    '.home-first .tx b{font-size:.875rem;font-weight:600}',
-    '.home-first .tx small{color:var(--soft);font-size:var(--fs-sm);line-height:1.5}',
-    '.home-rank{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px 16px;padding:16px}',
-    '@media (max-width:559px){.home-rank{grid-template-columns:auto minmax(0,1fr)}.home-rank .home-ladder-btn{grid-column:1 / -1;justify-self:start}}',
-    '.home-rank-tx{display:grid;gap:6px;min-width:0}',
-    '.home-rank-tx .row{gap:8px}',
-    '.home-rank-tx b{font-size:1rem;font-weight:700}',
-    '.home-xp{display:grid;gap:6px}',
-    '.home-xp-lbl{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-xs);color:var(--soft);font-variant-numeric:tabular-nums}',
-    '.home-xp-lbl b{color:var(--ink);font-weight:600}',
-    '.home-ladder-btn{padding:0;border:0;background:none;color:var(--firuze);font:600 var(--fs-sm)/1.2 var(--f-body);cursor:pointer}',
-    '.home-ladder-btn:hover{text-decoration:underline;text-underline-offset:3px}',
     '.home-lock{display:inline-grid;place-items:center;color:var(--faint)}',
-    '.home-lock svg{width:16px;height:16px}',
-
-    /* keyframes */
-    '@keyframes home-swap{from{opacity:0}to{opacity:1}}'
+    '.home-lock svg{width:15px;height:15px}',
+    '.home-cta[aria-busy="true"]{pointer-events:none}'
   ].join('\n');
 
   /* ------------------------------------------------------------------
@@ -295,40 +299,103 @@
      ------------------------------------------------------------------ */
   function isLive() { return !!(App.isLive && App.isLive()); }
 
-  function renderPro(page, post) {
-    var now = new Date(), P = realProjects();
-    var active = P.filter(function (p) { return p.status !== 'delivered'; });
-    var sub = dateLine(now) + (P.length ? ' · ' + active.length + ' aktiv layihə' : '');
-    var newPj = h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { var c = pjApi('create'); if (c) c(); else newProjectSheet(); } }, ie('plus'), 'Yeni layihə');
-    var tr = h('button', { class: 'btn btn-secondary', type: 'button', onclick: function () { goFirst(['translate'], {}, 'Tərcümə ekranı hazırlanır'); } }, ie('translate'), 'Tərcüməçi');
-    page.appendChild(h('div', { class: 'page-h' },
-      h('div', null,
-        h('h1', { text: 'İş masası' }),
-        h('p', { text: sub })),
-      h('div', { class: 'actions' }, tr, newPj)));
+  /* hero: «Sabahınız xeyir, <ad>.» (no name → «Xoş gəldiniz.») + one question */
+  function helloText(p, now) { var n = firstName(p); return n ? greeting(now) + ', ' + n + '.' : 'Xoş gəldiniz.'; }
+  function hero(p, now, question, acts) {
+    return h('header', { class: 'home-hero' },
+      h('div', { class: 'home-hero-tx' },
+        h('h1', { class: 'home-hello', text: helloText(p, now) }),
+        h('p', { class: 'home-q', text: question })),
+      acts && acts.length ? h('div', { class: 'home-hero-acts' }, acts) : null);
+  }
+  function secHead(id, title, right) {
+    return h('div', { class: 'home-sec-h' }, h('h2', { id: id, text: title }), right || null);
+  }
+  function sec(id, title, right, body) {
+    return h('section', { class: 'home-sec', 'aria-labelledby': id }, secHead(id, title, right), body);
+  }
+  function chev() { return ie('chevron'); }
 
-    if (P.length) page.appendChild(kpiStrip(P));
-    page.appendChild(h('div', { class: 'sec-h' }, h('h2', { id: 'home-recent-h', text: 'Son layihələr' }),
-      P.length ? h('button', { class: 'link small', type: 'button', onclick: function () { goFirst(['projects'], {}, 'Layihələr bölməsi hazırlanır'); } }, 'Hamısı') : null));
-    page.appendChild(P.length ? recentTable(P) : emptyProjects());
-    page.appendChild(h('div', { class: 'sec-h' }, h('h2', { text: 'Alətlər' })));
-    page.appendChild(proTools());
+  function openProject(id) { var o = pjApi('open'); if (o) o(id); else goFirst(['editor', 'projects'], { project: id }, 'Redaktor hələ yüklənməyib'); }
+  function createProject() { var c = pjApi('create'); if (c) c(); else newProjectSheet(); }
+  function allProjectsRaw() {
+    var a = pjApi('all');
+    if (a) { try { var l = a(); if (Array.isArray(l)) return l; } catch (e) { /* ignore */ } }
+    return null;
   }
 
-  /* 5.1 numbers from the user's real projects */
+  function renderPro(page) {
+    var now = new Date(), p = profile(), P = realProjects();
+    page.appendChild(hero(p, now, 'Bu gün haradan davam edirsiniz?', [
+      h('button', { class: 'btn btn-secondary', type: 'button', onclick: createProject }, ie('plus'), 'Yeni layihə')
+    ]));
+    var main = h('div', { class: 'home-col' },
+      sec('home-cont-h', 'Davam et', null, continueBlock(P)),
+      sec('home-recent-h', 'Son layihələr', recentMeta(P), P.length ? recentTable(P) : h('p', { class: 'home-none' }, h('b', { text: 'Layihə yoxdur' }), ' · Yaratdığınız layihələr burada siyahı kimi görünəcək.')),
+      sec('home-tools-h', 'Alətlər', null, proTools()));
+    var side = h('div', { class: 'home-col' },
+      sec('home-queue-h', 'Yoxlama növbəsi', null, reviewQueue(P)),
+      sec('home-ac-h', 'Akademiya vəziyyəti', h('button', { class: 'link', type: 'button', onclick: function () { toAcademy(); } }, 'Akademiya'), academyStatus(p)));
+    page.appendChild(h('div', { class: 'home-grid' }, main, side));
+  }
+  function toAcademy() {
+    try { if (App.setMode) { App.setMode('academy', { silent: true }); if (App.current && App.current() !== 'home') App.go('home'); return; } } catch (e) { /* ignore */ }
+    App.go('home');
+  }
+
+  /* 5.1 «Davam et» — the most recently edited project, with one primary action */
   var DAY_MS = 86400000;
-  function kpiStrip(P) {
+  function lastProject(P) {
+    var last = sget('pj:last', null), all = allProjectsRaw() || P, pick = null;
+    if (last) all.forEach(function (x) { if (x && String(x.id) === String(last) && !pick) pick = x; });
+    if (!pick) P.forEach(function (x) { if (!pick && x.status !== 'delivered') pick = x; });
+    return pick;
+  }
+  function segInfo(pj) {
+    var total = Number(pj.segs) || 0, saved = sget('pj:segs:' + pj.id, null);
+    if (!total) return '';
+    if (Array.isArray(saved) && saved.length) {
+      var next = -1;
+      for (var i = 0; i < total; i++) { var s = saved[i]; if (!(s && s.ok)) { next = i; break; } }
+      return next < 0 ? 'Bütün seqmentlər təsdiqlənib' : 'Seqment ' + (next + 1) + ' / ' + total;
+    }
+    return total + ' seqment';
+  }
+  function continueBlock(P) {
+    var pj = lastProject(P);
+    if (!pj) {
+      return h('div', { class: 'home-empty' },
+        h('span', { class: 'tx' }, h('b', { text: 'Layihə yoxdur' }), ' · İlk layihənizi yaradın və tərcüməyə başlayın.'),
+        h('span', { class: 'home-empty-acts' },
+          h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: createProject }, ie('plus'), 'Layihə yarat'),
+          h('button', { class: 'link small', type: 'button', onclick: function () { var o = pjApi('openSample'); if (o) o(); else goFirst(['projects'], {}, 'Layihələr bölməsi hazırlanır'); } }, 'Nümunə layihəni açın')));
+    }
+    var delivered = pj.status === 'delivered', done = clamp(Math.round(Number(pj.done) || 0), 0, 100);
+    var meta = [h('span', { class: 'home-mono', text: pairLabel(pj.pair) })];
+    [pj.field || pj.client || '', segInfo(pj), pj.sample ? 'Nümunə' : ''].filter(Boolean).forEach(function (t) { meta.push(h('i', { class: 'sep', 'aria-hidden': 'true' })); meta.push(h('span', { text: t })); });
+    return h('div', { class: 'home-cont' },
+      h('div', { class: 'home-cont-tx' },
+        h('h3', { text: pj.name }),
+        h('div', { class: 'home-cont-meta' }, meta),
+        h('div', { class: 'home-cont-bar' },
+          h('span', { class: 'progress' + (delivered ? ' green' : ''), role: 'progressbar', 'aria-label': 'Hazırlıq', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': delivered ? 100 : done }, h('i', { style: 'width:' + (delivered ? 100 : done) + '%' })),
+          h('span', { text: (delivered ? 100 : done) + '%' }))),
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { openProject(pj.id); } }, delivered ? 'Redaktorda aç' : 'Redaktorda davam et', ie('arrow')));
+  }
+
+  /* 5.2 recent projects — compact list-table */
+  function recentMeta(P) {
+    if (!P.length) return null;
     var active = P.filter(function (p) { return p.status !== 'delivered'; });
     var left = active.reduce(function (s, p) { return s + Math.round(p.words * (100 - p.done) / 100); }, 0);
-    var week = active.filter(function (p) { return p.due && p.due.getTime() - Date.now() < 7 * DAY_MS; }).length;
     var qa = P.filter(function (p) { return typeof p.qa === 'number'; });
     var avg = qa.length ? Math.round(qa.reduce(function (s, p) { return s + p.qa; }, 0) / qa.length) : null;
-    function kpi(label, val, note) { return h('div', { class: 'home-kpi' }, h('span', { text: label }), h('b', { text: val }), note ? h('small', { text: note }) : null); }
-    return h('section', { class: 'home-kpis', 'aria-label': 'Göstəricilər' },
-      kpi('Aktiv layihələr', String(active.length), P.length - active.length ? (P.length - active.length) + ' təhvil verilib' : null),
-      kpi('Qalan söz', num(left), null),
-      kpi('7 gün ərzində təhvil', String(week), null),
-      kpi('Orta QA balı', avg == null ? '—' : String(avg), avg == null ? 'Hələ yoxlanmayıb' : qa.length + ' layihə üzrə'));
+    var bits = [active.length + ' aktiv', num(left) + ' söz qalır'];
+    if (avg != null) bits.push('orta QA ' + avg);
+    var wrap = h('span', { class: 'row', style: 'gap:12px;flex-wrap:nowrap;min-width:0' },
+      h('span', { class: 'meta', text: bits.join(' · ') }),
+      P.length > 6 ? h('button', { class: 'link', type: 'button', onclick: function () { goFirst(['projects'], {}, 'Layihələr bölməsi hazırlanır'); } }, 'Hamısı') : null);
+    return wrap;
   }
   function dueInfo(pj) {
     if (pj.status === 'delivered') return { t: 'Təhvil verilib', c: '' };
@@ -342,53 +409,86 @@
     if (days === 1) return { t: 'Sabah ' + hhmm, c: 'soon' };
     return { t: d.getDate() + ' ' + MONTHS[d.getMonth()], c: '' };
   }
-  /* 5.2 recent projects — a compact table */
   function recentTable(P) {
     var rows = P.slice(0, 6).map(function (pj) {
-      var delivered = pj.status === 'delivered', due = dueInfo(pj);
-      var meta = [pj.client, pairLabel(pj.pair)].filter(Boolean).join(' · ');
-      return h('button', { class: 'home-pj-row', type: 'button', 'aria-label': pj.name + ' — ' + (delivered ? 'təhvil verilib' : pj.done + '% hazır') + '. Redaktorda aç',
-        onclick: function () { var o = pjApi('open'); if (o) o(pj.id); else goFirst(['editor', 'projects'], { project: pj.id }, 'Redaktor hələ yüklənməyib'); } },
-        h('span', { class: 'home-pj-name' }, h('b', { text: pj.name }), h('small', { text: meta || (pj.created ? relTime(pj.created) : '') })),
-        h('span', { class: 'home-pj-cell c-pair', text: pairLabel(pj.pair) }),
-        h('span', { class: 'home-pj-cell c-words r', text: pj.words ? num(pj.words) : '—' }),
-        h('span', { class: 'home-pj-prog' },
-          h('span', { class: 'progress thin' + (delivered ? ' green' : ''), 'aria-hidden': 'true' }, h('i', { style: 'width:' + (delivered ? 100 : pj.done) + '%' })),
-          h('span', { text: (delivered ? 100 : pj.done) + '%' })),
-        h('span', { class: 'home-pj-cell home-pj-due ' + due.c, text: due.t }));
+      var delivered = pj.status === 'delivered', due = dueInfo(pj), pct = delivered ? 100 : pj.done;
+      return h('button', { class: 'home-tr', type: 'button', 'aria-label': pj.name + ' — ' + (delivered ? 'təhvil verilib' : pj.done + '% hazır') + '. Redaktorda aç',
+        onclick: function () { openProject(pj.id); } },
+        h('span', { class: 'home-nm' }, h('b', { text: pj.name }), h('small', { text: pj.client || (pj.created ? relTime(pj.created) : '') })),
+        h('span', { class: 'home-cell home-mono c-pair', text: pairLabel(pj.pair) }),
+        h('span', { class: 'home-cell c-words r', text: pj.words ? num(pj.words) : '—' }),
+        h('span', { class: 'home-prog' },
+          h('span', { class: 'progress thin' + (delivered ? ' green' : ''), 'aria-hidden': 'true' }, h('i', { style: 'width:' + pct + '%' })),
+          h('span', { text: pct + '%' })),
+        h('span', { class: 'home-cell home-due ' + due.c, text: due.t }));
     });
-    return h('section', { class: 'home-pj', 'aria-labelledby': 'home-recent-h' },
-      h('div', { class: 'home-pj-head', 'aria-hidden': 'true' },
-        h('span', { text: 'Layihə' }), h('span', { text: 'Dil cütü' }), h('span', { class: 'r', text: 'Söz' }), h('span', { text: 'Hazırlıq' }), h('span', { text: 'Təhvil' })),
+    return h('div', { class: 'home-tbl', role: 'group', 'aria-labelledby': 'home-recent-h' },
+      h('div', { class: 'home-tr home-th', 'aria-hidden': 'true' },
+        h('span', { text: 'Layihə' }), h('span', { text: 'Cüt' }), h('span', { class: 'r', text: 'Söz' }), h('span', { text: 'Hazırlıq' }), h('span', { text: 'Təhvil' })),
       rows);
   }
-  function emptyProjects() {
-    return h('section', { class: 'home-empty', 'aria-labelledby': 'home-recent-h' },
-      icTile('folder'),
-      h('span', { class: 'tx' }, h('b', { text: 'Hələ layihə yoxdur' }), h('small', { text: 'Sənədi yükləyin, dil cütünü və təhvil tarixini seçin — layihə redaktorda açılacaq.' })),
-      h('span', { class: 'home-empty-acts' },
-        h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { var c = pjApi('create'); if (c) c(); else newProjectSheet(); } }, ie('plus'), 'Layihə yarat'),
-        h('button', { class: 'link small', type: 'button', onclick: function () { var o = pjApi('openSample'); if (o) o(); else goFirst(['projects'], {}, 'Layihələr bölməsi hazırlanır'); } }, 'Nümunə layihəni açın')));
-  }
 
-  /* 5.3 compact tools */
-  function proTools() {
-    var items = [
-      { t: 'Sürətli tərcümə', s: 'Bir-iki cümlə', ic: 'zap', run: quickTranslateSheet },
-      { t: 'Fayl analizi', s: 'Həcm, sahə, üslub', ic: 'upload', run: uploadSheet },
-      { t: 'Termin axtarışı', s: 'Layihə lüğəti', ic: 'book', run: termSheet },
-      { t: 'QA yoxlaması', s: 'Rəqəm, termin, forma', ic: 'shield', run: function () { goFirst(['qa'], {}, 'QA bölməsi hazırlanır'); } }
-    ];
-    return toolTiles(items, 'Alətlər');
-  }
-  function toolTiles(items, label) {
-    return h('div', { class: 'tiles home-tools', role: 'group', 'aria-label': label }, items.map(function (it) {
-      return h('button', { class: 'tile', type: 'button', onclick: function () { it.run(); } },
-        icTile(it.ic, it.cls), h('span', null, h('b', { text: it.t }), h('small', { text: it.s })));
+  /* 5.3 review queue — projects with open QA notes or a finished translation not checked yet */
+  function reviewQueue(P) {
+    var q = P.filter(function (p) {
+      if (p.status === 'delivered') return false;
+      return (typeof p.qa === 'number' && p.qa < 85) || (p.qa == null && p.done >= 100);
+    }).sort(function (a, b) { return (a.qa == null ? 101 : a.qa) - (b.qa == null ? 101 : b.qa); });
+    if (!q.length) {
+      return h('p', { class: 'home-none' }, h('b', { text: 'Növbə boşdur' }), P.length ? ' · Açıq qeydi və ya yoxlama gözləyən layihə yoxdur.' : ' · Layihələr yoxlamaya hazır olanda burada görünəcək.');
+    }
+    return h('div', { class: 'home-list' }, q.slice(0, 5).map(function (pj) {
+      var pending = pj.qa == null;
+      var why = pending ? 'Tərcümə bitib · yoxlanmayıb' : (pj.qa < 70 ? 'Kritik qeydlər var' : 'Düzəlişlər gözləyir');
+      return h('button', { class: 'home-row', type: 'button', onclick: function () { goFirst(['qa', 'editor'], { project: pj.id }, 'Yoxlama bölməsi hazırlanır'); } },
+        h('span', { class: 'tx' }, h('b', { text: pj.name }), h('small', { text: why })),
+        h('span', { class: 'end' }, pending ? badge('Gözləyir') : badge('QA ' + pj.qa, pj.qa < 70 ? 'red' : 'gold'), chev()));
     }));
   }
 
-  /* 5.4 sheets for the tools */
+  /* 5.4 academy status — one line with a progress bar; weak areas when there is data */
+  var AXES = ['Məna', 'Terminologiya', 'Üslub', 'Ədəbi norma', 'Format'];
+  function weakAreas() {
+    var s = sget('academy:skills', null);
+    if (!Array.isArray(s) || s.length < AXES.length) return [];
+    return AXES.map(function (a, i) { return { t: a, v: clamp(Math.round(Number(s[i]) || 0), 0, 100) }; })
+      .sort(function (a, b) { return a.v - b.v; }).filter(function (x) { return x.v < 85; }).slice(0, 3);
+  }
+  function weakList(list) {
+    return h('div', { class: 'home-weak', role: 'list', 'aria-label': 'Zəif tərəflər' }, list.map(function (w) {
+      return h('div', { class: 'home-wk', role: 'listitem' },
+        h('span', { text: w.t }),
+        h('span', { class: 'progress thin' + (w.v < 60 ? ' red' : w.v < 75 ? ' gold' : ''), 'aria-hidden': 'true' }, h('i', { style: 'width:' + w.v + '%' })),
+        h('b', { text: w.v + '%' }));
+    }));
+  }
+  function academyStatus(p) {
+    var r = rankInfo(p), xp = Number(p.xp) || 0;
+    if (!(xp > 0)) {
+      return h('p', { class: 'home-none' }, h('b', { text: 'Hələ dərs keçilməyib' }), ' · Qısa dərslə başlayın — irəliləyiş burada görünəcək.');
+    }
+    var pct = Math.round((r.progress || 0) * 100), weak = weakAreas();
+    return h('div', { class: 'home-ac' },
+      h('div', { class: 'home-ac-top' }, h('b', { text: r.name }), h('span', { text: num(xp) + ' XP' })),
+      h('span', { class: 'progress', role: 'progressbar', 'aria-label': 'Növbəti rütbəyə qədər', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct }, h('i', { style: 'width:' + pct + '%' })),
+      h('div', { class: 'home-ac-sub' }, h('span', { text: r.nextName ? r.nextName + ' rütbəsinə ' + num(r.toNext) + ' XP' : 'Ən yüksək rütbə' }), h('span', { text: 'Bu gün ' + todayXP() + ' / ' + (p.dailyGoal || 30) + ' XP' })),
+      weak.length ? h('div', { class: 'stack-sm', style: 'margin-top:6px' }, h('span', { class: 'caption', style: 'font-size:var(--t-micro)' }, 'Zəif tərəflər'), weakList(weak)) : null);
+  }
+
+  /* 5.5 compact tools */
+  function proTools() {
+    var items = [
+      { t: 'Sürətli tərcümə', ic: 'zap', run: quickTranslateSheet },
+      { t: 'Fayl analizi', ic: 'upload', run: uploadSheet },
+      { t: 'Termin axtarışı', ic: 'search', run: termSheet },
+      { t: 'QA yoxlaması', ic: 'shield', run: function () { goFirst(['qa'], {}, 'QA bölməsi hazırlanır'); } }
+    ];
+    return h('div', { class: 'home-tools', role: 'group', 'aria-label': 'Alətlər' }, items.map(function (it) {
+      return h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { it.run(); } }, ie(it.ic), it.t);
+    }));
+  }
+
+  /* 5.6 sheets for the tools */
   function regSeg(withAuto, initial, onPick) {
     var regs = (App.data && App.data.REGISTERS) || App.REGISTERS || [{ id: 'danisiq', label: 'Danışıq' }, { id: 'neytral', label: 'Neytral' }, { id: 'resmi', label: 'Rəsmi' }, { id: 'huquqi', label: 'Hüquqi' }];
     var opts = (withAuto ? [{ id: 'auto', label: 'Avto' }] : []).concat(regs);
@@ -427,7 +527,7 @@
     var ta = h('textarea', { class: 'textarea', id: 'home-qt-src', rows: '5', placeholder: 'Mətni yapışdırın — üslubu özüm tanıyacağam', value: firstSentences(S.legal || 'The Contractor shall notify the Employer within 14 days.', 2) });
     var seg = regSeg(true, 'auto', function (r) { reg = r; });
     var out = h('div', { class: 'home-qt-out', 'aria-live': 'polite' },
-      h('div', { class: 'home-qt-hint' }, ie('sparkle'), 'Tərcümə burada görünəcək. Sarı xətt — «yoxlayın», dalğalı qırmızı — «şübhəli».'));
+      h('div', { class: 'home-qt-hint' }, ie('info'), 'Tərcümə burada görünəcək. Sarı xətt — «yoxlayın», dalğalı qırmızı — «şübhəli».'));
     var samples = [['Müqavilə', S.legal, 2], ['Hesabat', S.report, 2], ['Məktub', S.letter, 3], ['Danışıq', S.casual, 3], ['Rusca', S.ru, 3]].filter(function (x) { return x[1]; });
     var chips = h('div', { class: 'chips', role: 'group', 'aria-label': 'Nümunə mətnlər' }, samples.map(function (x, i) {
       var c = h('button', { class: 'chip', type: 'button', 'aria-pressed': String(i === 0) }, x[0]);
@@ -455,7 +555,7 @@
         var st = r.stats || {};
         out.appendChild(h('div', { class: 'chips' },
           badge(r.pairLabel || '', 'navy', 'globe'),
-          h('span', { class: 'badge gold', title: r.auto ? 'Avtomatik tanındı' : 'Əl ilə seçildi' }, ie('sparkle'), 'Üslub: ' + (r.register || '') + (r.auto ? ' · avto' : '')),
+          h('span', { class: 'badge gold', title: r.auto ? 'Avtomatik tanındı' : 'Əl ilə seçildi' }, 'Üslub: ' + (r.register || '') + (r.auto ? ' · avto' : '')),
           st.high != null ? badge(st.high + ' əmin · ' + (st.mid || 0) + ' yoxlayın · ' + (st.low || 0) + ' şübhəli') : null));
         var p = h('p', { class: 'home-qt-text' });
         (r.segments || []).forEach(function (g) {
@@ -622,54 +722,57 @@
     return 'Bugünkü hədəf: ' + t + ' / ' + g + ' XP.' + (s > 1 ? ' Seriya: ' + s + ' gün.' : '');
   }
 
-  function renderAcademy(page, post) {
+  function renderAcademy(page) {
     var p = profile(), now = new Date();
     A = {};
-    A.sub = h('p', { text: dateLine(now) + ' · ' + academySub(p) });
-    var start = h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { if (A.cta) lessonCTA(A.cta); } }, ie('play'), 'Dərsə başla');
-    page.appendChild(h('div', { class: 'page-h' },
-      h('div', null,
-        h('h1', { text: 'Akademiya' }),
-        A.sub),
-      h('div', { class: 'actions' }, start)));
-    page.appendChild(h('div', { class: 'sec-h' }, h('h2', { text: 'Bugünkü dərs' })));
+    A.sub = h('span', { class: 'meta', text: academySub(p) });
+    page.appendChild(hero(p, now, 'Bu gün nə öyrənirik?', null));
     A.cta = ctaButton();
-    page.appendChild(A.cta);
-    page.appendChild(h('div', { class: 'sec-h' }, h('h2', { text: 'İrəliləyiş' })));
     A.rank = rankBlock(p);
-    page.appendChild(A.rank);
-    page.appendChild(h('div', { class: 'sec-h' }, h('h2', { text: 'Alətlər' })));
-    page.appendChild(toolsGrid());
+    var weak = weakAreas();
+    var main = h('div', { class: 'home-col' },
+      sec('home-next-h', 'Növbəti dərs', null, A.cta),
+      sec('home-prog-h', 'İrəliləyiş', A.sub, A.rank),
+      sec('home-weak-h', 'Zəif tərəflər', hasScreen('progress') ? h('button', { class: 'link', type: 'button', onclick: function () { App.go('progress'); } }, 'Ətraflı') : null,
+        weak.length ? weakList(weak) : h('p', { class: 'home-none' }, h('b', { text: 'Hələ məlumat yoxdur' }), ' · Yoxlanan ilk tapşırıqdan sonra məna, terminologiya və üslub üzrə göstəricilər görünəcək.')));
+    var side = h('div', { class: 'home-col' },
+      sec('home-rev-h', 'Təkrar', null, reviewCards()),
+      sec('home-tools-h', 'Məşq', null, toolsGrid()));
+    page.appendChild(h('div', { class: 'home-grid' }, main, side));
   }
 
-  /* 6.1 rank — only from real XP; at 0 XP a small «İlk dərsinizi edin» note */
+  /* 6.1 progress — only from real XP; a simple bar, no giant numbers */
   function rankBlock(p) { return Number(p.xp) > 0 ? rankCard(p) : firstLessonCard(); }
   function firstLessonCard() {
     var R = ranks(), r = rankInfo({ xp: 0 });
-    return h('section', { class: 'card home-first', 'aria-labelledby': 'home-first-h' },
-      h('span', { class: 'medal sm', 'aria-hidden': 'true' }, h('b', { text: R[0].name.charAt(0) })),
-      h('span', { class: 'tx' },
-        h('b', { id: 'home-first-h', text: 'Hələ XP yoxdur' }),
-        h('small', { text: 'Hər dərs və tapşırıq XP gətirir. İlk XP ilə «' + R[0].name + '» rütbəsindən başlayırsınız.' })),
-      h('button', { class: 'home-ladder-btn', type: 'button', onclick: function () { ranksSheet(r); } }, 'Rütbə yolu'));
+    return h('div', { class: 'home-ac' },
+      h('div', { class: 'home-ac-top' }, h('b', { text: R[0].name }), h('span', { text: '0 XP' })),
+      h('span', { class: 'progress', 'aria-hidden': 'true' }, h('i', { style: 'width:0%' })),
+      h('div', { class: 'home-ac-sub' },
+        h('span', { text: 'Hər dərs və tapşırıq XP gətirir' }),
+        h('button', { class: 'link', type: 'button', onclick: function () { ranksSheet(r); } }, 'Rütbə yolu')));
   }
   function rankCard(p) {
     var r = rankInfo(p);
     var pct = Math.round((r.progress || 0) * 100);
-    var streak = Number(p.streak) || 0, t = todayXP(), g = p.dailyGoal || 30;
-    var chips = [];
-    if (streak > 0) chips.push(badge(streak + ' gün ardıcıl', '', 'calendar'));
-    chips.push(badge('Bu gün ' + Math.min(t, 9999) + ' / ' + g + ' XP', t >= g ? 'green' : '', t >= g ? 'check' : null));
-    return h('section', { class: 'card home-rank', 'aria-label': 'Rütbəniz: ' + r.name },
-      h('span', { class: 'medal', style: '--size:44px', 'aria-hidden': 'true' }, h('b', { text: r.name.charAt(0) })),
-      h('div', { class: 'home-rank-tx' },
-        h('div', { class: 'row' }, h('b', { text: r.name }), chips),
-        h('div', { class: 'home-xp' },
-          h('div', { class: 'progress', role: 'progressbar', 'aria-label': 'Növbəti rütbəyə qədər', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct }, h('i', { style: 'width:' + pct + '%' })),
-          h('div', { class: 'home-xp-lbl' },
-            h('span', null, h('b', { text: num(r.xp) }), ' XP'),
-            h('span', { text: r.nextName ? r.nextName + ' rütbəsinə ' + num(r.toNext) + ' XP' : 'Ən yüksək rütbə' })))),
-      h('button', { class: 'home-ladder-btn', type: 'button', onclick: function () { ranksSheet(r); } }, 'Rütbə yolu'));
+    var streak = Number(p.streak) || 0;
+    return h('div', { class: 'home-ac', 'aria-label': 'Rütbəniz: ' + r.name },
+      h('div', { class: 'home-ac-top' }, h('b', { text: r.name }), h('span', { text: num(r.xp) + ' XP' + (streak > 1 ? ' · ' + streak + ' gün ardıcıl' : '') })),
+      h('span', { class: 'progress', role: 'progressbar', 'aria-label': 'Növbəti rütbəyə qədər', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct }, h('i', { style: 'width:' + pct + '%' })),
+      h('div', { class: 'home-ac-sub' },
+        h('span', { text: r.nextName ? r.nextName + ' rütbəsinə ' + num(r.toNext) + ' XP' : 'Ən yüksək rütbə' }),
+        h('button', { class: 'link', type: 'button', onclick: function () { ranksSheet(r); } }, 'Rütbə yolu')));
+  }
+  /* cards due for review (the Kartlar screen's own count) */
+  function dueCards() {
+    try { var l = App.screens ? App.screens() : []; for (var i = 0; i < l.length; i++) if (l[i] && l[i].id === 'cards' && typeof l[i].badge === 'function') return Number(l[i].badge()) || 0; } catch (e) { /* ignore */ }
+    return 0;
+  }
+  function reviewCards() {
+    var n = dueCards();
+    if (!n) return h('p', { class: 'home-none' }, h('b', { text: 'Təkrar gözləyən kart yoxdur' }), ' · Səhv etdiyiniz ifadələr kart olub burada növbəyə düşür.');
+    return h('div', { class: 'home-list' }, h('button', { class: 'home-row', type: 'button', onclick: function () { goFirst(['cards'], {}, 'Kartlar bölməsi hazırlanır'); } },
+      ie('cards'), h('span', { class: 'tx' }, h('b', { text: n + ' kart təkrar gözləyir' }), h('small', { text: 'Aralıqlı təkrar · bir neçə dəqiqə' })), h('span', { class: 'end' }, chev())));
   }
   function ranksSheet(r) {
     var R = ranks();
@@ -698,15 +801,19 @@
   function savedLesson() { var s = sget('home:lesson', null); return s && s.day === dayKey() && s.lesson ? s.lesson : null; }
   function ctaButton() {
     var L = savedLesson(), T = L || todayLesson(), first = !(Number(profile().xp) > 0);
-    var btn = h('button', { class: 'home-cta', type: 'button' },
-      h('span', { class: 'home-cta-ic', html: App.icon(L ? 'book' : 'play'), 'aria-hidden': 'true' }),
-      h('span', { class: 'home-cta-tx' },
-        h('small', { text: L ? 'Dərsiniz hazırdır' : first ? 'İlk dərs' : 'Bugünkü dərs' }),
-        h('b', { text: T ? T.title : 'Qısa dərsə başlayın' }),
-        h('span', { text: T ? [T.topic, T.minutes ? T.minutes + ' dəqiqə' : '', T.xp ? '+' + T.xp + ' XP' : ''].filter(Boolean).join(' · ') : '5–7 dəqiqə' })),
-      h('span', { class: 'home-cta-go', 'aria-hidden': 'true' }, h('span', { class: 't', text: L ? 'Aç' : 'Başla' }), ie('arrow')));
+    var meta = [];
+    (T ? [T.topic, T.level, T.minutes ? T.minutes + ' dəqiqə' : '', T.xp ? '+' + T.xp + ' XP' : ''] : ['5–7 dəqiqə']).filter(Boolean).forEach(function (t, i) {
+      if (i) meta.push(h('i', { class: 'sep', 'aria-hidden': 'true' }));
+      meta.push(h('span', { text: t }));
+    });
+    var btn = h('button', { class: 'btn btn-primary', type: 'button' }, L ? 'Dərsi aç' : first ? 'İlk dərsə başla' : 'Dərsə başla', ie('arrow'));
     btn.addEventListener('click', function () { lessonCTA(btn); });
-    return btn;
+    return h('div', { class: 'home-cont home-cta' },
+      h('div', { class: 'home-cont-tx' },
+        h('span', { class: 'caption', style: 'font-size:var(--t-micro)', text: L ? 'Dərsiniz hazırdır' : first ? 'İlk dərs' : 'Bugünkü dərs' }),
+        h('h3', { text: T ? T.title : 'Qısa dərsə başlayın' }),
+        h('div', { class: 'home-cont-meta' }, meta)),
+      btn);
   }
   function lessonCTA(btn) {
     var L0 = savedLesson();
@@ -863,12 +970,17 @@
 
   /* 6.3 tools */
   function toolsGrid() {
-    return toolTiles([
-      { t: 'Tapşırıq', s: 'Mətn tərcümə edin', ic: 'edit', run: function () { goFirst(['task', 'practice'], {}, 'Tapşırıq bölməsi hazırlanır'); } },
-      { t: 'Məşq', s: 'Qısa çalışmalar', ic: 'target', run: function () { goFirst(['practice'], {}, 'Məşq bölməsi hazırlanır'); } },
-      { t: 'Səhv kartları', s: 'Aralıqlı təkrar', ic: 'cards', run: function () { goFirst(['cards'], {}, 'Kartlar bölməsi hazırlanır'); } },
-      { t: 'Termin lüğəti', s: '7 sahə · 265 termin', ic: 'book', run: function () { if (App.academyGlossary) App.academyGlossary(''); else termSheet(); } }
-    ], 'Alətlər');
+    var items = [
+      { t: 'Tapşırıq', s: 'Mətn tərcümə edin, Məclis yoxlasın', ic: 'edit', ids: ['task', 'practice'] },
+      { t: 'Məşq', s: 'Qısa çalışmalar', ic: 'target', ids: ['practice'] },
+      { t: 'Səhv kartları', s: 'Aralıqlı təkrar', ic: 'cards', ids: ['cards'] },
+      { t: 'Lüğət', s: 'Sahələr üzrə terminlər', ic: 'type', run: function () { if (hasScreen('glossary')) App.go('glossary'); else if (App.academyGlossary) App.academyGlossary(''); else termSheet(); } },
+      { t: 'İnkişaf', s: 'Ballar və zəif tərəflər', ic: 'chart', ids: ['progress'] }
+    ].filter(function (it) { return it.run || it.ids.some(hasScreen); });
+    return h('div', { class: 'home-list', role: 'group', 'aria-label': 'Məşq' }, items.map(function (it) {
+      return h('button', { class: 'home-row', type: 'button', onclick: function () { if (it.run) it.run(); else goFirst(it.ids, {}, it.t + ' bölməsi hazırlanır'); } },
+        ie(it.ic), h('span', { class: 'tx' }, h('b', { text: it.t }), h('small', { text: it.s })), h('span', { class: 'end' }, chev()));
+    }));
   }
 
   /* ------------------------------------------------------------------
@@ -884,7 +996,7 @@
      8. REGISTER
      ------------------------------------------------------------------ */
   App.register('home', {
-    title: function (m) { return m === 'academy' ? 'Masa' : 'İş masası'; },
+    title: function (m) { return m === 'academy' ? 'Akademiya' : 'İş masası'; },
     icon: 'home',
     group: 'Peşəkar',
     mode: 'both',
@@ -894,7 +1006,7 @@
       cleanup();
       App.css('home', CSS);
       var m = App.mode ? App.mode() : 'pro';
-      var page = h('div', { class: 'page home-' + m });
+      var page = h('div', { class: 'page home-page home-' + m });
       el.appendChild(page);
       var post = [];
       if (m === 'academy') renderAcademy(page, post, params || {});
