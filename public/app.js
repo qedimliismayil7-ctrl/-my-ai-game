@@ -37,12 +37,14 @@
   function reEsc(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
   function mq(q) { try { return W.matchMedia(q); } catch (e) { return { matches: false, media: q }; } }
   function onMq(m, fn) { try { m.addEventListener('change', fn); } catch (e) { try { m.addListener(fn); } catch (e2) { /* old engines */ } } }
-  var mqDesk = mq('(min-width:1024px)'), mqReduce = mq('(prefers-reduced-motion: reduce)'), mqDark = mq('(prefers-color-scheme: dark)');
+  var mqDesk = mq('(min-width:1024px)'), mqNav = mq('(min-width:768px)'), mqReduce = mq('(prefers-reduced-motion: reduce)'), mqDark = mq('(prefers-color-scheme: dark)');
   /* Motion preference: 'full' (default — always animate, even when the OS asks to reduce motion),
      'system' (follow the OS) or 'reduce'. Mirrored on <html data-motion>. */
   function motionPref() { var m = R.getAttribute('data-motion'); return m === 'reduce' || m === 'system' ? m : 'full'; }
   function reducedMotion() { var m = motionPref(); return m === 'reduce' || (m === 'system' && !!mqReduce.matches); }
   function isDesktop() { return !!mqDesk.matches; }
+  /* the navigation is persistent (icon rail 768–1199px, full sidebar ≥1200px); below 768px it is a drawer + bottom bar */
+  function navPersistent() { return !!mqNav.matches; }
   function isTyping(el) { if (!el || el === D.body) return false; var t = el.tagName; return t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || !!el.isContentEditable; }
   var IS_MAC = /Mac|iPhone|iPad|iPod/.test((navigator.platform || '') + ' ' + (navigator.userAgent || ''));
   var MOD = IS_MAC ? '⌘' : 'Ctrl';
@@ -211,10 +213,14 @@
     wand: '<path d="m4 20 11-11"/><path d="m13.5 7.5 3 3"/><path d="M17 3v3M15.5 4.5h3"/><path d="M20 9v2M19 10h2"/><path d="M10 3.5v2M9 4.5h2"/>',
     cap: '<path d="M2.5 9 12 4.5 21.5 9 12 13.5Z"/><path d="M6.5 11v4.5c0 1.4 2.5 3 5.5 3s5.5-1.6 5.5-3V11"/><path d="M21.5 9v5"/>',
     sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
-    dot: '<circle cx="12" cy="12" r="3"/>'
+    dot: '<circle cx="12" cy="12" r="3"/>',
+    library: '<path d="M4.5 4.5h3.5v15H4.5Z"/><path d="M8 7.5h3.5v12H8Z"/><path d="m13.2 6.3 3.4-.9 3.9 14.1-3.4.9Z"/>',
+    type: '<path d="M3.5 18.5 8.25 5.5 13 18.5"/><path d="M5.3 13.6h5.9"/><circle cx="17.6" cy="15.9" r="2.6"/><path d="M20.2 13.3v5.2"/>',
+    inbox: '<path d="M3.5 13.5 6 5.5h12l2.5 8"/><path d="M3.5 13.5v5a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5v-5h-5a3.5 3.5 0 0 1-7 0Z"/>',
+    command: '<path d="M9 6.5a2.5 2.5 0 1 0-2.5 2.5H9Zm0 0v11m0-8.5h6M9 15H6.5A2.5 2.5 0 1 0 9 17.5M15 6.5A2.5 2.5 0 1 1 17.5 9H15Zm0 0v11m0-2.5h2.5A2.5 2.5 0 1 1 15 17.5"/>'
   };
   var ICON_ALIAS = {
-    glossary: 'book', dictionary: 'book', lesson: 'book', lessons: 'book', tm: 'database', memory: 'database', qa: 'shield',
+    glossary: 'type', dictionary: 'type', terminology: 'tag', lesson: 'book', lessons: 'book', tm: 'database', memory: 'database', qa: 'shield',
     academy: 'cap', practice: 'target', streak: 'flame', profile: 'user', notifications: 'bell', security: 'lock',
     appearance: 'palette', theme: 'palette', billing: 'card', shortcuts: 'keyboard', about: 'info', close: 'x', add: 'plus',
     next: 'arrow', right: 'chevron', 'chevron-right': 'chevron', projects: 'folder', project: 'folder', stats: 'chart',
@@ -399,56 +405,43 @@
     (D.body || D.head || R).appendChild(st);
   }
   var SHELL_CSS = [
-    '.screen[tabindex="-1"]:focus,.screen[tabindex="-1"]:focus-visible{outline:none}',
-    '.dr-tools{flex:none;padding:4px 12px 8px}',
-    '.dr-search{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;padding:0 6px 0 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--soft);font:500 var(--fs-sm)/1 var(--f-body);text-align:left;cursor:pointer;transition:border-color var(--t-fast),color var(--t-fast)}',
-    '.dr-search svg{width:15px;height:15px}.dr-search .lbl{flex:1;min-width:0}',
-    '.dr-search:hover{color:var(--ink);border-color:var(--line-2)}.dr-search:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.dr-profile .who .badge{display:none}',
-    '.avatar > svg.av-ic{width:56%;height:56%}',
-    '.dr-profile.incomplete .who small{color:var(--firuze)}',
-    '.shell-dock{position:relative;width:var(--dock);height:var(--dock);padding:0;border:1px solid var(--line-2);border-radius:50%;display:grid;place-items:center;cursor:pointer;background:var(--surface);box-shadow:var(--sh-2);transition:border-color var(--t-fast)}',
-    '.shell-dock svg{width:26px;height:26px}',
-    '@media (hover:hover){.shell-dock:hover{border-color:var(--firuze)}}',
-    '.shell-dock-bubble{position:absolute;right:0;bottom:calc(100% + 10px);width:max-content;max-width:min(260px,calc(100vw - 32px));animation:toast-in .2s var(--ease-out) both;transform-origin:100% 100%}',
-    '.sheet-grab{position:relative;touch-action:none}.sheet-grab::before{content:"";position:absolute;inset:-12px -56px}',
-    '@media (max-width:639px){.sheet-h{touch-action:none}}',
-    '.sheet.dragging,.drawer.dragging{transition:none!important}',
-    '.sheet-nz{display:flex;align-items:flex-end;gap:12px;padding:2px 0 10px}',
-    '.sheet-nz-art{flex:none;width:64px;min-height:64px;display:grid;place-items:end center}',
-    '.sheet-nz-art .medal{--size:48px}',
-    '.sheet-nz .bubble{flex:1;min-width:0;max-width:none;box-shadow:none;background:var(--surface2)}',
-    '.sheet-pal .sheet-b{padding-top:4px}',
-    '.sheet-pal-list{display:grid;gap:1px;margin-top:10px}',
-    '.sheet-pal-grp{padding:12px 10px 4px;font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}',
-    '.sheet-pal-it{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:6px 10px;border:0;border-radius:var(--r-sm);background:none;color:var(--ink);text-align:left;font:500 .875rem/1.3 var(--f-body);cursor:pointer;transition:background var(--t-fast)}',
-    '.sheet-pal-it .ic{width:28px;height:28px;border-radius:6px}.sheet-pal-it .ic svg{width:16px;height:16px}',
-    '.sheet-pal-it .tx{flex:1;min-width:0}.sheet-pal-it small{display:block;color:var(--soft);font-size:var(--fs-xs);font-weight:400}',
-    '.sheet-pal-it .end{display:flex;align-items:center;gap:6px;color:var(--faint)}.sheet-pal-it .end svg{width:16px;height:16px;opacity:0;transition:opacity var(--t-fast)}',
-    '.sheet-pal-it[aria-selected="true"],.sheet-pal-it:hover{background:var(--hover)}',
-    '.sheet-pal-it[aria-selected="true"] .end svg{opacity:1}',
-    '.sheet-pal-it:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
-    '.sheet-pal-empty{padding:28px 10px;text-align:center;color:var(--soft)}',
-    '.sheet-job-res{display:grid;justify-items:center;gap:12px;text-align:center;padding:10px 0 4px;animation:fade-in .3s var(--ease-out) both}',
-    '.sheet-job-res p{max-width:44ch;color:var(--soft)}',
+    '.shell-dock{position:relative;width:var(--dock);height:var(--dock);padding:0;border:1px solid var(--line-2);border-radius:50%;display:grid;place-items:center;cursor:pointer;background:var(--surface);transition:border-color var(--t-fast)}',
+    '.shell-dock svg{width:22px;height:22px}',
+    '@media (hover:hover){.shell-dock:hover{border-color:var(--accent)}}',
+    '.shell-dock-bubble{position:absolute;right:0;bottom:calc(100% + 8px);width:max-content;max-width:min(260px,calc(100vw - 32px));animation:toast-in var(--t-slow) var(--ease-out) both}',
+    /* Nuanza menu */
+    '.sheet-nz{display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:8px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface2)}',
+    '.sheet-nz-art{flex:none;width:44px;min-height:44px;display:grid;place-items:center}',
+    '.sheet-nz-art .medal{--size:36px}',
+    '.sheet-nz-art .nz{--nz-w:44px}',
+    '.sheet-nz-tx{flex:1;min-width:0;display:grid;gap:2px}',
+    '.sheet-nz-tx .caption{font-size:var(--t-micro)}',
+    '.sheet-nz-tx p{font-size:var(--t-small);line-height:1.5;color:var(--ink)}',
+    /* big-job fallback */
+    '.sheet-job-res{display:grid;justify-items:center;gap:12px;text-align:center;padding:10px 0 4px;animation:fade-in var(--t-slow) var(--ease-out) both}',
+    '.sheet-job-res p{max-width:44ch;color:var(--soft);font-size:var(--t-small)}',
     '.sheet-job .list-row .avatar{flex:none}',
+    '.sheet-keys .list-row{min-height:40px}',
+    '.sheet-keys .list-row .tx b{font-weight:400}',
     '.sheet-keys .list-row .end{gap:4px}',
+    /* onboarding */
     '.onb-skip{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2}',
-    '.onb-hero{display:flex;align-items:center;gap:10px}',
-    '.onb-hero b{font-family:var(--f-display);font-size:1.0625rem;font-weight:700;letter-spacing:-.01em}',
-    '.onb-hero small{margin-left:auto;color:var(--faint);font-size:var(--fs-xs);font-variant-numeric:tabular-nums}',
-    '.onb-card{display:grid;gap:20px;padding:24px;border:1px solid var(--line);border-radius:var(--r-xl);background:var(--surface)}',
-    '@media (max-width:479px){.onb-card{padding:20px 16px}}',
+    '.onb-hero{display:flex;align-items:center;gap:8px}',
+    '.onb-hero b{font-family:var(--f-display);font-size:var(--t-h3);font-weight:600;letter-spacing:-.01em}',
+    '.onb-hero small{margin-left:auto;color:var(--faint);font:500 var(--t-micro)/1 var(--f-mono)}',
+    '.onb-card{display:grid;gap:24px;padding:28px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}',
+    '@media (max-width:479px){.onb-card{padding:20px 16px;gap:20px}}',
     '.onb-host{width:100%}',
-    '.onb-field{width:100%;max-width:380px;text-align:left}',
+    '.onb-field{width:100%;max-width:360px;text-align:left}',
     '.onb-pairs{justify-content:flex-start}',
-    '.onb-err{color:var(--nar);font-size:var(--fs-sm);font-weight:500;min-height:1.4em}',
-    '.onb-note{font-size:var(--fs-sm);color:var(--soft)}',
-    '.onb-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}',
+    '.onb-pairs .chip{height:30px;padding:0 11px;font-family:var(--f-mono);font-size:var(--t-caption);letter-spacing:.02em}',
+    '.onb-err{color:var(--nar);font-size:var(--t-small);font-weight:500;min-height:1.4em}',
+    '.onb-note{font-size:var(--t-small);color:var(--soft)}',
+    '.onb-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:4px}',
     '.onb-foot .onb-actions{width:auto;padding-top:0}',
+    '.onb-choices .choice .ic{margin-top:1px}',
     '.shell-fallback .tiles{margin-top:4px}',
-    '::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}',
-    '::view-transition-new(root){z-index:2}'
+    '::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}'
   ].join('\n');
 
   /* ------------------------------------------------------------------
@@ -497,7 +490,7 @@
   var overlays = [];
   var drawerOpen = false, onb = null;
   function lockScroll() {
-    var lock = overlays.length > 0 || (drawerOpen && !isDesktop());
+    var lock = overlays.length > 0 || (drawerOpen && !navPersistent());
     if (D.body) D.body.classList.toggle('no-scroll', lock);
   }
   function pushOverlay(o) { overlays.push(o); lockScroll(); }
@@ -1653,6 +1646,89 @@
   /* ------------------------------------------------------------------
      12. SHELL: header, drawer, nav, profile, mode, theme
      ------------------------------------------------------------------ */
+  /* Navigation contract — groups and items (only items whose screen is registered are drawn).
+     Items of the other mode switch the mode first (App.setMode) and then open the screen. */
+  var NAV = [
+    { key: 'desk', id: 'home', mode: 'pro', label: 'İş masası', icon: 'home', top: true },
+    { grp: 'İş', items: [
+      { id: 'projects', label: 'Layihələr', icon: 'folder' },
+      { id: 'editor', label: 'Redaktor', icon: 'edit' },
+      { id: 'translate', label: 'Tərcümə', icon: 'translate' },
+      { id: 'qa', label: 'Yoxlama', icon: 'shield' }] },
+    { grp: 'Öyrən', items: [
+      { key: 'academy', id: 'home', mode: 'academy', label: 'Akademiya', icon: 'cap' },
+      { id: 'lessons', label: 'Dərslər', icon: 'book' },
+      { id: 'cards', label: 'Kartlar', icon: 'cards' },
+      { id: 'glossary', label: 'Lüğət', icon: 'type' }] },
+    { grp: 'Resurslar', items: [
+      { id: 'library', label: 'Kitabxana', icon: 'library' },
+      { id: 'tm', label: 'Translation Memory', icon: 'database' },
+      { id: 'terminology', label: 'Terminologiya', icon: 'tag' }] },
+    { grp: 'Sistem', items: [
+      { id: 'settings', label: 'Ayarlar', icon: 'settings' }] }
+  ];
+  /* academy work screens live under «Akademiya» (reached from the academy pages and the palette) */
+  var NAV_CHILD = {
+    task: { parent: 'academy', label: 'Tapşırıq', icon: 'edit' },
+    practice: { parent: 'academy', label: 'Məşq', icon: 'target' },
+    progress: { parent: 'academy', label: 'İnkişaf', icon: 'chart' }
+  };
+  var BNAV = { pro: ['desk', 'projects', 'editor', 'translate', 'qa', 'library'], academy: ['academy', 'lessons', 'cards', 'glossary', 'practice', 'task'] };
+  var GROUP_OF = { 'Peşəkar': 'İş', 'Akademiya': 'Öyrən', 'Hesab': 'Sistem', 'Ümumi': 'Sistem' };
+  function navKey(it) { return it.key || it.id; }
+  /* the nav model with registered screens only; unknown registered screens join a group by their own group */
+  function navModel() {
+    var known = {}, top = [], groups = [];
+    NAV.forEach(function (g) {
+      if (g.top) { known[g.id + ':' + g.mode] = 1; if (screens[g.id]) top.push(g); return; }
+      var items = g.items.filter(function (it) { known[it.id + (it.mode ? ':' + it.mode : '')] = 1; known[it.id] = 1; return !!screens[it.id]; });
+      groups.push({ grp: g.grp, items: items });
+    });
+    order.forEach(function (id) {
+      var d = screens[id];
+      if (!d || known[id] || NAV_CHILD[id] || d.hidden || d.nav === false || id === 'home') return;
+      var gname = GROUP_OF[d.group] || (d.mode === 'academy' ? 'Öyrən' : 'Resurslar');
+      var g = null;
+      groups.forEach(function (x) { if (x.grp === gname) g = x; });
+      if (!g) { g = { grp: gname, items: [] }; groups.push(g); }
+      g.items.push({ id: id, label: titleOf(d), icon: d.icon || 'dot', extra: true });
+    });
+    return { top: top, groups: groups.filter(function (g) { return g.items.length; }) };
+  }
+  function navItemByKey(k) {
+    var found = null;
+    NAV.forEach(function (g) { if (g.top) { if (navKey(g) === k) found = g; return; } g.items.forEach(function (it) { if (navKey(it) === k) found = it; }); });
+    if (!found && NAV_CHILD[k]) found = { id: k, label: NAV_CHILD[k].label, icon: NAV_CHILD[k].icon };
+    if (!found && screens[k]) found = { id: k, label: titleOf(screens[k]), icon: screens[k].icon || 'dot' };
+    return found;
+  }
+  function groupOfKey(k) {
+    var name = '';
+    NAV.forEach(function (g) { if (!g.top) g.items.forEach(function (it) { if (navKey(it) === k) name = g.grp; }); });
+    if (!name && screens[k]) name = GROUP_OF[screens[k].group] || (screens[k].mode === 'academy' ? 'Öyrən' : 'Resurslar');
+    return name;
+  }
+  /* which nav item is «current» for a screen id in the current mode */
+  function activeKey(id) {
+    if (!id) return null;
+    if (id === 'home') return curMode === 'academy' ? 'academy' : 'desk';
+    if (NAV_CHILD[id]) return NAV_CHILD[id].parent;
+    return id;
+  }
+  function modeFor(it) {
+    if (it.mode) return it.mode;
+    var d = screens[it.id];
+    return d && (d.mode === 'pro' || d.mode === 'academy') ? d.mode : null;
+  }
+  function navGo(it, e) {
+    if (e) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || (e.button && e.button !== 0)) return;
+      e.preventDefault();
+    }
+    var m = modeFor(it);
+    if (m && m !== curMode) setMode(m, { silent: true, noRender: true });
+    go(it.id, it.params || {});
+  }
   function buildShell() {
     var app = $('.app');
     if (!app) {
@@ -1660,17 +1736,17 @@
       app.innerHTML =
         '<header class="hdr"><div class="hdr-in">' +
         '<button class="burger" type="button" aria-label="Menyunu aç" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>' +
-        '<a class="brand" href="#home" aria-label="Mirzə — ana səhifə">' + logoSvg() + '<b>Mirzə</b><small hidden>Akademiya</small></a>' +
+        '<a class="brand" href="#home" aria-label="Mirzə — iş masası">' + logoSvg() + '<b>Mirzə</b><small hidden>Akademiya</small></a>' +
         '<div class="hdr-crumb" aria-hidden="true"><span class="c-grp"></span><span class="c-sep">/</span><span class="c-cur"></span></div>' +
-        '<div class="hdr-acts"><button class="icon-btn ghost hdr-search" type="button" aria-label="Axtar və keç" data-icon="search"></button>' +
+        '<div class="hdr-acts"><div class="hdr-ctx"></div><button class="icon-btn ghost hdr-keys" type="button" aria-label="Klaviatura qısayolları" data-icon="keyboard"></button>' +
+        '<button class="icon-btn ghost hdr-search" type="button" aria-label="Axtar və keç" data-icon="search"></button>' +
         '<button class="avatar av-firuze" type="button" aria-label="Profil və ayarlar"></button></div></div></header>' +
-        '<nav class="drawer" id="drawer" aria-label="Əsas menyu"><div class="dr-head"><a class="brand dr-brand" href="#home" aria-label="Mirzə — ana səhifə">' + logoSvg() + '<b>Mirzə</b><small hidden>Akademiya</small></a></div>' +
+        '<nav class="drawer" id="drawer" aria-label="Əsas menyu"><div class="dr-head"><a class="brand dr-brand" href="#home" aria-label="Mirzə — iş masası">' + logoSvg() + '<b>Mirzə</b><small hidden>Akademiya</small></a></div>' +
         '<div class="dr-tools"><button class="dr-search" type="button"></button></div>' +
-        '<div class="dr-mode"><div class="seg block" role="group" aria-label="Rejim"><button type="button" data-mode="pro" aria-pressed="true">Peşəkar</button><button type="button" data-mode="academy" aria-pressed="false">Akademiya</button></div></div>' +
         '<div class="dr-nav"></div>' +
         '<div class="dr-foot"><button class="dr-profile" type="button"><span class="avatar av-firuze" aria-hidden="true"></span><span class="who"><b></b><small></small><span class="badge"></span></span></button>' +
         '<button class="icon-btn ghost sm theme-toggle" type="button" aria-label="Rəng rejimini dəyiş"></button><span class="ver">Mirzə ' + VERSION + '</span></div></nav>' +
-        '<div class="scrim" aria-hidden="true"></div><main class="main" id="main"></main><div class="companion" aria-label="Nuanza"></div>';
+        '<div class="scrim" aria-hidden="true"></div><main class="main" id="main"></main><nav class="bnav" aria-label="Sürətli keçid"></nav><div class="companion" aria-label="Nuanza"></div>';
       D.body.insertBefore(app, D.body.firstChild);
     }
     els.app = app;
@@ -1686,6 +1762,8 @@
     els.brandSmall = els.brandSmalls[0] || null;
     els.hdrAvatar = $('.hdr .avatar', app) || $('.hdr-in > .avatar', app);
     els.hdrSearch = $('.hdr-search', app);
+    els.hdrKeys = $('.hdr-keys', app);
+    els.hdrCtx = $('.hdr-ctx', app);
     els.crumbGrp = $('.hdr-crumb .c-grp', app);
     els.crumbCur = $('.hdr-crumb .c-cur', app);
     els.drawer = $('.drawer', app);
@@ -1697,6 +1775,8 @@
     els.companion = $('.companion', app) || $('.companion');
     els.themeToggle = $('.theme-toggle', app);
     els.search = $('.dr-search', app);
+    els.bnav = $('.bnav', app);
+    if (!els.bnav) { els.bnav = h('nav', { class: 'bnav', 'aria-label': 'Sürətli keçid' }); app.insertBefore(els.bnav, els.companion || null); }
     if (!els.companion) { els.companion = h('div', { class: 'companion', 'aria-label': 'Nuanza' }); app.appendChild(els.companion); }
     if (!$('.toasts')) D.body.appendChild(h('div', { class: 'toasts', 'aria-live': 'polite' }));
     if (els.drawer && !els.search) {
@@ -1704,57 +1784,76 @@
       els.drawer.insertBefore(tools, els.nav);
     }
     if (els.search) {
-      els.search.innerHTML = icon('search') + '<span class="lbl">Axtar və keç</span><kbd class="kbd">' + MOD + ' K</kbd>';
+      els.search.innerHTML = icon('search') + '<span class="lbl">Axtar</span><kbd class="kbd">' + MOD + ' K</kbd>';
       els.search.setAttribute('aria-label', 'Axtar və keç (' + MOD + ' K)');
+      els.search.setAttribute('title', 'Axtar və keç · ' + MOD + ' K');
     }
     if (els.themeToggle) els.themeToggle.innerHTML = icon('moon', 'i-moon') + icon('sun', 'i-sun');
+    if (els.hdrKeys) els.hdrKeys.setAttribute('title', 'Klaviatura qısayolları · ?');
     els.brands.forEach(function (b) { if (!$('.logo', b)) b.insertBefore(frag(logoSvg()), b.firstChild); });
     $$('[data-icon]').forEach(function (n) { n.innerHTML = icon(n.getAttribute('data-icon')); });
+  }
+  function navBadge(id) {
+    var d = screens[id]; if (!d) return null;
+    var bd = badgeOf(d);
+    if (bd === null || bd === undefined || bd === '' || bd === 0 || bd === '0') return null;
+    return h('span', { class: 'dr-n ' + (d.badgeKind === 'gold' ? 'gold' : d.badgeKind === 'red' || !d.badgeKind ? 'red' : ''), text: String(bd), 'aria-label': String(bd) });
+  }
+  function navLink(it, cls) {
+    var a = h('a', { class: 'dr-link' + (cls ? ' ' + cls : ''), href: '#' + it.id, 'data-key': navKey(it), 'data-id': it.id, 'data-tip': it.label, html: icon(it.icon || 'dot') },
+      h('span', { text: it.label }), navBadge(it.id));
+    a.addEventListener('click', function (e) { navGo(it, e); });
+    return a;
   }
   function buildNav(anim) {
     var nav = els.nav; if (!nav) return;
     nav.textContent = '';
-    var primary = curMode === 'academy' ? 'Akademiya' : 'Peşəkar';
-    var groups = {}, gOrder = [];
-    order.forEach(function (id) {
-      var d = screens[id];
-      if (!d || d.hidden || d.nav === false || !isAvail(d, curMode)) return;
-      var g = (!d.group || d.group === 'Peşəkar' || d.group === 'Akademiya') ? primary : d.group;
-      if (!groups[g]) { groups[g] = []; gOrder.push(g); }
-      groups[g].push(d);
+    var M = navModel();
+    M.top.forEach(function (it) { nav.appendChild(navLink(it, 'top')); });
+    M.groups.forEach(function (g) {
+      nav.appendChild(h('div', { class: 'dr-grp', text: g.grp }));
+      g.items.forEach(function (it) { nav.appendChild(navLink(it)); });
     });
-    var final = [primary].concat(gOrder.filter(function (g) { return g !== primary && g !== 'Ümumi' && g !== 'Hesab'; }), ['Ümumi', 'Hesab']);
-    var i = 0;
-    final.forEach(function (g) {
-      var list = groups[g]; if (!list || !list.length) return;
-      list.sort(function (a, b) { return (a.id === 'home' ? -1 : b.id === 'home' ? 1 : 0) || ((a.order || 0) - (b.order || 0)) || (a._i - b._i); });
-      nav.appendChild(h('div', { class: 'dr-grp', style: '--i:' + (i++), text: g }));
-      list.forEach(function (d) {
-        var bd = badgeOf(d);
-        var a = h('a', { class: 'dr-link', href: '#' + d.id, 'data-id': d.id, style: '--i:' + (i++), html: icon(d.icon || 'star') },
-          h('span', { text: titleOf(d) }),
-          bd !== null && bd !== undefined && bd !== '' && bd !== 0 ? h('span', { class: 'badge ' + (d.badgeKind || 'red'), text: String(bd) }) : null);
-        a.addEventListener('click', function (e) {
-          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || (e.button && e.button !== 0)) return;
-          e.preventDefault(); go(d.id);
-        });
-        nav.appendChild(a);
-      });
-    });
-    if (anim && !reducedMotion()) { nav.classList.add('anim'); later(function () { nav.classList.remove('anim'); }, 900); }
+    buildBottomNav();
     markNav(current && current.id);
   }
-  function markNav(id) {
-    var d = id && screens[id];
-    if (els.crumbGrp) {
-      var g = d && d.group && d.group !== 'Peşəkar' && d.group !== 'Akademiya' ? d.group : (curMode === 'academy' ? 'Akademiya' : 'Peşəkar');
-      els.crumbGrp.textContent = g;
-    }
-    if (els.crumbCur) els.crumbCur.textContent = d ? titleOf(d) : '';
-    if (!els.nav) return;
-    $$('.dr-link', els.nav).forEach(function (a) {
-      if (a.getAttribute('data-id') === id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  /* phones: the 4 most used items of the current mode + «Daha çox» (opens the full menu) */
+  function buildBottomNav() {
+    var bn = els.bnav; if (!bn) return;
+    bn.textContent = '';
+    var keys = (BNAV[curMode] || BNAV.pro).filter(function (k) { var it = navItemByKey(k); return it && screens[it.id]; }).slice(0, 4);
+    keys.forEach(function (k) {
+      var it = navItemByKey(k);
+      var label = k === 'desk' ? 'Masa' : it.label;
+      var a = h('a', { class: 'bnav-it', href: '#' + it.id, 'data-key': k, html: icon(it.icon || 'dot') }, h('span', { text: label }), navBadge(it.id));
+      a.addEventListener('click', function (e) { navGo(it, e); });
+      bn.appendChild(a);
     });
+    var more = h('button', { class: 'bnav-it bnav-more', type: 'button', 'aria-controls': 'drawer', 'aria-expanded': 'false', 'aria-label': 'Daha çox — bütün bölmələr', html: icon('menu') }, h('span', { text: 'Daha çox' }));
+    more.addEventListener('click', function () { toggleDrawer(); });
+    bn.appendChild(more);
+    els.bnavMore = more;
+  }
+  function markNav(id) {
+    var k = activeKey(id), d = id && screens[id];
+    var it = k ? navItemByKey(k) : null;
+    var grp = '', cur = d ? titleOf(d) : '';
+    if (id === 'home') { if (curMode === 'academy') { grp = 'Öyrən'; cur = 'Akademiya'; } else { cur = 'İş masası'; } }
+    else if (NAV_CHILD[id]) { grp = 'Akademiya'; cur = titleOf(d) || NAV_CHILD[id].label; }
+    else if (it) { grp = groupOfKey(k); cur = it.extra ? titleOf(d) : it.label; }
+    if (els.crumbGrp) els.crumbGrp.textContent = grp;
+    if (els.crumbCur) els.crumbCur.textContent = cur;
+    if (els.nav) $$('.dr-link', els.nav).forEach(function (a) {
+      if (a.getAttribute('data-key') === k) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    if (els.bnav) {
+      var hit = false;
+      $$('.bnav-it[data-key]', els.bnav).forEach(function (a) {
+        var on = a.getAttribute('data-key') === k; hit = hit || on;
+        if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+      });
+      if (els.bnavMore) { if (!hit && k) els.bnavMore.setAttribute('aria-current', 'page'); else els.bnavMore.removeAttribute('aria-current'); }
+    }
   }
   function avatarCls(c) { return /^av-(nar|lacquer|zafaran|firuze|benovse|zeytun)$/.test(c || '') ? c : 'av-firuze'; }
   /* Avatar content: initials when there is a name, otherwise a person icon. */
@@ -1779,21 +1878,22 @@
         if (sm) {
           if (!named) sm.textContent = 'Adınızı əlavə edin';
           else if (curMode === 'academy') sm.textContent = p.rank + ' · ' + fmt.num(p.xp) + ' XP';
-          else sm.textContent = [p.role, p.pairsLabel].filter(Boolean).join(' · ');
+          else sm.textContent = [p.role, p.pairsLabel].filter(Boolean).join(' · ') || p.pairsLabel;
         }
         if (bg) { bg.textContent = curMode === 'academy' && p.streak > 0 ? (p.streak + ' günlük seriya') : ''; bg.className = 'badge'; }
       }
       els.drProfile.setAttribute('aria-label', (named ? p.name : 'Profilinizi tamamlayın') + ' — profil və ayarlar');
+      els.drProfile.setAttribute('title', named ? p.name : 'Profil');
     }
   }
   function syncModeUI() {
     R.setAttribute('data-mode', curMode);
     if (els.modeSeg) $$('button', els.modeSeg).forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-mode') === curMode)); });
-    (els.brandSmalls || []).forEach(function (sm) { sm.hidden = curMode !== 'academy'; });
-    (els.brands || []).forEach(function (b) { b.setAttribute('aria-label', curMode === 'academy' ? 'Mirzə Akademiya — ana səhifə' : 'Mirzə — ana səhifə'); });
+    (els.brandSmalls || []).forEach(function (sm) { sm.hidden = true; });
     if (current) markNav(current.id);
   }
   function mode() { return curMode; }
+  /* setMode(m, {silent, noRender}) — noRender: the caller opens a screen right after (nav items) */
   function setMode(m, opts) {
     opts = opts || {};
     m = m === 'academy' ? 'academy' : 'pro';
@@ -1802,23 +1902,21 @@
     syncModeUI(); renderProfile(); buildNav(prev !== m);
     if (prev === m || !started) return;
     var cur = current && current.id, d = cur && screens[cur];
-    if (!onb) {
+    if (!onb && !opts.noRender) {
       if (d && isAvail(d, m) && cur !== 'home') renderScreen(cur, current.params, { keepDrawer: true, keepScroll: true, focus: false });
       else { renderScreen('home', {}, { keepDrawer: true, focus: false }); try { if (W.location.hash !== '#home') W.history.replaceState(null, '', '#home'); } catch (e) { /* sandboxed */ } }
     }
     emit('mode', m);
     if (opts.silent) return;
-    if (m === 'academy') {
-      toast('Akademiya rejimi', 'ok', { sub: 'Dərslər, tapşırıqlar, səhv kartları', icon: 'cap' });
-    } else {
-      toast('Peşəkar rejim', 'ok', { sub: 'Layihələr, lüğət, QA və təhvil', icon: 'folder' });
-    }
+    if (m === 'academy') toast('Akademiya', 'info', { sub: 'Dərslər, tapşırıqlar və kartlar', icon: 'cap' });
+    else toast('İş masası', 'info', { sub: 'Layihələr, redaktor və yoxlama', icon: 'folder' });
   }
   /* theme */
   function effectiveTheme() { var t = R.getAttribute('data-theme'); if (t === 'dark' || t === 'light') return t; return mqDark.matches ? 'dark' : 'light'; }
   function applyTheme(t) {
     if (t === 'light' || t === 'dark') R.setAttribute('data-theme', t); else R.removeAttribute('data-theme');
     updateThemeToggle();
+    try { var mt = $('meta[name="theme-color"]'); if (mt) mt.setAttribute('content', effectiveTheme() === 'dark' ? '#121416' : '#F7F5F0'); } catch (e) { /* ignore */ }
   }
   function updateThemeToggle() {
     if (!els.themeToggle) return;
@@ -1829,26 +1927,12 @@
   function setTheme(t, origin) {
     t = t === 'light' || t === 'dark' ? t : 'system';
     iset('theme', t);
-    var apply = function () { applyTheme(t); };
-    var canVT = origin && typeof D.startViewTransition === 'function' && !reducedMotion();
-    if (canVT) {
-      var r0 = origin.getBoundingClientRect ? origin.getBoundingClientRect() : { left: 0, top: 0, width: 0, height: 0 };
-      var x = r0.left + r0.width / 2, y = r0.top + r0.height / 2;
-      try {
-        var vt = D.startViewTransition(apply);
-        vt.ready.then(function () {
-          var rad = Math.hypot(Math.max(x, W.innerWidth - x), Math.max(y, W.innerHeight - y));
-          R.animate({ clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + rad + 'px at ' + x + 'px ' + y + 'px)'] },
-            { duration: 560, easing: 'cubic-bezier(.2,.8,.2,1)', pseudoElement: '::view-transition-new(root)' });
-        }).catch(function () { /* ignore */ });
-      } catch (e) { apply(); }
-    } else apply();
+    applyTheme(t);
     emit('theme', t);
   }
   function toggleTheme(e) {
     var next = effectiveTheme() === 'dark' ? 'light' : 'dark';
     setTheme(next, e && e.currentTarget ? e.currentTarget : null);
-
   }
   function normMotion(m) {
     if (m === 'reduce' || m === true || (m && typeof m === 'object' && m.reduce)) return 'reduce';
@@ -1868,19 +1952,23 @@
     try { if (W.Nuanza && typeof W.Nuanza.applyConfig === 'function') W.Nuanza.applyConfig(); } catch (e) { log(e); }
     return m;
   }
-  /* drawer */
+  /* drawer (phones only; the rail and the sidebar are persistent) */
   function syncDrawerInert() {
     if (!els.drawer) return;
-    if (isDesktop()) { els.drawer.removeAttribute('inert'); els.drawer.removeAttribute('aria-hidden'); }
+    if (navPersistent()) { els.drawer.removeAttribute('inert'); els.drawer.removeAttribute('aria-hidden'); }
     else if (!drawerOpen) { els.drawer.setAttribute('inert', ''); }
   }
+  function setDrawerExpanded(on) {
+    if (els.burger) { els.burger.setAttribute('aria-expanded', String(on)); els.burger.setAttribute('aria-label', on ? 'Menyunu bağla' : 'Menyunu aç'); }
+    if (els.bnavMore) els.bnavMore.setAttribute('aria-expanded', String(on));
+  }
   function openDrawer() {
-    if (isDesktop() || drawerOpen || !els.drawer) return;
+    if (navPersistent() || drawerOpen || !els.drawer) return;
     drawerOpen = true;
     els.drawer.removeAttribute('inert');
     els.drawer.classList.add('on');
     if (els.scrim) els.scrim.classList.add('on');
-    if (els.burger) { els.burger.setAttribute('aria-expanded', 'true'); els.burger.setAttribute('aria-label', 'Menyunu bağla'); }
+    setDrawerExpanded(true);
     lockScroll();
     var cur = $('.dr-link[aria-current="page"]', els.drawer) || $('.dr-link', els.drawer) || els.drProfile;
     focusSoon(cur);
@@ -1890,15 +1978,15 @@
     drawerOpen = false;
     if (els.drawer) { els.drawer.classList.remove('on'); els.drawer.style.transform = ''; }
     if (els.scrim) els.scrim.classList.remove('on');
-    if (els.burger) { els.burger.setAttribute('aria-expanded', 'false'); els.burger.setAttribute('aria-label', 'Menyunu aç'); }
+    setDrawerExpanded(false);
     syncDrawerInert(); lockScroll();
-    if (returnFocus && els.burger) restoreFocus(els.burger);
+    if (returnFocus) restoreFocus(els.bnavMore && els.bnavMore.offsetParent ? els.bnavMore : els.burger);
   }
   function toggleDrawer() { if (drawerOpen) closeDrawer(true); else openDrawer(); }
   function enableDrawerSwipe() {
     var dr = els.drawer; if (!dr) return;
     var x0 = null, y0 = 0, dx = 0, active = false;
-    dr.addEventListener('pointerdown', function (e) { if (isDesktop() || !drawerOpen || e.pointerType === 'mouse') return; x0 = e.clientX; y0 = e.clientY; dx = 0; active = false; });
+    dr.addEventListener('pointerdown', function (e) { if (navPersistent() || !drawerOpen || e.pointerType === 'mouse') return; x0 = e.clientX; y0 = e.clientY; dx = 0; active = false; });
     dr.addEventListener('pointermove', function (e) {
       if (x0 === null) return;
       var mx = e.clientX - x0, my = e.clientY - y0;
@@ -2007,7 +2095,7 @@
     translate: ['Mətni yapışdırın — üslubu özüm tanıyacağam. Sarı xətli yerlərə bir də baxın.', 'Situasiya kartını doldurun: kimə, nə üçün? Tərcümə ona uyğunlaşır.'],
     projects: ['Yeni layihə yaradın — QA və təhvil paketi bir kliklə hazır olacaq.', 'Nümunə layihəni açıb redaktora baxa bilərsiniz.'],
     settings: ['Burada məni də fərdiləşdirə bilərsiniz: ölçü, danışıqlıq, hərəkət.', 'Rəng rejimini sistemə də bağlaya bilərsiniz.'],
-    home: ['Layihəyə qayıtmaq üçün «Son layihələr» cədvəlində sətirə toxunun.', 'Yeni layihə — sağ yuxarıdakı mis rəngli düymə.']
+    home: ['Layihəyə qayıtmaq üçün «Son layihələr» siyahısında sətirə toxunun.', 'Yarımçıq qalan iş «Davam et» bölməsində görünür.']
   };
   var HINT_IDS = { translate: 1, projects: 1, settings: 1, glossary: 1, qa: 1, academy: 1, lessons: 1, practice: 1, cards: 1, review: 1, memory: 1, tm: 1 };
   var HINT_TEXT = {
@@ -2033,7 +2121,7 @@
     if (menuOpen) return;
     menuOpen = true;
     var tips = tipsFor(current && current.id), ti = 0;
-    var bubble = h('div', { class: 'bubble', role: 'status', text: tips[0] });
+    var bubble = h('p', { role: 'status', text: tips[0] });
     var art = h('div', { class: 'sheet-nz-art' });
     var mini = null;
     var rows = [
@@ -2054,7 +2142,7 @@
         onclick: function () { var keep = r.run(); if (keep !== false && s) s.close(); }
       }, h('span', { class: 'ic' + (r.cls ? ' ' + r.cls : ''), html: icon(r.ic) }), h('span', { class: 'tx' }, h('b', { text: r.b }), h('small', { text: r.s })), h('span', { class: 'end', html: icon('chevron') }));
     }));
-    var body = h('div', null, h('div', { class: 'sheet-nz' }, art, bubble), list);
+    var body = h('div', null, h('div', { class: 'sheet-nz' }, art, h('div', { class: 'sheet-nz-tx' }, h('span', { class: 'caption', text: 'Məsləhət' }), bubble)), list);
     s = sheet({ title: 'Nuanza', body: body, onClose: function () { menuOpen = false; try { if (mini && mini.destroy) mini.destroy(); } catch (e) { /* ignore */ } } });
     if (W.Nuanza && typeof W.Nuanza.mount === 'function') {
       try { mini = W.Nuanza.mount(art, { size: 'mini' }); if (mini && mini.set) mini.set('wave', {}); } catch (e) { log(e); mini = null; }
@@ -2139,20 +2227,28 @@
      ------------------------------------------------------------------ */
   var palOpen = false;
   function paletteItems() {
-    var items = [];
-    order.forEach(function (id) {
-      var d = screens[id]; if (!d || d.hidden || d.nav === false) return;
-      var other = !isAvail(d, curMode);
-      items.push({ group: 'Ekranlar', label: titleOf(d), sub: other ? (d.mode === 'academy' ? 'Akademiya' : 'Peşəkar') + ' rejiminə keçir' : (d.group || ''), icon: d.icon || 'star', run: function () { go(id); } });
+    var items = [], seen = {};
+    function addNav(it, grpName) {
+      var k = navKey(it); if (seen[k] || !screens[it.id]) return; seen[k] = 1;
+      items.push({ group: 'Keçid', label: it.label, sub: grpName || '', icon: it.icon || 'dot', run: function () { navGo(it); } });
+    }
+    var M = navModel();
+    M.top.forEach(function (it) { addNav(it, ''); });
+    M.groups.forEach(function (g) {
+      g.items.forEach(function (it) {
+        addNav(it, g.grp);
+        if (navKey(it) === 'academy') Object.keys(NAV_CHILD).forEach(function (cid) { if (screens[cid]) addNav({ id: cid, label: NAV_CHILD[cid].label, icon: NAV_CHILD[cid].icon }, 'Akademiya'); });
+      });
     });
     var cfg = companionCfg();
+    if (App.projects && typeof App.projects.create === 'function') items.push({ group: 'Əmrlər', label: 'Yeni layihə', sub: 'Layihələr', icon: 'plus', run: function () { App.projects.create(); } });
     items.push(
-      { group: 'Əmrlər', label: curMode === 'pro' ? 'Akademiya rejiminə keç' : 'Peşəkar rejimə keç', sub: 'Alt + M', icon: curMode === 'pro' ? 'cap' : 'folder', run: function () { setMode(curMode === 'pro' ? 'academy' : 'pro'); } },
-      { group: 'Əmrlər', label: effectiveTheme() === 'dark' ? 'İşıqlı rejimə keç' : 'Qaranlıq rejimə keç', sub: 'Alt + T', icon: effectiveTheme() === 'dark' ? 'sun' : 'moon', run: function () { setTheme(effectiveTheme() === 'dark' ? 'light' : 'dark', els.themeToggle); } },
-      { group: 'Əmrlər', label: 'Mirzə Məclisini çağır', sub: 'Nümunə yoxlama', icon: 'shield', run: demoCouncil },
-      { group: 'Əmrlər', label: cfg.show ? 'Nuanzanı gizlət' : 'Nuanzanı göstər', sub: 'Yoldaş', icon: cfg.show ? 'eyeoff' : 'eye', run: function () { setCompanion({ show: !cfg.show }); if (!cfg.show) later(function () { companion.set('wave', { say: 'Yenə buradayam.', ms: 2400 }); }, 200); } },
-      { group: 'Əmrlər', label: 'Girişi yenidən göstər', sub: 'İlk quraşdırma', icon: 'info', run: onboarding },
-      { group: 'Əmrlər', label: 'Klaviatura qısayolları', sub: '?', icon: 'keyboard', run: shortcuts }
+      { group: 'Əmrlər', label: curMode === 'pro' ? 'Akademiyaya keç' : 'İş masasına keç', sub: '', key: ['Alt', 'M'], icon: curMode === 'pro' ? 'cap' : 'home', run: function () { setMode(curMode === 'pro' ? 'academy' : 'pro'); } },
+      { group: 'Əmrlər', label: effectiveTheme() === 'dark' ? 'İşıqlı rejim' : 'Qaranlıq rejim', sub: '', key: ['Alt', 'T'], icon: effectiveTheme() === 'dark' ? 'sun' : 'moon', run: function () { setTheme(effectiveTheme() === 'dark' ? 'light' : 'dark', els.themeToggle); } },
+      { group: 'Əmrlər', label: 'Mirzə Məclisi — nümunə yoxlama', sub: '', icon: 'shield', run: demoCouncil },
+      { group: 'Əmrlər', label: cfg.show ? 'Nuanzanı gizlət' : 'Nuanzanı göstər', sub: '', icon: cfg.show ? 'eyeoff' : 'eye', run: function () { setCompanion({ show: !cfg.show }); } },
+      { group: 'Əmrlər', label: 'Girişi yenidən göstər', sub: '', icon: 'info', run: onboarding },
+      { group: 'Əmrlər', label: 'Klaviatura qısayolları', sub: '', key: ['?'], icon: 'keyboard', run: shortcuts }
     );
     return items;
   }
@@ -2160,7 +2256,7 @@
     if (palOpen) return;
     palOpen = true;
     var all = paletteItems(), shown = [], active = 0, s;
-    var input = h('input', { class: 'input', type: 'search', placeholder: 'Ekran və ya əmr axtarın…', 'aria-label': 'Ekran və ya əmr axtarın', autocomplete: 'off', spellcheck: 'false', autofocus: true, role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'pal-list' });
+    var input = h('input', { class: 'input', type: 'search', placeholder: 'Bölmə və ya əmr axtarın…', 'aria-label': 'Bölmə və ya əmr axtarın', autocomplete: 'off', spellcheck: 'false', autofocus: true, role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'pal-list', 'aria-autocomplete': 'list' });
     var list = h('div', { class: 'sheet-pal-list', id: 'pal-list', role: 'listbox', 'aria-label': 'Nəticələr' });
     function run(it) { if (!it) return; if (s) s.close(); later(function () { try { it.run(); } catch (e) { log(e); } }, 40); }
     function paint() {
@@ -2168,14 +2264,16 @@
       shown = all.filter(function (it) { return !q || fold(it.label + ' ' + it.sub + ' ' + it.group).indexOf(q) >= 0; });
       active = clamp(active, 0, Math.max(0, shown.length - 1));
       list.textContent = '';
-      if (!shown.length) { list.appendChild(h('div', { class: 'sheet-pal-empty' }, 'Heç nə tapılmadı. «tərcümə», «layihə» və ya «rejim» yazın.')); return; }
+      if (!shown.length) { list.appendChild(h('div', { class: 'sheet-pal-empty' }, 'Uyğun nəticə yoxdur. «layihə», «tərcümə» və ya «lüğət» yazın.')); input.removeAttribute('aria-activedescendant'); return; }
       var lastG = null;
       shown.forEach(function (it, i) {
         if (it.group !== lastG) { lastG = it.group; list.appendChild(h('div', { class: 'sheet-pal-grp', 'aria-hidden': 'true', text: it.group })); }
         var b = h('button', {
           class: 'sheet-pal-it', type: 'button', role: 'option', id: 'pal-' + i, 'aria-selected': String(i === active), tabindex: '-1',
           onclick: function () { run(it); }, onmousemove: function () { if (active !== i) { active = i; mark(); } }
-        }, h('span', { class: 'ic' + (it.group === 'Əmrlər' ? ' gold' : ''), html: icon(it.icon) }), h('span', { class: 'tx' }, it.label, it.sub ? h('small', { text: it.sub }) : null), h('span', { class: 'end', html: icon('arrow') }));
+        }, h('span', { class: 'ic', html: icon(it.icon) }),
+          h('span', { class: 'tx' }, h('span', { text: it.label }), it.sub ? h('small', { text: it.sub }) : null),
+          h('span', { class: 'end' }, it.key ? it.key.map(function (k) { return h('kbd', { class: 'kbd', text: k }); }) : null, frag(icon('arrow'))));
         list.appendChild(b);
       });
       mark();
@@ -2193,16 +2291,20 @@
       else if (e.key === 'End' && !input.value) { e.preventDefault(); active = shown.length - 1; mark(); }
       else if (e.key === 'Enter') { e.preventDefault(); run(shown[active]); }
     });
-    var body = h('div', null, h('label', { class: 'input-ic' }, iconEl('search'), input), list);
+    var foot = h('div', { class: 'pal-foot', 'aria-hidden': 'true' },
+      h('span', null, h('kbd', { class: 'kbd', text: '↑' }), h('kbd', { class: 'kbd', text: '↓' }), 'seç'),
+      h('span', null, h('kbd', { class: 'kbd', text: '↵' }), 'aç'),
+      h('span', null, h('kbd', { class: 'kbd', text: 'Esc' }), 'bağla'));
+    var body = h('div', null, h('label', { class: 'pal-in' }, iconEl('search'), input, h('kbd', { class: 'kbd', text: 'Esc' })), list, foot);
     s = sheet({ title: 'Axtar və keç', body: body, cls: 'sheet-pal', onClose: function () { palOpen = false; } });
     paint();
   }
   function shortcuts() {
-    var rows = [[[MOD, 'K'], 'Axtar və keç'], [['Alt', 'M'], 'Peşəkar ↔ Akademiya'], [['Alt', 'T'], 'İşıqlı ↔ qaranlıq rejim'], [['?'], 'Bu siyahı'], [['Esc'], 'Pəncərəni və ya menyunu bağla']];
+    var rows = [[[MOD, 'K'], 'Axtar və keç'], [['Alt', 'M'], 'İş masası ↔ Akademiya'], [['Alt', 'T'], 'İşıqlı ↔ qaranlıq rejim'], [['?'], 'Qısayolların siyahısı'], [['Esc'], 'Pəncərəni və ya menyunu bağla']];
     var list = h('div', { class: 'list' }, rows.map(function (r) {
       return h('div', { class: 'list-row' }, h('span', { class: 'tx' }, h('b', { text: r[1] })), h('span', { class: 'end' }, r[0].map(function (k) { return h('kbd', { class: 'kbd', text: k }); })));
     }));
-    sheet({ title: 'Klaviatura qısayolları', body: list, cls: 'sheet-keys', actions: [{ label: 'Aydındır', kind: 'primary' }] });
+    sheet({ title: 'Klaviatura qısayolları', body: list, cls: 'sheet-keys', actions: [{ label: 'Bağla', kind: 'secondary' }] });
   }
 
   /* ------------------------------------------------------------------
@@ -2240,16 +2342,16 @@
       return h('div', { class: 'onb-step' },
         h('span', { class: 'eyebrow' }, 'Tərcüməçinin iş masası'),
         h('h1', { class: 'onb-h', id: 'onb-h', text: 'Mirzəyə xoş gəldiniz' }),
-        h('p', { class: 'onb-p', text: 'Layihələr, seqment redaktoru, terminologiya və keyfiyyət yoxlaması — Azərbaycan dili ilə işləyən tərcüməçilər üçün bir yerdə. Quraşdırma bir dəqiqə çəkir.' }),
+        h('p', { class: 'onb-p', text: 'Layihələr, seqment redaktoru, terminologiya və keyfiyyət yoxlaması bir yerdə. Quraşdırma bir dəqiqə çəkir.' }),
         foot(0, [h('button', { class: 'btn btn-primary', type: 'button', 'data-primary': '1', onclick: function () { show(1); } }, 'Davam et', iconEl('arrow'))]));
     }
     function step1() {
       return h('div', { class: 'onb-step' },
-        h('h1', { class: 'onb-h', id: 'onb-h', text: 'Necə işləyirsiniz?' }),
-        h('p', { class: 'onb-p', text: 'Rejimi istənilən vaxt menyudan dəyişə bilərsiniz.' }),
+        h('h1', { class: 'onb-h', id: 'onb-h', text: 'Haradan başlayırsınız?' }),
+        h('p', { class: 'onb-p', text: 'Hər iki bölmə həmişə menyudadır — bu, yalnız ilk açılan səhifədir.' }),
         h('div', { class: 'onb-choices', role: 'group', 'aria-label': 'Rejim' },
-          choice('pro', 'folder', 'Peşəkar tərcüməçi', 'Layihələr, lüğət, tərcümə yaddaşı, QA və təhvil paketi'),
-          choice('academy', 'cap', 'Tələbə — Akademiya', 'Dərslər, tapşırıqlar, səhv kartları və irəliləyiş')),
+          choice('pro', 'folder', 'İş masası', 'Layihələr, redaktor, terminologiya, yoxlama və təhvil'),
+          choice('academy', 'cap', 'Akademiya', 'Dərslər, tapşırıqlar, səhv kartları və irəliləyiş')),
         foot(1, [
           h('button', { class: 'btn btn-primary', type: 'button', 'data-primary': '1', onclick: function () { show(2); } }, 'Davam et', iconEl('arrow')),
           h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { show(0); } }, 'Geri')]));
@@ -2269,7 +2371,7 @@
       }));
       return h('div', { class: 'onb-step' },
         h('h1', { class: 'onb-h', id: 'onb-h', text: 'Dil cütləriniz' }),
-        h('p', { class: 'onb-p', text: 'Mirzə Azərbaycan dilini ingilis, rus və türk dilləri ilə dəstəkləyir. Bir neçə cüt seçə bilərsiniz.' }),
+        h('p', { class: 'onb-p', text: 'Azərbaycan dili ingilis, rus və türk dilləri ilə. Bir neçə cüt seçə bilərsiniz.' }),
         chips, err,
         foot(2, [
           h('button', {
@@ -2290,10 +2392,10 @@
       });
       return h('div', { class: 'onb-step' },
         h('h1', { class: 'onb-h', id: 'onb-h', text: 'Sizə necə müraciət edək?' }),
-        h('p', { class: 'onb-p', text: 'Adınız profildə görünəcək. Sonra ayarlardan dəyişə bilərsiniz.' }),
+        h('p', { class: 'onb-p', text: 'Adınız salamlamada və profildə görünəcək. Sonra ayarlardan dəyişə bilərsiniz.' }),
         h('div', { class: 'field onb-field' }, h('label', { for: 'onb-name' }, 'Ad və soyad', h('span', { class: 'opt', text: 'istəyə bağlı' })), nameIn),
         foot(3, [
-          h('button', { class: 'btn btn-primary', type: 'button', 'data-primary': '1', onclick: function () { finish(false); } }, 'Masaya keç', iconEl('arrow')),
+          h('button', { class: 'btn btn-primary', type: 'button', 'data-primary': '1', onclick: function () { finish(false); } }, 'Başla', iconEl('arrow')),
           h('button', { class: 'btn btn-ghost', type: 'button', onclick: function () { st.name = ''; finish(false); } }, 'Keç')]));
     }
     function show(i) {
@@ -2320,7 +2422,7 @@
       later(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 320);
       go('home', {}, { focus: false });
       restoreFocus(restore && restore !== D.body ? restore : null);
-      if (!skipped) toast(first ? 'Xoş gəldiniz, ' + first + '!' : 'Xoş gəldiniz!', 'ok', { sub: curMode === 'academy' ? 'Akademiya masanız hazırdır' : 'İş masanız hazırdır', icon: 'check' });
+      if (!skipped) toast(first ? 'Xoş gəldiniz, ' + first + '.' : 'Xoş gəldiniz.', 'ok', { sub: curMode === 'academy' ? 'Akademiya hazırdır' : 'İş masanız hazırdır', icon: 'check' });
     }
     show(0);
   }
@@ -2339,7 +2441,7 @@
       if (drawerOpen) { e.preventDefault(); closeDrawer(true); return; }
     }
     if (e.key === 'Tab') {
-      var top = overlays.length ? overlays[overlays.length - 1].el : (drawerOpen && !isDesktop() ? els.drawer : null);
+      var top = overlays.length ? overlays[overlays.length - 1].el : (drawerOpen && !navPersistent() ? els.drawer : null);
       if (top) trapTab(top, e);
       return;
     }
@@ -2382,8 +2484,9 @@
 
     if (els.burger) els.burger.addEventListener('click', toggleDrawer);
     if (els.scrim) els.scrim.addEventListener('click', function () { closeDrawer(true); });
-    (els.brands || []).forEach(function (b) { b.addEventListener('click', function (e) { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); go('home'); }); });
+    (els.brands || []).forEach(function (b) { b.addEventListener('click', function (e) { navGo(NAV[0], e); }); });
     if (els.hdrSearch) els.hdrSearch.addEventListener('click', function () { palette(); });
+    if (els.hdrKeys) els.hdrKeys.addEventListener('click', function () { shortcuts(); });
     if (els.hdrAvatar) els.hdrAvatar.addEventListener('click', function () { if (screens.settings) go('settings'); else toast('Ayarlar hələ yüklənməyib', 'info'); });
     if (els.drProfile) els.drProfile.addEventListener('click', function () { if (screens.settings) go('settings'); else toast(profile().name, 'info', { sub: profile().role }); });
     if (els.modeSeg) els.modeSeg.addEventListener('click', function (e) { var b = e.target.closest('button[data-mode]'); if (b) setMode(b.getAttribute('data-mode')); });
@@ -2406,7 +2509,7 @@
     W.addEventListener('hashchange', onHash);
     W.addEventListener('scroll', onScroll, { passive: true });
     ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function (ev) { W.addEventListener(ev, activity, { passive: true }); });
-    onMq(mqDesk, function () { if (isDesktop()) closeDrawer(false); syncDrawerInert(); lockScroll(); });
+    onMq(mqNav, function () { if (navPersistent()) closeDrawer(false); syncDrawerInert(); lockScroll(); });
     onMq(mqDark, updateThemeToggle);
     onMq(mqReduce, function () {
       if (motionPref() !== 'system') return;

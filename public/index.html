@@ -24,7 +24,7 @@
     var r = document.documentElement;
     r.lang = 'az';
     try {
-      /* dark is the default look; 'system' follows the OS, 'light' is opt-in */
+      /* light (ivory) is the default look; 'dark' is opt-in, 'system' follows the OS */
       var t = JSON.parse(localStorage.getItem('nuanza2:theme'));
       if (t !== 'system') r.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
       var m = JSON.parse(localStorage.getItem('nuanza2:mode'));
@@ -43,15 +43,17 @@
   <header class="hdr">
     <div class="hdr-in">
       <button class="burger" type="button" aria-label="Menyunu aç" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>
-      <a class="brand" href="#home" aria-label="Mirzə — ana səhifə">
+      <a class="brand" href="#home" aria-label="Mirzə — iş masası">
         <svg class="logo" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false">
           <polygon class="l-star" points="0,-19 4.22,-14.78 4.22,-11.61 7.39,-11.61 11.61,-7.39 11.61,-4.22 14.78,-4.22 19,0 14.78,4.22 11.61,4.22 11.61,7.39 7.39,11.61 4.22,11.61 4.22,14.78 0,19 -4.22,14.78 -4.22,11.61 -7.39,11.61 -11.61,7.39 -11.61,4.22 -14.78,4.22 -19,0 -14.78,-4.22 -11.61,-4.22 -11.61,-7.39 -7.39,-11.61 -4.22,-11.61 -4.22,-14.78"/>
           <polygon class="l-ring" points="0,-10 10,0 0,10 -10,0"/><polygon class="l-dot" points="0,-5 5,0 0,5 -5,0"/>
         </svg>
         <b>Mirzə</b><small hidden>Akademiya</small>
       </a>
-      <div class="hdr-crumb" aria-hidden="true"><span class="c-grp">Peşəkar</span><span class="c-sep">/</span><span class="c-cur"></span></div>
+      <div class="hdr-crumb" aria-hidden="true"><span class="c-grp"></span><span class="c-sep">/</span><span class="c-cur"></span></div>
       <div class="hdr-acts">
+        <div class="hdr-ctx"></div>
+        <button class="icon-btn ghost hdr-keys" type="button" aria-label="Klaviatura qısayolları" data-icon="keyboard"></button>
         <button class="icon-btn ghost hdr-search" type="button" aria-label="Axtar və keç" data-icon="search"></button>
         <button class="avatar av-firuze" type="button" aria-label="Profil və ayarlar"></button>
       </div>
@@ -60,7 +62,7 @@
 
   <nav class="drawer" id="drawer" aria-label="Əsas menyu">
     <div class="dr-head">
-      <a class="brand dr-brand" href="#home" aria-label="Mirzə — ana səhifə">
+      <a class="brand dr-brand" href="#home" aria-label="Mirzə — iş masası">
         <svg class="logo" viewBox="-20 -20 40 40" aria-hidden="true" focusable="false">
           <polygon class="l-star" points="0,-19 4.22,-14.78 4.22,-11.61 7.39,-11.61 11.61,-7.39 11.61,-4.22 14.78,-4.22 19,0 14.78,4.22 11.61,4.22 11.61,7.39 7.39,11.61 4.22,11.61 4.22,14.78 0,19 -4.22,14.78 -4.22,11.61 -7.39,11.61 -11.61,7.39 -11.61,4.22 -14.78,4.22 -19,0 -14.78,-4.22 -11.61,-4.22 -11.61,-7.39 -7.39,-11.61 -4.22,-11.61 -4.22,-14.78"/>
           <polygon class="l-ring" points="0,-10 10,0 0,10 -10,0"/><polygon class="l-dot" points="0,-5 5,0 0,5 -5,0"/>
@@ -68,12 +70,7 @@
         <b>Mirzə</b><small hidden>Akademiya</small>
       </a>
     </div>
-    <div class="dr-tools"><button class="dr-search" type="button" aria-label="Axtar və keç"><span class="lbl">Axtar və keç</span></button></div>
-    <div class="dr-mode">
-      <div class="seg block" role="group" aria-label="Rejim">
-        <button type="button" data-mode="pro" aria-pressed="true">Peşəkar</button><button type="button" data-mode="academy" aria-pressed="false">Akademiya</button>
-      </div>
-    </div>
+    <div class="dr-tools"><button class="dr-search" type="button" aria-label="Axtar və keç"><span class="lbl">Axtar</span></button></div>
     <div class="dr-nav" id="dr-nav"></div>
     <div class="dr-foot">
       <button class="dr-profile" type="button" aria-label="Profil və ayarlar">
@@ -89,13 +86,14 @@
   <main class="main" id="main">
     <section class="screen" aria-busy="true" aria-label="Yüklənir">
       <div class="page">
-        <div class="sk-stack"><span class="skeleton text" style="width:120px"></span><span class="skeleton title"></span><span class="skeleton text" style="width:72%"></span></div>
-        <div class="grid-3"><span class="skeleton block"></span><span class="skeleton block"></span><span class="skeleton block"></span></div>
-        <span class="skeleton block" style="height:220px"></span>
+        <div class="sk-stack"><span class="skeleton title" style="width:240px"></span><span class="skeleton text" style="width:180px"></span></div>
+        <div class="sk-stack"><span class="skeleton text" style="width:96px"></span><span class="skeleton block" style="height:72px"></span></div>
+        <div class="sk-stack"><span class="skeleton text" style="width:120px"></span><span class="skeleton block" style="height:200px"></span></div>
       </div>
     </section>
   </main>
 
+  <nav class="bnav" aria-label="Sürətli keçid"></nav>
   <div class="companion" aria-label="Nuanza"></div>
 </div>
 
@@ -118,6 +116,7 @@
 <script src="data-real.js"></script>
 <script src="s-academy.js"></script>
 <script src="s-library.js"></script>
+<script src="s-resources.js"></script>
 <script src="s-settings.js"></script>
 <script>
   if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(function () {}); }

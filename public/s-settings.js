@@ -1,14 +1,14 @@
 /* =====================================================================
    NUANZA — s-settings.js
-   'settings' — Profil və ayarlar (hər iki rejim, «Hesab» qrupu).
-     • Telefonda: axtarışlı bölmələr siyahısı → hər bölmə geri düyməli alt səhifə.
-     • Geniş ekranda: solda yapışqan bölmə naviqasiyası, sağda bölmənin məzmunu.
-     • Profil başlığı: xalça gölündə baş hərflər, rəng seçimi, profil tamlığı.
-     • Bölmələr: Hesab · İş profili · Tərcümə · Nuanza köməkçisi · Görünüş ·
-       Bildirişlər · Məxfilik və məlumat · Klaviatura qısayolları · Haqqında.
+   'settings' — Ayarlar (hər iki rejim).
+     • Geniş ekranda: solda bölmə naviqasiyası, sağda bölmənin məzmunu.
+     • Telefonda: bölmələr siyahısı → geri düyməli alt səhifə.
+     • Bölmələr: Hesab · Görünüş · Dil · Tərcümə · AI · Məxfilik ·
+       Klaviatura qısayolları · Məlumatlar · Haqqında.
+     • Sətirlər: solda ad + izah, sağda idarəetmə; qruplar kiçik başlıqla.
      • Formlar qaralama kimi saxlanılır: «Yadda saxlanılmamış dəyişikliklər» paneli,
        Ctrl/⌘+S, doğrulama. Tema, şrift, sıxlıq və köməkçi dərhal tətbiq olunur.
-   Store: profile (App.setProfile), prefs, ui, companion, tg-link.
+   Store: profile (App.setProfile), prefs, ui, companion, tg-link, code.
    Plain browser JS. Screen CSS prefix: settings-.
    ===================================================================== */
 (function () {
@@ -100,28 +100,32 @@
   /* ------------------------------------------------------------------
      2. REFERENCE DATA
      ------------------------------------------------------------------ */
-  var GROUPS = ['Profil', 'İş üslubu', 'Tətbiq', 'Kömək'];
+  /* Nine sections, in this order. Groups only add spacing in the navigation. */
+  var GROUPS = ['Profil', 'Tətbiq', 'İş', 'Sistem'];
   var SECTIONS = [
-    { id: 'account', title: 'Hesab', icon: 'user', cls: '', grp: 'Profil', kw: 'profil şəxsi ad e-poçt telefon giriş kod',
-      desc: 'Ad, əlaqə məlumatları və sayt giriş kodu.' },
-    { id: 'work', title: 'İş profili', icon: 'quill', cls: 'gold', grp: 'Profil', kw: 'dil cüt ixtisas tarif qiymət imza möhür faktura vöen bank',
-      desc: 'Dil cütləri, ixtisas sahələri, tariflər və hesab-faktura rekvizitləri.' },
-    { id: 'translation', title: 'Tərcümə', icon: 'translate', cls: 'settings-fir', grp: 'İş üslubu', kw: 'üslub register keyfiyyət format tarix rəqəm transliterasiya türk',
-      desc: 'Əsas üslub, keyfiyyət rejimi, formatlar və avtomatik yoxlamalar.' },
-    { id: 'companion', title: 'Nuanza köməkçisi', icon: 'user', cls: '', grp: 'İş üslubu', kw: 'köməkçi qız nuanza animasiya danışıq ölçü', live: true,
-      desc: 'Nuanzanın görünüşü, ölçüsü, nə qədər danışdığı və hərəkəti.' },
-    { id: 'appearance', title: 'Görünüş', icon: 'palette', cls: '', grp: 'Tətbiq', kw: 'tema qaranlıq işıqlı şrift kompakt dil interfeys animasiya hərəkət', live: true,
-      desc: 'Tema, şrift ölçüsü, sıxlıq, animasiyalar və interfeys dili.' },
-    { id: 'notifications', title: 'Bildirişlər', icon: 'bell', cls: 'gold', grp: 'Tətbiq', kw: 'bildiriş xatırlatma telegram bot e-poçt hesabat',
-      desc: 'Son tarix xatırlatmaları, Telegram bot və həftəlik e-poçt hesabatı.' },
-    { id: 'privacy', title: 'Məxfilik və məlumat', icon: 'lock', cls: 'green', grp: 'Tətbiq', kw: 'məxfilik lokal maska sil ixrac json tmx tbx',
-      desc: 'Lokal rejim, maskalama, saxlama müddəti və məlumatların ixracı.' },
-    { id: 'shortcuts', title: 'Klaviatura qısayolları', icon: 'keyboard', cls: '', grp: 'Kömək', kw: 'qısayol klaviatura düymə',
+    { id: 'account', title: 'Hesab', icon: 'user', grp: 'Profil', kw: 'profil şəxsi ad e-poçt telefon rol iş profili dil cüt ixtisas tarif qiymət imza möhür faktura vöen bank iban bildiriş xatırlatma telegram bot e-poçt hesabat',
+      desc: 'Şəxsi məlumatlar, iş profili, tariflər, rekvizitlər və bildirişlər.' },
+    { id: 'appearance', title: 'Görünüş', icon: 'palette', grp: 'Tətbiq', kw: 'tema qaranlıq işıqlı sistem şrift kompakt sıxlıq animasiya hərəkət', live: true,
+      desc: 'Tema, mətn ölçüsü, sıxlıq və animasiyalar.' },
+    { id: 'language', title: 'Dil', icon: 'globe', grp: 'Tətbiq', kw: 'interfeys dil english русский müraciət sən siz tarix rəqəm format transliterasiya',
+      desc: 'İnterfeys dili, müraciət forması, tarix, rəqəm və adların yazılışı.' },
+    { id: 'translation', title: 'Tərcümə', icon: 'translate', grp: 'İş', kw: 'üslub register danışıq neytral rəsmi hüquqi termin lüğət türk forması yoxlama sual',
+      desc: 'Əsas üslub, terminologiya və avtomatik yoxlamalar.' },
+    { id: 'ai', title: 'AI', icon: 'sliders', grp: 'İş', kw: 'süni intellekt keyfiyyət sürətli dəqiq mirzə məclisi giriş kod açar köməkçi nuanza danışıq ölçü animasiya',
+      desc: 'Keyfiyyət rejimi, sayt giriş kodu və köməkçi Nuanza.' },
+    { id: 'privacy', title: 'Məxfilik', icon: 'lock', grp: 'Sistem', kw: 'məxfilik lokal bulud maska anonim saxlama müddət sil',
+      desc: 'Məlumatın harada saxlandığı, maskalama və saxlama müddəti.' },
+    { id: 'shortcuts', title: 'Klaviatura qısayolları', icon: 'keyboard', grp: 'Sistem', kw: 'qısayol klaviatura düymə ctrl alt',
       desc: 'Siçana əl atmadan, daha sürətli işləmək üçün.' },
-    { id: 'about', title: 'Haqqında', icon: 'info', cls: '', grp: 'Kömək', kw: 'versiya rəy şərtlər məxfilik siyasəti',
-      desc: 'Versiya, hüquqi sənədlər və rəy göndərmək.' }
+    { id: 'data', title: 'Məlumatlar', icon: 'database', grp: 'Sistem', kw: 'ixrac json yüklə sil hamısını təhlükəli',
+      desc: 'Məlumatların ixracı və bu cihazdan silinməsi.' },
+    { id: 'about', title: 'Haqqında', icon: 'info', grp: 'Sistem', kw: 'versiya yenilik rəy şərtlər siyasət lisenziya giriş tanışlıq',
+      desc: 'Versiya, yeniliklər, rəy və hüquqi sənədlər.' }
   ];
   var SEC = {}; SECTIONS.forEach(function (s) { SEC[s.id] = s; });
+  /* earlier section ids still open the right place (links, saved drafts, history) */
+  var SEC_ALIAS = { work: 'account', notifications: 'account', companion: 'ai' };
+  function secId(id) { id = SEC_ALIAS[id] || id; return SEC[id] ? id : null; }
 
   /* searchable options: [section, data-opt key, label, keywords] */
   var OPTS = [
@@ -129,44 +133,45 @@
     ['account', 'email', 'E-poçt ünvanı', 'email mail poçt'],
     ['account', 'phone', 'Telefon nömrəsi', 'nömrə mobil əlaqə'],
     ['account', 'role', 'Rol', 'freelance büro şirkətdaxili tələbə vəzifə'],
-    ['account', 'code', 'Sayt giriş kodu', 'kod giriş açar parol şifrə access ai süni intellekt'],
-    ['work', 'pairs', 'Dil cütləri', 'ingilis rus türk en ru tr az dil'],
-    ['work', 'specialties', 'İxtisas sahələri', 'hüquq maliyyə neft tibb sahə'],
-    ['work', 'rates', 'Tariflər', 'qiymət söz səhifə azn manat notarial'],
-    ['work', 'sign', 'İmza və möhür', 'imza möhür ştamp bəyan'],
-    ['work', 'invoice', 'Hesab-faktura məlumatları', 'vöen ünvan bank iban faktura rekvizit'],
-    ['translation', 'register', 'Əsas üslub', 'register danışıq neytral rəsmi hüquqi defolt'],
-    ['translation', 'quality', 'Keyfiyyət rejimi', 'sürətli dəqiq mirzə məclisi'],
-    ['translation', 'enforceTerms', 'Termin bazası məcburidir', 'lüğət glossary termin'],
-    ['translation', 'address', 'Müraciət forması', 'sən siz you'],
-    ['translation', 'dateFmt', 'Tarix formatı', 'tarix gün ay il'],
-    ['translation', 'numFmt', 'Rəqəm formatı', 'rəqəm vergül nöqtə onluq kəsr'],
-    ['translation', 'translit', 'Adların transliterasiyası', 'ad soyad transliterasiya kiril latın'],
-    ['translation', 'turkic', 'Türk formalarını yoxla', 'türkcə türk forması dilçi nənə'],
-    ['translation', 'clarify', 'Dəqiqləşdirici suallar', 'klarifikasiya sual soruş'],
-    ['companion', 'cShow', 'Nuanzanı göstər', 'köməkçi gizlət göstər'],
-    ['companion', 'cSize', 'Köməkçinin ölçüsü', 'kiçik böyük ölçü'],
-    ['companion', 'cTalk', 'Danışma tezliyi', 'sakit normal çox danış'],
-    ['companion', 'cMotion', 'Animasiya intensivliyi', 'hərəkət animasiya canlı'],
+    ['account', 'pairs', 'Dil cütləri', 'ingilis rus türk en ru tr az dil'],
+    ['account', 'specialties', 'İxtisas sahələri', 'hüquq maliyyə neft tibb sahə'],
+    ['account', 'rates', 'Tariflər', 'qiymət söz səhifə azn manat notarial'],
+    ['account', 'sign', 'İmza və möhür', 'imza möhür ştamp bəyan'],
+    ['account', 'invoice', 'Hesab-faktura məlumatları', 'vöen ünvan bank iban faktura rekvizit'],
+    ['account', 'nDeadline', 'Son tarix xatırlatması', 'deadline müddət xatırlat bildiriş'],
+    ['account', 'telegram', 'Telegram botu qoş', 'bot bağla kod telegram'],
+    ['account', 'nWeekly', 'Həftəlik e-poçt hesabatı', 'e-poçt hesabat həftəlik'],
     ['appearance', 'theme', 'Tema', 'işıqlı qaranlıq sistem rəng gecə'],
     ['appearance', 'fontScale', 'Şrift ölçüsü', 'şrift yazı böyüt kiçilt'],
     ['appearance', 'compact', 'Kompakt rejim', 'sıx kompakt sıxlıq'],
     ['appearance', 'motion', 'Animasiyalar', 'animasiya hərəkət azalt həmişə tam sistem sakit'],
-    ['appearance', 'lang', 'İnterfeys dili', 'english русский dil azərbaycan'],
-    ['appearance', 'intro', 'Girişi yenidən göstər', 'tanışlıq onboarding giriş'],
-    ['notifications', 'nDeadline', 'Son tarix xatırlatması', 'deadline müddət xatırlat'],
-    ['notifications', 'telegram', 'Telegram botu qoş', 'bot bağla kod telegram'],
-    ['notifications', 'nWeekly', 'Həftəlik e-poçt hesabatı', 'e-poçt hesabat həftəlik'],
+    ['language', 'lang', 'İnterfeys dili', 'english русский dil azərbaycan'],
+    ['language', 'address', 'Müraciət forması', 'sən siz you'],
+    ['language', 'dateFmt', 'Tarix formatı', 'tarix gün ay il'],
+    ['language', 'numFmt', 'Rəqəm formatı', 'rəqəm vergül nöqtə onluq kəsr'],
+    ['language', 'translit', 'Adların transliterasiyası', 'ad soyad transliterasiya kiril latın'],
+    ['translation', 'register', 'Əsas üslub', 'register danışıq neytral rəsmi hüquqi defolt'],
+    ['translation', 'enforceTerms', 'Termin bazası məcburidir', 'lüğət glossary termin'],
+    ['translation', 'turkic', 'Türk formalarını yoxla', 'türkcə türk forması dilçi nənə'],
+    ['translation', 'clarify', 'Dəqiqləşdirici suallar', 'klarifikasiya sual soruş'],
+    ['ai', 'quality', 'Keyfiyyət rejimi', 'sürətli dəqiq mirzə məclisi'],
+    ['ai', 'code', 'Sayt giriş kodu', 'kod giriş açar parol şifrə access ai süni intellekt'],
+    ['ai', 'cShow', 'Nuanzanı göstər', 'köməkçi gizlət göstər'],
+    ['ai', 'cSize', 'Köməkçinin ölçüsü', 'kiçik böyük ölçü'],
+    ['ai', 'cTalk', 'Danışma tezliyi', 'sakit normal çox danış'],
+    ['ai', 'cMotion', 'Animasiya intensivliyi', 'hərəkət animasiya canlı'],
     ['privacy', 'local', 'Lokal rejim', 'lokal cihaz oflayn'],
     ['privacy', 'mask', 'Adları və rəqəmləri maskala', 'maska anonim gizlət ai'],
     ['privacy', 'retention', 'Avtomatik silmə müddəti', 'sil müddət saxlama'],
-    ['privacy', 'export', 'Məlumatlarımı ixrac et', 'json ixrac yüklə'],
-    ['privacy', 'wipe', 'Hər şeyi sil', 'sil hesab təhlükəli zona'],
     ['shortcuts', 'keys', 'Qısayolların siyahısı', 'qısayol ctrl alt düymə'],
+    ['data', 'export', 'Məlumatlarımı ixrac et', 'json ixrac yüklə'],
+    ['data', 'wipe', 'Hər şeyi sil', 'sil hesab təhlükəli zona'],
     ['about', 'version', 'Versiya', 'versiya yenilik buraxılış'],
     ['about', 'feedback', 'Rəy göndər', 'rəy təklif xəta əlaqə'],
+    ['about', 'intro', 'Girişi yenidən göstər', 'tanışlıq onboarding giriş'],
     ['about', 'legal', 'Məxfilik siyasəti və istifadə şərtləri', 'şərtlər siyasət lisenziya']
   ];
+  var OPT_SEC = {}; OPTS.forEach(function (o) { if (!OPT_SEC[o[1]]) OPT_SEC[o[1]] = o[0]; });
 
   var ROLES = [
     { id: '', label: 'Seçilməyib', hint: '' },
@@ -193,14 +198,14 @@
   var BANKS = ['Kapital Bank', 'PAŞA Bank', 'ABB', 'Bank Respublika', 'Xalq Bank', 'Unibank', 'Yelo Bank', 'AccessBank', 'Rabitəbank'];
 
   var REGS = [
-    { id: 'auto', label: 'Avtomatik', ic: 'sparkle' },
+    { id: 'auto', label: 'Avto' },
     { id: 'danisiq', label: 'Danışıq' },
     { id: 'neytral', label: 'Neytral' },
     { id: 'resmi', label: 'Rəsmi' },
     { id: 'huquqi', label: 'Hüquqi' }
   ];
   var REG_EX = {
-    auto: 'Nuanza mətnin üslubunu özü tanıyır: müqavilədə «Hüquqi», işgüzar məktubda «Rəsmi», çatda «Danışıq».',
+    auto: 'Üslub hər mətndə ayrıca tanınır: müqavilədə «Hüquqi», işgüzar məktubda «Rəsmi», çatda «Danışıq».',
     danisiq: 'Sənədləri cüməyə qədər göndərərsən?',
     neytral: 'Sənədləri cümə gününə qədər göndərin.',
     resmi: 'Xahiş edirik, sənədləri cümə gününədək təqdim edəsiniz.',
@@ -215,9 +220,9 @@
   };
   var REG_SHORT = { auto: 'Avtomatik üslub', danisiq: 'Danışıq', neytral: 'Neytral', resmi: 'Rəsmi', huquqi: 'Hüquqi' };
   var QUALITY = [
-    { id: 'fast', label: 'Sürətli', ic: 'zap', cls: 'gold', hint: 'Təxminən 1 saniyə, bir keçid. Qısa mesajlar və çat üçün.' },
-    { id: 'exact', label: 'Dəqiq', ic: 'target', cls: '', hint: 'Lüğət, tərcümə yaddaşı və hər seqment üçün əminlik yoxlaması.' },
-    { id: 'meclis', label: 'Mirzə Məclisi', ic: 'shield', cls: 'settings-fir', hint: 'Tərcümədən sonra beş mirzə yoxlayır və səhvləri özləri düzəldir.' }
+    { id: 'fast', label: 'Sürətli', hint: 'Təxminən 1 saniyə, bir keçid. Qısa mesajlar və çat üçün.' },
+    { id: 'exact', label: 'Dəqiq', hint: 'Lüğət, tərcümə yaddaşı və hər seqment üçün əminlik yoxlaması.' },
+    { id: 'meclis', label: 'Mirzə Məclisi', hint: 'Tərcümədən sonra beş redaktor yoxlayır və tapılan səhvləri düzəldir.' }
   ];
   var Q_SHORT = { fast: 'Sürətli', exact: 'Dəqiq', meclis: 'Mirzə Məclisi' };
   var ADDRS = [
@@ -252,17 +257,18 @@
     { id: '365', label: 'Tamamlandıqdan 1 il sonra' }
   ];
   var AV_COLORS = [
-    { id: 'av-nar', name: 'Nar', note: 'isti və cəsur' },
-    { id: 'av-lacquer', name: 'Lacivərt', note: 'sakit və ciddi' },
-    { id: 'av-zafaran', name: 'Zəfəran', note: 'günəşli və mehriban' },
+    { id: 'av-nar', name: 'Nar', note: 'isti' },
+    { id: 'av-lacquer', name: 'Lacivərt', note: 'sakit' },
+    { id: 'av-zafaran', name: 'Zəfəran', note: 'günəşli' },
     { id: 'av-firuze', name: 'Firuzə', note: 'təravətli' },
     { id: 'av-benovse', name: 'Bənövşə', note: 'zərif' },
-    { id: 'av-zeytun', name: 'Zeytun', note: 'təbii və təmkinli' }
+    { id: 'av-zeytun', name: 'Zeytun', note: 'təmkinli' }
   ];
+  /* light is the default theme */
   var THEMES = [
-    { id: 'dark', label: 'Qaranlıq', ic: 'moon' },
-    { id: 'light', label: 'İşıqlı', ic: 'sun' },
-    { id: 'system', label: 'Sistem', ic: 'settings' }
+    { id: 'light', label: 'İşıqlı' },
+    { id: 'dark', label: 'Qaranlıq' },
+    { id: 'system', label: 'Sistem' }
   ];
   var LANGS_UI = [{ id: 'az', label: 'Azərbaycan' }, { id: 'en', label: 'English' }, { id: 'ru', label: 'Русский' }];
   var SHORTCUTS = [
@@ -282,10 +288,11 @@
   ];
   var FIELD_SEC = {
     first: 'account', last: 'account', email: 'account', phone: 'account', role: 'account',
-    pairs: 'work', specialties: 'work', rate: 'work', ratePage: 'work', notarial: 'work', signName: 'work', voen: 'work', addr: 'work', bank: 'work', iban: 'work',
-    register: 'translation', quality: 'translation', enforceTerms: 'translation', address: 'translation', dateFmt: 'translation', numFmt: 'translation',
-    translit: 'translation', turkic: 'translation', clarify: 'translation',
-    nDeadline: 'notifications', nLead: 'notifications', nMeclis: 'notifications', nComments: 'notifications', nStreak: 'notifications', nWeekly: 'notifications', nWeeklyDay: 'notifications',
+    pairs: 'account', specialties: 'account', rate: 'account', ratePage: 'account', notarial: 'account', signName: 'account', voen: 'account', addr: 'account', bank: 'account', iban: 'account',
+    nDeadline: 'account', nLead: 'account', nMeclis: 'account', nComments: 'account', nStreak: 'account', nWeekly: 'account', nWeeklyDay: 'account',
+    address: 'language', dateFmt: 'language', numFmt: 'language', translit: 'language',
+    register: 'translation', enforceTerms: 'translation', turkic: 'translation', clarify: 'translation',
+    quality: 'ai',
     local: 'privacy', mask: 'privacy', retention: 'privacy'
   };
   var PREF_DEF = {
@@ -361,20 +368,22 @@
 
   /* global CSS: compact density (applies to every screen) */
   var GLOBAL_CSS = [
-    ':where(:root[data-density="compact"]) .page{gap:14px;padding-block:14px 112px}',
-    ':where(:root[data-density="compact"]) .card{padding:14px}',
-    ':where(:root[data-density="compact"]) .card.pad-lg{padding:18px}',
-    ':where(:root[data-density="compact"]) .card-h{margin-bottom:10px}',
-    ':where(:root[data-density="compact"]) .list-row{min-height:46px;padding-block:6px}',
-    ':where(:root[data-density="compact"]) .btn{min-height:38px}',
-    ':where(:root[data-density="compact"]) .btn-sm{min-height:30px}',
-    ':where(:root[data-density="compact"]) .btn-lg{min-height:46px}',
-    ':where(:root[data-density="compact"]) .input,:where(:root[data-density="compact"]) .select{min-height:38px;padding-block:7px}',
-    ':where(:root[data-density="compact"]) .grid-2,:where(:root[data-density="compact"]) .grid-3,:where(:root[data-density="compact"]) .tiles{gap:10px}',
+    ':where(:root[data-density="compact"]) .page{gap:12px;padding-block:12px 104px}',
+    ':where(:root[data-density="compact"]) .card{padding:12px}',
+    ':where(:root[data-density="compact"]) .card.pad-lg{padding:16px}',
+    ':where(:root[data-density="compact"]) .card-h{margin-bottom:8px}',
+    ':where(:root[data-density="compact"]) .list-row{min-height:40px;padding-block:4px}',
+    ':where(:root[data-density="compact"]) .btn{min-height:28px}',
+    ':where(:root[data-density="compact"]) .btn-sm{min-height:24px}',
+    ':where(:root[data-density="compact"]) .btn-lg{min-height:32px}',
+    ':where(:root[data-density="compact"]) .input,:where(:root[data-density="compact"]) .select{min-height:30px;padding-block:4px}',
+    ':where(:root[data-density="compact"]) select.select:not([multiple]):not([size]){height:30px}',
+    ':where(:root[data-density="compact"]) .grid-2,:where(:root[data-density="compact"]) .grid-3,:where(:root[data-density="compact"]) .tiles{gap:8px}',
     ':where(:root[data-density="compact"]) .stack{gap:8px}',
-    ':where(:root[data-density="compact"]) .seg button{min-height:30px;padding-block:4px}',
-    ':where(:root[data-density="compact"]) .table td{padding-block:8px}',
-    ':where(:root[data-density="compact"]) .tile{padding:10px}'
+    ':where(:root[data-density="compact"]) .seg button{min-height:24px;padding-block:2px}',
+    ':where(:root[data-density="compact"]) .table td{padding-block:6px}',
+    ':where(:root[data-density="compact"]) .tile{padding:8px}',
+    ':where(:root[data-density="compact"]) .settings-row{min-height:44px;padding-block:8px}'
   ].join('\n');
   try { App.css('settings-global', GLOBAL_CSS); } catch (e) { /* ignore */ }
   applyUI();
@@ -397,285 +406,270 @@
   }, 2500);
 
   /* ------------------------------------------------------------------
-     4. SCREEN CSS
+     4. SCREEN CSS — tokens only. Layout: navigation list (left on wide
+     screens; list → detail on phones) and a content panel of grouped rows.
      ------------------------------------------------------------------ */
   var CSS = [
-    '.settings-page{--settings-lift:0px}',
-    /* hero */
-    '.settings-hero{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px 16px;overflow:hidden;isolation:isolate}',
-    '@media (min-width:640px){.settings-hero{grid-template-columns:auto minmax(0,1fr) auto;gap:14px 20px;padding:20px}}',
-    '.settings-hero > .rugband{display:none}',
-    '.settings-hero::before,.settings-hero::after{content:none}',
-    '.settings-av{position:relative;flex:none;width:56px;height:56px;display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:var(--av,var(--av-firuze));color:inherit;cursor:pointer}',
-    '@media (min-width:640px){.settings-av{width:64px;height:64px}}',
-    '.settings-av .sa-star,.settings-av .sa-fill{display:none}',
-    /* avatar: göl — firuzə stepped rim with a zəfəran glint, the colour fill inside */
-    '.settings-av .sa-ring{display:none}',
-    '.settings-av b{position:relative;font-family:var(--f-display);font-size:1.25rem;font-weight:600;letter-spacing:.03em;color:var(--on-av);line-height:1}',
-    '@media (min-width:640px){.settings-av b{font-size:1.375rem}}',
-    '.settings-av b svg{display:block;width:1.1em;height:1.1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}',
-    '.settings-hero h2.settings-hero-empty{color:var(--soft)}',
-    '@media (hover:hover){.settings-av:hover{opacity:.9}}',
-    '.settings-av:focus-visible{outline:2px solid var(--focus);outline-offset:4px}',
-    '.settings-av-edit{position:absolute;right:-4px;bottom:-4px;width:24px;height:24px;display:grid;place-items:center;border-radius:50%;background:var(--surface);color:var(--soft);box-shadow:0 0 0 1px var(--line-2)}',
-    '.settings-av-edit svg{width:13px;height:13px}',
-    '.settings-av.big{width:96px;height:96px;cursor:default}',
-    '.settings-av.big b{font-size:2rem}',
-    '.settings-av.pop{animation:none}',
-    '.settings-hero-tx{min-width:0;display:grid;gap:3px}',
-    '.settings-hero-tx h2{font-size:var(--fs-lg);font-weight:600;line-height:1.25;overflow-wrap:anywhere}',
-    '.settings-hero-meta{color:var(--soft);font-size:var(--fs-sm);min-width:0}',
-    '.settings-hero-mail{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.settings-hero-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}',
-    '.settings-hero-act{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:8px}',
-    '@media (min-width:640px){.settings-hero-act{grid-column:auto;flex-direction:column;align-items:stretch}}',
-    '.settings-complete{grid-column:1 / -1;display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--line)}',
-    '.settings-complete .row{justify-content:space-between;flex-wrap:nowrap}',
-    '.settings-complete .row > span{min-width:0;color:var(--soft)}',
-    '.settings-complete .row > span b{color:var(--ink)}',
+    '.settings-page{--settings-lift:0px;--settings-ease:cubic-bezier(.2,.8,.2,1)}',
+    '.settings-head h1{font:600 var(--t-h1,1.375rem)/1.27 var(--f-display);letter-spacing:-.01em;color:var(--text,var(--ink))}',
+    '.settings-head p{font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft))}',
     /* layout */
-    '.settings-wrap{display:grid;gap:20px;min-width:0;align-items:start}',
+    '.settings-wrap{display:grid;gap:16px;min-width:0;align-items:start}',
     '.settings-side,.settings-main{min-width:0;display:grid;gap:16px;align-content:start}',
     '.settings-main{container-type:inline-size;container-name:stmain}',
     '.settings-page:not(.is-wide)[data-view="list"] .settings-main{display:none}',
-    '.settings-page:not(.is-wide)[data-view="sub"] .settings-side,.settings-page:not(.is-wide)[data-view="sub"] .settings-hero,.settings-page:not(.is-wide)[data-view="sub"] > .page-h{display:none}',
-    '.settings-page.is-wide .settings-wrap{grid-template-columns:232px minmax(0,1fr);gap:28px}',
-    '.settings-page.is-wide .settings-side{position:sticky;top:calc(var(--hdr-h) + var(--band-h) + 16px);max-height:calc(100dvh - var(--hdr-h) - var(--band-h) - 32px);overflow-y:auto;overscroll-behavior:contain;padding:3px 6px 10px 3px;margin:-3px -6px 0 -3px}',
+    '.settings-page:not(.is-wide)[data-view="sub"] .settings-side,.settings-page:not(.is-wide)[data-view="sub"] > .page-h{display:none}',
+    '.settings-page.is-wide .settings-wrap{grid-template-columns:216px minmax(0,1fr);gap:40px}',
+    '.settings-page.is-wide .settings-main{max-width:760px}',
+    '.settings-page.is-wide .settings-side{position:sticky;top:calc(var(--hdr-h,56px) + var(--band-h,0px) + 16px);max-height:calc(100dvh - var(--hdr-h,56px) - var(--band-h,0px) - 32px);overflow-y:auto;overscroll-behavior:contain;gap:12px;padding:2px;margin:-2px}',
     '.settings-page.is-wide .settings-back{display:none}',
-    '.settings-page.is-wide .settings-savebar{grid-column:2}',
-    /* search + nav */
-    '.settings-search input{background-color:var(--surface)}',
-    '.settings-grp{display:grid;gap:6px}',
-    '.settings-grp-h{padding:0 4px;font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}',
-    '.settings-navcard{padding:2px 16px}',
-    '.settings-nav-row .tx small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.settings-dot{width:7px;height:7px;flex:none;border-radius:50%;background:var(--zafaran)}',
-    '.settings-page.is-wide .settings-grp{gap:2px}',
-    '.settings-page.is-wide .settings-grp + .settings-grp{margin-top:12px}',
-    '.settings-page.is-wide .settings-navcard{padding:0;background:none;border:0;box-shadow:none}',
-    '.settings-page.is-wide .settings-nav-row{min-height:34px;padding:4px 10px;gap:10px}',
-    '.settings-page.is-wide .settings-nav-row + .settings-nav-row{border-top:0}',
-    '.settings-page.is-wide .settings-nav-row::before{inset:0}',
-    '.settings-page.is-wide .settings-nav-row .ic{width:auto;height:auto;background:none;box-shadow:none;color:var(--soft)}',
-    '.settings-page.is-wide .settings-nav-row .ic svg{width:17px;height:17px}',
-    '.settings-page.is-wide .settings-nav-row .tx b{font-size:var(--fs-sm);font-weight:500}',
+    '.settings-page.is-wide .settings-savebar{grid-column:2;max-width:760px}',
+    /* search */
+    '.settings-search .input{min-height:32px;height:32px;padding-block:0;font-size:var(--t-body,.875rem);background-color:var(--panel,var(--surface))}',
+    '.settings-search > svg{width:15px;height:15px}',
+    /* navigation */
+    '.settings-groups{display:grid;gap:16px}',
+    '.settings-navgrp{display:flex;flex-direction:column;min-width:0}',
+    '.settings-nav-row{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-width:0;min-height:48px;padding:8px 16px;border:0;background:none;color:var(--text,var(--ink));font:inherit;text-align:left;cursor:pointer;transition:background-color 120ms ease,color 120ms ease}',
+    '.settings-nav-ic{flex:none;display:grid;place-items:center;width:20px;height:20px;color:var(--text-2,var(--soft))}',
+    '.settings-nav-ic svg{width:18px;height:18px}',
+    '.settings-nav-row .tx{flex:1;min-width:0;display:grid;gap:1px}',
+    '.settings-nav-row .tx b{font-size:var(--t-body,.875rem);font-weight:500;line-height:20px}',
+    '.settings-nav-row .tx small{font-size:var(--t-small,.8125rem);line-height:18px;color:var(--text-2,var(--soft));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.settings-nav-row .end{flex:none;display:flex;align-items:center;gap:8px;color:var(--text-3,var(--faint))}',
+    '.settings-nav-row .end svg{width:16px;height:16px}',
+    '.settings-dot{width:6px;height:6px;flex:none;border-radius:50%;background:var(--accent,var(--firuze))}',
+    /* phones: grouped list boxes */
+    '.settings-page:not(.is-wide) .settings-navgrp{background:var(--panel,var(--surface));border:1px solid var(--border,var(--line));border-radius:8px;overflow:hidden}',
+    '.settings-page:not(.is-wide) .settings-nav-row + .settings-nav-row{border-top:1px solid var(--border,var(--line))}',
+    '@media (hover:hover){.settings-page:not(.is-wide) .settings-nav-row:hover{background:var(--hover)}}',
+    '.settings-page:not(.is-wide) .settings-nav-row:active{background:var(--hover)}',
+    '.settings-page:not(.is-wide) .settings-nav-row[data-sec="account"]{min-height:64px}',
+    '.settings-page:not(.is-wide) .settings-nav-row[data-sec="account"] .settings-av{width:40px;height:40px}',
+    '.settings-page:not(.is-wide) .settings-nav-row[data-sec="account"] .settings-av b{font-size:.875rem}',
+    /* wide: a quiet sidebar list */
+    '.settings-page.is-wide .settings-groups{gap:12px}',
+    '.settings-page.is-wide .settings-navgrp{gap:1px}',
+    '.settings-page.is-wide .settings-nav-row{min-height:32px;padding:6px 10px;gap:10px;border-radius:6px;color:var(--text-2,var(--soft))}',
+    '.settings-page.is-wide .settings-nav-ic{width:16px;height:16px;color:var(--text-3,var(--faint))}',
+    '.settings-page.is-wide .settings-nav-ic svg{width:16px;height:16px}',
     '.settings-page.is-wide .settings-nav-row .tx small,.settings-page.is-wide .settings-nav-row .chev{display:none}',
-    '.settings-page.is-wide .settings-nav-row[aria-current="page"]::before{opacity:1;background:var(--sel)}',
+    '@media (hover:hover){.settings-page.is-wide .settings-nav-row:hover{background:var(--hover);color:var(--text,var(--ink))}}',
+    '.settings-page.is-wide .settings-nav-row[aria-current="page"]{background:var(--selected,var(--sel));color:var(--text,var(--ink))}',
     '.settings-page.is-wide .settings-nav-row[aria-current="page"] .tx b{font-weight:600}',
-    '.settings-page.is-wide .settings-nav-row[aria-current="page"] .ic{color:var(--firuze)}',
-    '.settings-results .list-row .tx small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.settings-page.is-wide .settings-results{padding:2px 12px}',
-    '.settings-mk{background:var(--fir-t);color:inherit;border-radius:3px;padding:0 1px}',
-    '.settings-noresult{padding:24px 16px}',
-    '.settings-noresult .empty-art{width:48px;height:48px}',
-    /* section */
-    '.settings-subh{display:grid;gap:10px}',
-    '.settings-back{justify-self:start;margin-left:-10px}',
-    '.settings-subh-t{display:flex;align-items:flex-start;gap:14px;min-width:0}',
-    '.settings-subh-t h2{font-size:var(--fs-xl);font-weight:700;line-height:var(--lh-tight);outline:none}',
-    '.settings-subh-t p{color:var(--soft);margin-top:4px;max-width:62ch}',
-    '.settings-subh-t .badge{margin-top:8px}',
-    '.settings-sec{display:grid;gap:16px;min-width:0}',
-    '.settings-sec.in-r{animation:settings-in-r .26s var(--ease-out) both}',
-    '.settings-sec.in{animation:settings-in .24s var(--ease-out) both}',
-    '.settings-side.in-l{animation:settings-in-l .26s var(--ease-out) both}',
-    '.settings-card .card-h{align-items:flex-start;margin-bottom:12px}',
-    '.settings-card .card-h p{margin-top:2px;max-width:60ch}',
-    '.settings-card .list{margin-block:-6px}',
+    '.settings-page.is-wide .settings-nav-row[aria-current="page"] .settings-nav-ic{color:var(--accent,var(--firuze))}',
+    '.settings-page.is-wide .settings-nav-row .settings-av{width:20px;height:20px}',
+    '.settings-page.is-wide .settings-nav-row .settings-av b{font-size:.5625rem}',
+    '.settings-nav-row:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    /* search results */
+    '.settings-results{display:grid;gap:8px}',
+    '.settings-results .settings-navgrp{background:var(--panel,var(--surface));border:1px solid var(--border,var(--line));border-radius:8px;overflow:hidden}',
+    '.settings-results .settings-nav-row{min-height:44px;padding:8px 12px;border-radius:0;color:var(--text,var(--ink))}',
+    '.settings-results .settings-nav-row + .settings-nav-row{border-top:1px solid var(--border,var(--line))}',
+    '.settings-page.is-wide .settings-results .settings-nav-row .tx small{display:block}',
+    '@media (hover:hover){.settings-results .settings-nav-row:hover{background:var(--hover)}}',
+    '.settings-mk{background:var(--accent-t,var(--fir-t));color:inherit;border-radius:2px;padding:0 1px}',
+    '.settings-noresult{padding:16px;font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft))}',
+    '.settings-noresult b{display:block;color:var(--text,var(--ink));font-weight:600;margin-bottom:2px}',
+    /* section header */
+    '.settings-subh{display:grid;gap:4px}',
+    '.settings-back{justify-self:start;margin:0 0 8px -8px}',
+    '.settings-subh h2{font:600 var(--t-h1,1.375rem)/1.27 var(--f-display);letter-spacing:-.01em;outline:none}',
+    '.settings-subh p{font-size:var(--t-small,.8125rem);line-height:18px;color:var(--text-2,var(--soft));max-width:62ch}',
+    '.settings-sec{display:grid;gap:24px;min-width:0}',
+    '.settings-sec.in,.settings-sec.in-r{animation:settings-in 160ms var(--settings-ease) both}',
+    '.settings-side.in-l{animation:settings-in 160ms var(--settings-ease) both}',
+    /* groups + rows */
+    '.settings-grp{display:grid;gap:8px;min-width:0;border-radius:8px}',
+    '.settings-cap{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:0 4px;min-width:0}',
+    '.settings-cap h3{font:600 var(--t-caption,.75rem)/16px var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--text-2,var(--soft))}',
+    '.settings-cap .link,.settings-cap small{font-size:var(--t-small,.8125rem);font-weight:500}',
+    '.settings-cap small{color:var(--text-3,var(--faint));font-weight:400}',
+    '.settings-box{min-width:0;background:var(--panel,var(--surface));border:1px solid var(--border,var(--line));border-radius:8px}',
+    '.settings-box > * + *{border-top:1px solid var(--border,var(--line))}',
+    '.settings-box > .settings-row:first-child{border-top-left-radius:8px;border-top-right-radius:8px}',
+    '.settings-box > .settings-row:last-child{border-bottom-left-radius:8px;border-bottom-right-radius:8px}',
+    '.settings-foot{padding:0 4px;font-size:var(--t-caption,.75rem);line-height:16px;color:var(--text-2,var(--soft));max-width:70ch}',
+    '.settings-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 24px;min-width:0;min-height:52px;padding:12px 16px}',
+    '.settings-row > .tx{flex:1 1 240px;min-width:0;display:grid;gap:2px}',
+    '.settings-row > .tx > b{font-size:var(--t-body,.875rem);font-weight:500;line-height:20px;color:var(--text,var(--ink))}',
+    '.settings-row > .tx > small{font-size:var(--t-small,.8125rem);line-height:18px;color:var(--text-2,var(--soft));max-width:62ch}',
+    '.settings-row > .ctl{flex:0 1 auto;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;min-width:0;margin-left:auto}',
+    '.settings-row.wide-ctl > .ctl{flex:1 1 100%;justify-content:flex-start;margin-left:0}',
+    '.settings-row.is-block{display:grid;gap:8px}',
+    '.settings-list > * + *{border-top:1px solid var(--border,var(--line))}',
+    '.settings-radio{min-height:56px}',
+    '.settings-radio-dot{display:block;width:16px;height:16px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--border-2,var(--line-2));transition:box-shadow 120ms ease}',
+    '.settings-radio[aria-checked="true"] .settings-radio-dot{box-shadow:inset 0 0 0 5px var(--accent,var(--firuze))}',
+    '.settings-radio[aria-checked="true"] .tx > b{font-weight:600}',
+    '.settings-radio:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    '.settings-row .select{width:auto;max-width:100%}',
+    '.settings-row select.select:not([multiple]):not([size]){height:32px;min-height:32px;font-size:var(--t-body,.875rem)}',
+    '.settings-row .ctl .seg{max-width:100%}',
+    /* form rows: label column + control column */
+    '.settings-row.is-field{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr);align-items:start;gap:6px 24px}',
+    '.settings-row.is-field > label,.settings-row.is-field > .label{padding-top:6px;font-size:var(--t-body,.875rem);font-weight:500;line-height:20px;color:var(--text,var(--ink))}',
+    '.settings-row.is-field .opt{display:block;font-size:var(--t-caption,.75rem);font-weight:400;color:var(--text-3,var(--faint))}',
+    '.settings-row.is-field > .fctl{display:grid;gap:4px;min-width:0}',
+    '.settings-row .fctl .input{min-height:32px;height:32px;padding-block:0;font-size:var(--t-body,.875rem)}',
+    '.settings-row .fctl > span:not(.hint):not(.err):not(.settings-affix){display:block;min-width:0}',
+    '.settings-row .fctl > select.select{width:100%}',
+    '.settings-row .hint{font-size:var(--t-caption,.75rem);line-height:16px;color:var(--text-2,var(--soft))}',
+    '.settings-row .err{display:flex;align-items:center;gap:6px;font-size:var(--t-caption,.75rem);font-weight:500;color:var(--danger,var(--nar))}',
+    '.settings-row .err svg{width:14px;height:14px}',
+    '@container stmain (max-width:560px){.settings-row.is-field{grid-template-columns:minmax(0,1fr);gap:6px}.settings-row.is-field > label,.settings-row.is-field > .label{padding-top:0}}',
+    /* switch rows: the whole row toggles */
     '.settings-sw{cursor:pointer}',
-    /* rows that carry extra content (chips, a seg, a select): pin the icon and switch to the title line */
-    '.settings-sw.has-extra{align-items:flex-start}',
-    '.settings-sw.has-extra > .ic{margin-top:2px}',
-    '.settings-sw.has-extra > .end{margin-top:4px}',
-    '.settings-sw .tx > .chips{gap:6px}',
-    '.settings-sw .tx > .chips .chip{min-height:28px;padding:0 10px;gap:4px;font-size:var(--fs-xs)}',
-    /* «Əsas üslub»: Avtomatik gets its own row on phones, the four registers share the next one */
-    '.seg.settings-reg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%}',
-    '.seg.settings-reg button{min-width:0;padding-inline:4px}',
-    '.seg.settings-reg button:first-child{grid-column:1/-1}',
-    '@media (min-width:640px){.seg.settings-reg{grid-template-columns:1.35fr repeat(4,minmax(0,1fr))}.seg.settings-reg button:first-child{grid-column:auto}}',
-    '.sg-meta > span{display:block}',
-    '.settings-meter-n{white-space:nowrap}',
-    '.settings-hist .tx b{white-space:nowrap}',
-    '.settings-paid{color:var(--ok);font-weight:600}',
-    /* three export tiles on a two-column phone grid: the odd one out spans the full row */
-    '@media (max-width:479px){.settings-exp{grid-template-columns:1fr 1fr}.settings-exp > :last-child:nth-child(odd){grid-column:1/-1}}',
-    '.settings-sw .tx small{max-width:58ch}',
-    '.settings-sw .tx .seg,.settings-sw .tx .select{margin-top:8px;cursor:auto}',
-    '.settings-sw .tx select.select{height:36px;min-height:36px;padding-block:0;font-size:var(--fs-sm);max-width:280px}',
-    '.settings-sw .tx[aria-disabled="true"] .seg,.settings-sw .tx[aria-disabled="true"] .select{opacity:.45;pointer-events:none}',
-    '.settings-flash{border-radius:var(--r-md);animation:settings-flash 1.9s var(--ease-out)}',
-    '.settings-mt{margin-top:4px}',
+    '.settings-sw > .tx > .chips,.settings-sw > .tx > .seg,.settings-sw > .tx > .select{margin-top:8px;cursor:auto;justify-self:start}',
+    '.settings-sw > .tx > select.select{height:32px;min-height:32px;padding-block:0;font-size:var(--t-small,.8125rem);max-width:260px}',
+    '.settings-sw > .tx[aria-disabled="true"] .seg,.settings-sw > .tx[aria-disabled="true"] .select{opacity:.45;pointer-events:none}',
+    '.settings-sw .chips .chip{min-height:24px;padding:0 8px;font-size:var(--t-caption,.75rem)}',
+    '.settings-sw .chips .chip s{color:var(--text-3,var(--faint))}',
+    /* quiet example line */
+    '.settings-ex{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;min-width:0;font-size:var(--t-small,.8125rem);line-height:18px;color:var(--text-2,var(--soft))}',
+    '.settings-ex .k{flex:none;font-size:var(--t-caption,.75rem);font-weight:500;color:var(--text-3,var(--faint))}',
+    '.settings-ex .src{color:var(--text-2,var(--soft));overflow-wrap:anywhere}',
+    '.settings-ex .src::after{content:" →";color:var(--text-3,var(--faint))}',
+    '.settings-ex .tgt{color:var(--text,var(--ink));overflow-wrap:anywhere}',
+    '.settings-ex .tgt.swap{animation:settings-in 160ms var(--settings-ease)}',
+    '.settings-ex.block{display:grid;gap:2px}',
+    '.settings-ex.block .src::after{content:none}',
+    '.settings-flash{animation:settings-flash 1.6s ease}',
     '.settings-row2{display:flex;flex-wrap:wrap;gap:8px;align-items:center}',
-    /* save bar */
-    '.settings-savebar{position:sticky;bottom:calc(16px + var(--settings-lift) + env(safe-area-inset-bottom,0px));z-index:6;display:flex;align-items:center;gap:10px;min-width:0;padding:8px 8px 8px 10px;border-radius:var(--r-md);background:var(--inv-bg);color:var(--inv-ink);box-shadow:var(--sh-3);opacity:0;visibility:hidden;transform:translateY(16px) scale(.98);transition:opacity var(--t-base) var(--ease-out),transform .32s var(--ease-spring),visibility 0s linear var(--t-base)}',
-    '.settings-savebar.on{opacity:1;visibility:visible;transform:none;transition:opacity var(--t-base) var(--ease-out),transform .22s var(--ease-out),visibility 0s}',
-    '.settings-savebar.shake{animation:settings-shake .42s var(--ease-out)}',
-    '.settings-savebar .sb-ic{flex:none;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:color-mix(in srgb,var(--inv-gold) 22%,transparent);color:var(--inv-gold)}',
-    '.settings-savebar .sb-ic svg{width:16px;height:16px}',
-    '.settings-savebar .sb-tx{flex:1;min-width:0;display:grid;line-height:1.3}',
-    '.settings-savebar .sb-tx b{font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.settings-savebar .sb-tx small{font-size:var(--fs-xs);color:var(--inv-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.settings-savebar .sb-act{flex:none;display:flex;gap:6px}',
-    '.settings-savebar .btn-ghost{--btn-ink:var(--inv-ink);--btn-bg-h:color-mix(in srgb,var(--inv-ink) 12%,transparent)}',
-    '.settings-savebar .kbd{background:color-mix(in srgb,var(--on-firuze) 14%,transparent);border-color:color-mix(in srgb,var(--on-firuze) 28%,transparent);color:var(--on-firuze);height:18px;min-width:18px;font-size:.66rem}',
-    '@media (max-width:479px){.settings-savebar .kbd{display:none}}',
-    /* inputs */
-    '.settings-affix{position:relative;display:block;min-width:0}',
-    '.settings-affix > .input{padding-right:92px}',
-    '.settings-affix > span{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--soft);font-size:var(--fs-sm);pointer-events:none;white-space:nowrap}',
-    '.settings-ex{display:grid;gap:6px;padding:12px 14px;border-radius:var(--r-md);background:var(--surface2);font-size:var(--fs-sm);min-width:0}',
-    '.settings-ex .k{display:flex;align-items:center;gap:6px;font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}',
-    '.settings-ex .src{color:var(--soft);overflow-wrap:anywhere}',
-    '.settings-ex .tgt{font-family:var(--f-display);font-size:var(--fs-md);line-height:1.4;color:var(--ink);overflow-wrap:anywhere}',
-    '.settings-ex .tgt.swap{animation:settings-in .3s var(--ease-out)}',
-    '.settings-choices{display:grid;gap:10px;grid-template-columns:minmax(0,1fr)}',
-    '@media (min-width:480px){.settings-choices{grid-template-columns:repeat(2,minmax(0,1fr))}}',
-    '.settings-choices.three{grid-template-columns:minmax(0,1fr)}',
-    '@container stmain (min-width:600px){.settings-choices.three{grid-template-columns:repeat(3,minmax(0,1fr))}}',
-    '.settings-choices .choice b{display:flex;align-items:center;gap:6px;flex-wrap:wrap}',
-    '.settings-chip-main{border-color:color-mix(in srgb,var(--firuze) 60%,var(--line-2));background:var(--fir-t)}',
-    '.settings-chip-main svg{color:var(--firuze)}',
-    /* firuzə variants for brand/selected icon tiles, badges and bars (scoped names, work in sheets too) */
-    '.ic.settings-fir{color:var(--firuze)}',
-    '.badge.settings-fir{background:var(--fir-t);color:var(--firuze)}',
-    '.progress.settings-over > i{background:var(--nar)}',
-    '.progress.settings-prog > i{background:var(--firuze)}',
-    '.settings-add{border-style:dashed;color:var(--soft);background:transparent}',
+    /* avatar */
+    '.settings-av{position:relative;flex:none;width:48px;height:48px;display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:var(--av,var(--av-firuze));color:var(--on-av,#fff)}',
+    '.settings-av b{display:grid;place-items:center;width:100%;height:100%;font:600 1rem/1 var(--f-body);letter-spacing:.02em;color:var(--on-av,#fff)}',
+    '.settings-av b svg{display:block;width:50%;height:50%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}',
+    '.settings-av.big{width:72px;height:72px}',
+    '.settings-av.big b{font-size:1.5rem}',
+    '.settings-prof .tx b{font-size:var(--t-h3,.9375rem);font-weight:600}',
+    '.settings-prof .settings-hero-empty{color:var(--text-2,var(--soft))}',
+    '.settings-prof-meta{display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:2px}',
+    '.settings-complete{gap:8px 16px}',
+    '.settings-complete .progress{flex:0 0 120px;height:4px}',
+    '.settings-complete .tx small b{color:var(--text,var(--ink));font-weight:500}',
+    '.settings-avsheet{display:grid;justify-items:center;gap:16px;text-align:center;padding-top:4px}',
+    /* chips that list values (pairs, specialties) */
+    '.settings-chip-main{border-color:var(--accent-line,var(--firuze));color:var(--text,var(--ink))}',
+    '.settings-chip-main::after{content:"əsas";margin-left:2px;font-size:var(--t-micro,.6875rem);color:var(--text-3,var(--faint))}',
+    '.settings-add{border-style:dashed;color:var(--text-2,var(--soft));background:transparent}',
     '.settings-chips-pick .chip{cursor:pointer}',
+    /* inputs with a unit */
+    '.settings-affix{position:relative;display:block;min-width:0}',
+    '.settings-affix > .input{padding-right:96px}',
+    '.settings-affix > span{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--text-2,var(--soft));font-size:var(--t-small,.8125rem);pointer-events:none;white-space:nowrap}',
+    '.settings-calc{font-size:var(--t-small,.8125rem);color:var(--text-2,var(--soft));font-variant-numeric:tabular-nums}',
+    '.settings-calc b{color:var(--text,var(--ink));font-weight:600}',
     /* signature + seal */
-    '.settings-sign{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;border-radius:var(--r-md);background:var(--surface);border:1px dashed var(--line-2);min-width:0}',
+    '.settings-sign{display:flex;align-items:center;justify-content:space-between;gap:16px;min-width:0}',
     '.settings-sign .sg-l{min-width:0;display:grid;gap:2px}',
-    '.settings-sign .sg-k{font-size:.6875rem;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);font-weight:600}',
-    '.settings-sign .sg-name{font-family:var(--f-display);font-style:normal;font-weight:500;letter-spacing:-.01em;font-size:var(--fs-xl);color:var(--lacquer);line-height:1.25;overflow-wrap:anywhere}',
-    '.settings-sign .sg-line{display:block;height:1px;background:var(--line-2);margin:6px 0 2px}',
-    '.settings-sign .sg-meta{font-size:var(--fs-xs);color:var(--soft)}',
-    '.settings-seal{width:88px;height:88px;flex:none;color:var(--firuze);opacity:.9;transform:rotate(-12deg)}',
+    '.settings-sign .sg-k{font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft))}',
+    '.settings-sign .sg-name{font-size:var(--t-h2,1.0625rem);font-weight:500;color:var(--text,var(--ink));line-height:1.3;overflow-wrap:anywhere}',
+    '.settings-sign .sg-line{display:block;height:1px;background:var(--border-2,var(--line-2));margin:4px 0 2px}',
+    '.settings-sign .sg-meta{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft))}',
+    '.settings-seal{width:64px;height:64px;flex:none;color:var(--accent,var(--firuze));transform:rotate(-10deg)}',
     '.settings-seal .s-o{fill:none;stroke:currentColor;stroke-width:2.5}',
     '.settings-seal .s-i{fill:none;stroke:currentColor;stroke-width:1;stroke-dasharray:2 2}',
     '.settings-seal .s-t{fill:currentColor;font-family:var(--f-body);font-size:9px;font-weight:600;letter-spacing:.04em}',
     '.settings-seal .s-star{fill:none;stroke:currentColor;stroke-width:1.4;stroke-linejoin:miter}',
     '.settings-seal .s-c{fill:currentColor}',
     '.settings-seal .s-c2{fill:none;stroke:currentColor;stroke-width:1}',
-    '.settings-seal.stamp{animation:none}',
-    /* theme tiles */
-    '.settings-theme{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}',
-    '.settings-tt{position:relative;display:grid;gap:8px;min-width:0;padding:7px 7px 10px;border:1.5px solid var(--line-2);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);text-align:left;font:inherit;cursor:pointer;transition:border-color var(--t-base),box-shadow var(--t-base),transform var(--t-fast) var(--ease-out)}',
-    '@media (hover:hover){.settings-tt:hover{border-color:color-mix(in srgb,var(--firuze) 45%,var(--line-2))}}',
-
-    '.settings-tt:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.settings-tt[aria-pressed="true"]{border-color:var(--firuze)}',
-    '.settings-tt > b{display:flex;align-items:center;gap:6px;padding-inline:3px;font-size:var(--fs-sm);font-weight:600;min-width:0}',
-    '.settings-tt > b svg{width:15px;height:15px;color:var(--soft)}',
-    '.settings-tt .tt-ck{position:absolute;top:12px;right:12px;z-index:2;width:20px;height:20px;border-radius:50%;background:var(--firuze);box-shadow:0 0 0 2px var(--surface);transform:scale(0);transition:transform .15s var(--ease-out)}',
-    '.settings-tt .tt-ck::after{content:"";position:absolute;inset:5px;background:var(--on-firuze);-webkit-mask:var(--m-check) center/contain no-repeat;mask:var(--m-check) center/contain no-repeat}',
-    '.settings-tt[aria-pressed="true"] .tt-ck{transform:scale(1)}',
-    '.settings-tt-art{position:relative;display:block;aspect-ratio:4 / 3;border-radius:11px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}',
-    /* mini app previews: lt = new light UI (cool grey, ink, firuzə), dk = new dark UI (near-black, firuzə headings).
-       Fixed per tile, independent of the current theme. Hairline under the header; logo = göl. */
+    /* theme picker — the one visual preview on this screen */
+    '.settings-theme{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:16px}',
+    '.settings-tt{display:grid;gap:8px;min-width:0;padding:0;border:0;background:none;color:var(--text,var(--ink));text-align:left;font:inherit;cursor:pointer}',
+    '.settings-tt-art{position:relative;display:block;aspect-ratio:16 / 10;border-radius:6px;overflow:hidden;box-shadow:0 0 0 1px var(--border-2,var(--line-2));transition:box-shadow 120ms ease}',
+    '@media (hover:hover){.settings-tt:hover .settings-tt-art{box-shadow:0 0 0 1px var(--text-3,var(--faint))}}',
+    '.settings-tt[aria-pressed="true"] .settings-tt-art{box-shadow:0 0 0 2px var(--accent,var(--firuze))}',
+    '.settings-tt:focus-visible{outline:none}',
+    '.settings-tt:focus-visible .settings-tt-art{box-shadow:0 0 0 2px var(--panel,var(--surface)),0 0 0 4px var(--focus)}',
+    '.settings-tt > b{display:flex;align-items:center;gap:8px;font-size:var(--t-small,.8125rem);font-weight:500;min-width:0}',
+    '.settings-tt .tt-ck{flex:none;width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--border-2,var(--line-2));transition:box-shadow 120ms ease}',
+    '.settings-tt[aria-pressed="true"] .tt-ck{box-shadow:inset 0 0 0 4px var(--accent,var(--firuze))}',
+    /* mini previews keep their own fixed palette (the theme they show), independent of the current theme */
     '.settings-art{position:absolute;inset:0;background:var(--a-bg)}',
-    '.settings-art.lt{--a-bg:color-mix(in srgb,var(--ivory) 93%,var(--deep-2));--a-card:var(--ivory);--a-line:color-mix(in srgb,var(--deep-2) 16%,transparent);--a-h:color-mix(in srgb,var(--deep-2) 78%,transparent);--a-fir:color-mix(in srgb,var(--firuze) 78%,var(--deep-2));--a-top:color-mix(in srgb,var(--ivory) 70%,var(--a-bg));--a-dia:var(--ivory)}',
-    '.settings-art.dk{--a-bg:color-mix(in srgb,var(--deep-2) 40%,black);--a-card:color-mix(in srgb,var(--on-deep) 7%,var(--a-bg));--a-line:color-mix(in srgb,var(--on-deep) 20%,transparent);--a-fir:color-mix(in srgb,var(--firuze) 82%,var(--on-deep));--a-h:var(--a-fir);--a-top:color-mix(in srgb,var(--on-deep) 4%,var(--a-bg));--a-dia:var(--on-deep)}',
+    '.settings-art.lt{--a-bg:#F7F5F0;--a-side:#EFEBE3;--a-card:#FFFFFF;--a-line:#E4E0D8;--a-h:#1D1F21;--a-t:#C9C4BA;--a-acc:#2F5A55}',
+    '.settings-art.dk{--a-bg:#121416;--a-side:#16191C;--a-card:#1E2226;--a-line:#2A2F33;--a-h:#E8E6E1;--a-t:#454B50;--a-acc:#6FA59D}',
     '.settings-art.half{clip-path:polygon(100% 0,100% 100%,0 100%)}',
     '.settings-art i{position:absolute;display:block}',
-    '.settings-art .a-top{left:0;right:0;top:0;height:17%;background:var(--a-top)}',
-    '.settings-art .a-band{left:0;right:0;top:17%;height:1px;background:var(--a-line)}',
-    '.settings-art .a-logo{left:5%;top:4%;width:9%;aspect-ratio:1;background:var(--rug);-webkit-mask:var(--m-star) center/contain no-repeat;mask:var(--m-star) center/contain no-repeat}',
-    '.settings-art .a-logo::before,.settings-art .a-logo::after{content:"";position:absolute;inset:24%;background:var(--a-dia);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}',
-    '.settings-art .a-logo::after{inset:37%;background:var(--a-fir)}',
-    '.settings-art .a-side{left:0;top:23%;bottom:0;width:24%;background:color-mix(in srgb,var(--a-card) 55%,var(--a-bg))}',
-    '.settings-art .a-s1,.settings-art .a-s2{left:5%;height:4px;border-radius:2px;background:var(--a-line)}',
-    '.settings-art .a-s1{top:32%;width:13%;background:var(--a-fir)}',
-    '.settings-art .a-s2{top:42%;width:10%}',
-    '.settings-art .a-card{left:31%;right:7%;top:31%;bottom:12%;border-radius:6px;background:var(--a-card);box-shadow:0 0 0 1px var(--a-line)}',
-    '.settings-art .a-l1,.settings-art .a-l2,.settings-art .a-l3{left:37%;height:4px;border-radius:2px;background:var(--a-line)}',
-    '.settings-art .a-l1{top:39%;width:34%;height:6px;border-radius:3px;background:var(--a-h)}',
-    '.settings-art .a-l2{top:51%;width:46%}',
-    '.settings-art .a-l3{top:60%;width:28%}',
-    '.settings-art .a-btn{left:37%;bottom:19%;width:24%;height:10%;border-radius:999px;background:var(--a-fir)}',
-    /* range */
-    '.settings-range{--p:50%;-webkit-appearance:none;appearance:none;display:block;width:100%;height:28px;margin:0;background:transparent;cursor:pointer}',
-    '.settings-range:focus{outline:none}',
-    '.settings-range::-webkit-slider-runnable-track{height:6px;border-radius:var(--r-pill);background:linear-gradient(90deg,var(--firuze) 0 var(--p),var(--surface2) var(--p) 100%);box-shadow:inset 0 0 0 1px var(--line)}',
-    '.settings-range::-moz-range-track{height:6px;border-radius:var(--r-pill);background:var(--surface2);box-shadow:inset 0 0 0 1px var(--line)}',
-    '.settings-range::-moz-range-progress{height:6px;border-radius:var(--r-pill);background:var(--firuze)}',
-    '.settings-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;margin-top:-8px;border:0;border-radius:50%;background:var(--knob);box-shadow:var(--sh-pop),0 0 0 1px var(--line-2);transition:none}',
-    '.settings-range::-moz-range-thumb{width:22px;height:22px;border:0;border-radius:50%;background:var(--knob);box-shadow:var(--sh-pop),0 0 0 1px var(--line-2)}',
-
-    '.settings-range:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--focus)}',
-    '.settings-range:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--focus)}',
-    '.settings-rangewrap{display:grid;gap:2px}',
-    '.settings-rangewrap .ticks{display:flex;justify-content:space-between;gap:8px;font-size:var(--fs-xs);color:var(--soft)}',
-    '.settings-rangeval{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}',
-    '.settings-aa{display:flex;align-items:center;gap:12px}',
-    '.settings-aa > span{flex:none;font-family:var(--f-display);color:var(--soft);line-height:1}',
-    '.settings-aa > span:first-child{font-size:.8125rem}',
-    '.settings-aa > span:last-child{font-size:1.375rem}',
-    '.settings-aa > .grow{flex:1}',
-    '.settings-sample{font-family:var(--f-display);font-size:var(--fs-lg);line-height:1.35}',
-    /* companion */
-    '.settings-nzgrid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);align-items:start}',
-    '@container stmain (min-width:620px){.settings-nzgrid{grid-template-columns:minmax(0,1fr) minmax(0,.92fr)}.settings-nzgrid > .settings-nzprev{order:2;position:sticky;top:calc(var(--hdr-h) + var(--band-h) + 16px)}}',
-    '.settings-nzstage{position:relative;isolation:isolate;display:grid;place-items:end center;min-height:220px;padding:72px 12px 20px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface2)}',
-    '.settings-nzstage::before{content:none}',
-    '.settings-nzstage > .rugband{display:none}',
-    '.settings-nzstage .nz{transition:width .3s var(--ease-out),opacity .3s,filter .3s}',
-    '.settings-nzstage.off .nz{opacity:.38;filter:grayscale(.75)}',
-    '.settings-nzstage .settings-nzfb svg{width:96px;height:96px}',
-    '.settings-nzcap{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:var(--fs-sm);color:var(--soft)}',
-    /* notifications */
-    '.settings-code{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 16px;border-radius:var(--r-md);background:var(--surface2);border:1px dashed var(--line-2)}',
-    '.settings-code b{font:600 1.375rem/1 var(--f-mono);letter-spacing:.12em;color:var(--ink)}',
-    '.settings-code small{display:block;margin-top:6px;color:var(--soft);font-size:var(--fs-xs);font-variant-numeric:tabular-nums}',
-    '.settings-steps{margin:0;padding-left:1.3em;display:grid;gap:6px;color:var(--soft);font-size:var(--fs-sm)}',
-    '.settings-steps b{color:var(--ink)}',
+    '.settings-art .a-side{left:0;top:0;bottom:0;width:24%;background:var(--a-side);box-shadow:1px 0 0 var(--a-line)}',
+    '.settings-art .a-s1,.settings-art .a-s2,.settings-art .a-s3{left:5%;height:3px;border-radius:1px;background:var(--a-t)}',
+    '.settings-art .a-s1{top:14%;width:12%;background:var(--a-h)}',
+    '.settings-art .a-s2{top:26%;width:14%;background:var(--a-acc)}',
+    '.settings-art .a-s3{top:36%;width:10%}',
+    '.settings-art .a-top{left:24%;right:0;top:0;height:16%;box-shadow:0 1px 0 var(--a-line)}',
+    '.settings-art .a-card{left:31%;right:7%;top:26%;bottom:12%;border-radius:3px;background:var(--a-card);box-shadow:0 0 0 1px var(--a-line)}',
+    '.settings-art .a-l1,.settings-art .a-l2,.settings-art .a-l3{left:36%;height:3px;border-radius:1px;background:var(--a-t)}',
+    '.settings-art .a-l1{top:34%;width:26%;height:4px;background:var(--a-h)}',
+    '.settings-art .a-l2{top:46%;width:44%}',
+    '.settings-art .a-l3{top:55%;width:32%}',
+    '.settings-art .a-btn{left:36%;bottom:20%;width:14%;height:9%;border-radius:2px;background:var(--a-acc)}',
+    /* range: native control in the accent colour */
+    '.settings-range{display:block;width:100%;min-width:140px;height:20px;margin:0;accent-color:var(--accent,var(--firuze));cursor:pointer}',
+    '.settings-rangewrap{display:flex;align-items:center;gap:12px;min-width:0;width:100%;max-width:360px}',
+    '.settings-rangewrap > .grow{flex:1;min-width:0}',
+    '.settings-rangewrap > span[aria-hidden]{flex:none;color:var(--text-3,var(--faint));line-height:1}',
+    '.settings-rangewrap > span.a1{font-size:.75rem}',
+    '.settings-rangewrap > span.a2{font-size:1.0625rem}',
+    '.settings-rangeval{min-width:84px;text-align:right;font-size:var(--t-small,.8125rem);font-variant-numeric:tabular-nums;color:var(--text-2,var(--soft))}',
+    /* telegram */
+    '.settings-code{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px;border-radius:6px;background:var(--sunken,var(--surface2))}',
+    '.settings-code b{font:500 1.0625rem/1 var(--f-mono);letter-spacing:.1em;color:var(--text,var(--ink))}',
+    '.settings-code small{display:block;margin-top:6px;color:var(--text-2,var(--soft));font-size:var(--t-caption,.75rem);font-variant-numeric:tabular-nums}',
+    '.settings-steps{margin:0;padding-left:1.3em;display:grid;gap:4px;color:var(--text-2,var(--soft));font-size:var(--t-small,.8125rem)}',
+    '.settings-steps b{color:var(--text,var(--ink));font-weight:600}',
     /* privacy */
-    '.settings-tok{display:inline-block;padding:0 6px;border-radius:6px;background:var(--lac-t);color:var(--lacquer);font:600 .78em/1.7 var(--f-mono);letter-spacing:.02em}',
-    '.settings-tile-busy{pointer-events:none;opacity:.75}',
-    '.settings-tile-busy .ic{color:transparent;position:relative}',
-    '.settings-tile-busy .ic::after{content:"";position:absolute;inset:10px;border-radius:50%;border:2px solid color-mix(in srgb,var(--lacquer) 25%,transparent);border-top-color:var(--lacquer);animation:spin .7s linear infinite}',
-    '.settings-danger-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}',
-    '.settings-danger-row p{max-width:52ch;font-size:var(--fs-sm);color:var(--soft)}',
+    '.settings-tok{display:inline-block;padding:0 4px;border-radius:3px;background:var(--sunken,var(--surface2));box-shadow:inset 0 0 0 1px var(--border,var(--line));color:var(--text,var(--ink));font:500 .78em/1.6 var(--f-mono)}',
+    '.settings-danger .settings-box{border-color:color-mix(in srgb,var(--danger,var(--nar)) 32%,var(--border,var(--line)))}',
+    '.settings-danger .settings-cap h3{color:var(--danger,var(--nar))}',
     '.settings-wipe{display:grid;gap:10px;margin-top:6px;text-align:left}',
-    '.settings-wipe .input{font-family:var(--f-mono);letter-spacing:.24em;text-transform:uppercase}',
-    '.settings-wipe label{color:var(--ink);font-size:var(--fs-sm);font-weight:600}',
+    '.settings-wipe .input{font-family:var(--f-mono);letter-spacing:.2em;text-transform:uppercase}',
+    '.settings-wipe label{color:var(--text,var(--ink));font-size:var(--t-small,.8125rem);font-weight:600}',
     /* shortcuts */
+    '.settings-keys{width:100%;border-collapse:collapse;font-size:var(--t-body,.875rem)}',
+    '.settings-keys td{padding:10px 16px;border-top:1px solid var(--border,var(--line));vertical-align:middle;transition:background-color 120ms ease}',
+    '.settings-keys tr:first-child td{border-top:0}',
     '.settings-keys td:last-child{text-align:right;white-space:nowrap}',
-    '.settings-keys .kbd{transition:background var(--t-fast),color var(--t-fast),transform var(--t-fast),border-color var(--t-fast)}',
-    '.settings-keys .kbd.on{background:var(--lacquer);border-color:var(--lacquer);color:var(--on-lacquer);transform:translateY(1px)}',
-    '.settings-keys tr.hit td{background:var(--fir-t)}',
-    '.settings-keys tr.grp td{background:var(--surface2);font-size:.6875rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);padding-block:8px}',
-    '.settings-keys .plus{margin:0 3px;color:var(--faint);font-size:var(--fs-xs)}',
+    '.settings-keys .kbd{min-width:22px;height:22px;transition:background-color 120ms ease,color 120ms ease,border-color 120ms ease}',
+    '.settings-keys .kbd.on{background:var(--accent,var(--firuze));border-color:var(--accent,var(--firuze));color:var(--on-accent,var(--on-firuze))}',
+    '.settings-keys tr.hit td{background:var(--selected,var(--fir-t))}',
+    '.settings-keys .plus{margin:0 3px;color:var(--text-3,var(--faint));font-size:var(--t-caption,.75rem)}',
     /* about */
-    '.settings-about{display:grid;justify-items:center;text-align:center;gap:10px;padding-block:30px 22px}',
-    '.settings-about .logo{width:48px;height:48px}',
-    '@media (hover:hover){.settings-about:hover .logo{transform:rotate(45deg)}}',
-    '.settings-about h2{font-size:var(--fs-xl)}',
-    '.settings-about .row{justify-content:center}',
-    '.settings-legal{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;font-size:var(--fs-sm)}',
+    '.settings-app{gap:12px 16px}',
+    '.settings-app .logo{width:32px;height:32px;flex:none}',
+    '.settings-app .tx b{font-size:var(--t-h3,.9375rem);font-weight:600}',
+    '.settings-kv{display:grid;grid-template-columns:minmax(0,180px) minmax(0,1fr);gap:0 24px;align-items:baseline}',
+    '.settings-kv dt{color:var(--text-2,var(--soft));font-size:var(--t-small,.8125rem)}',
+    '.settings-kv dd{margin:0;font-size:var(--t-body,.875rem);overflow-wrap:anywhere}',
+    '.settings-ver{flex:none;min-width:40px;font:500 var(--t-small,.8125rem)/20px var(--f-mono);color:var(--text,var(--ink))}',
+    '.settings-link-row{cursor:pointer;background:none;border:0;width:100%;text-align:left;font:inherit;color:inherit;transition:background-color 120ms ease}',
+    '@media (hover:hover){.settings-link-row:hover{background:var(--hover)}}',
+    '.settings-link-row .ctl svg{width:16px;height:16px;color:var(--text-3,var(--faint))}',
     '.settings-stars{display:flex;gap:2px}',
-    '.settings-stars button{width:40px;height:40px;display:grid;place-items:center;padding:0;border:0;border-radius:10px;background:none;color:var(--line-2);cursor:pointer;transition:color var(--t-fast)}',
-    /* rating: a plain rounded 5-point star (universal «rate us» symbol, not the göl ornament) */
+    '.settings-stars button{width:36px;height:36px;display:grid;place-items:center;padding:0;border:0;border-radius:6px;background:none;color:var(--border-2,var(--line-2));cursor:pointer;transition:color 120ms ease}',
     '.settings-stars{--settings-m-star5:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\'%3E%3Cpath d=\'M12 2.6l2.9 5.9 6.5.95-4.7 4.58 1.1 6.47L12 17.45 6.2 20.5l1.1-6.47L2.6 9.45l6.5-.95z\' stroke=\'black\' stroke-width=\'1.6\' stroke-linejoin=\'round\'/%3E%3C/svg%3E")}',
-    '.settings-stars button span{width:26px;height:26px;background:currentColor;-webkit-mask:var(--settings-m-star5) center/contain no-repeat;mask:var(--settings-m-star5) center/contain no-repeat}',
-    '.settings-stars button.on{color:var(--zafaran)}',
-
+    '.settings-stars button span{width:22px;height:22px;background:currentColor;-webkit-mask:var(--settings-m-star5) center/contain no-repeat;mask:var(--settings-m-star5) center/contain no-repeat}',
+    '.settings-stars button.on{color:var(--accent,var(--firuze))}',
     '.settings-stars button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}',
-    '.settings-inv{display:grid;gap:14px;font-size:var(--fs-sm)}',
-    '.settings-inv .miss{color:var(--nar);font-weight:500}',
-    '.settings-inv .tot{display:flex;justify-content:space-between;align-items:baseline;padding-top:12px;border-top:1px solid var(--line)}',
-    '.settings-inv .tot b{font-family:var(--f-display);font-size:var(--fs-xl)}',
-    '.settings-avsheet{display:grid;justify-items:center;gap:16px;text-align:center;padding-top:6px}',
-    '.settings-out{animation:settings-out .28s var(--ease-in-out) forwards}',
+    '.settings-inv{display:grid;gap:14px;font-size:var(--t-small,.8125rem)}',
+    '.settings-inv .miss{color:var(--danger,var(--nar));font-weight:500}',
+    '.settings-inv .tot{display:flex;justify-content:space-between;align-items:baseline;padding-top:12px;border-top:1px solid var(--border,var(--line))}',
+    '.settings-inv .tot b{font-size:var(--t-h2,1.0625rem);font-variant-numeric:tabular-nums}',
+    /* save bar */
+    '.settings-savebar{position:sticky;bottom:calc(16px + var(--settings-lift) + env(safe-area-inset-bottom,0px));z-index:6;display:flex;align-items:center;gap:12px;min-width:0;padding:8px 8px 8px 16px;border:1px solid var(--border-2,var(--line-2));border-radius:8px;background:var(--panel,var(--surface));color:var(--text,var(--ink));box-shadow:var(--sh-2);opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity 160ms ease,transform 160ms ease,visibility 0s linear 160ms}',
+    '.settings-savebar.on{opacity:1;visibility:visible;transform:none;transition:opacity 160ms ease,transform 160ms ease,visibility 0s}',
+    '.settings-savebar.shake{animation:settings-attn 1.2s ease}',
+    '.settings-savebar .sb-ic{flex:none;width:8px;height:8px;border-radius:50%;background:var(--accent,var(--firuze))}',
+    '.settings-savebar .sb-tx{flex:1;min-width:0;display:grid;line-height:1.3}',
+    '.settings-savebar .sb-tx b{font-size:var(--t-small,.8125rem);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.settings-savebar .sb-tx small{font-size:var(--t-caption,.75rem);color:var(--text-2,var(--soft));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.settings-savebar .sb-act{flex:none;display:flex;gap:6px}',
+    '.settings-savebar .btn-primary .kbd{background:transparent;border-color:color-mix(in srgb,var(--on-accent,#fff) 35%,transparent);color:var(--on-accent,#fff);height:18px;min-width:18px;font-size:.625rem;opacity:.85}',
+    '@media (max-width:479px){.settings-savebar .kbd{display:none}}',
     /* keyframes */
-    '@keyframes settings-in-r{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}',
-    '@keyframes settings-in-l{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}',
-    '@keyframes settings-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}',
-    '@keyframes settings-flash{0%,35%{background-color:var(--fir-t)}100%{background-color:transparent}}',
-    '@keyframes settings-shake{0%,100%{transform:none}20%{transform:translateX(-7px)}45%{transform:translateX(6px)}70%{transform:translateX(-3px)}}',
-    '@keyframes settings-stamp{0%{transform:rotate(-12deg) scale(1.3);opacity:0}60%{transform:rotate(-12deg) scale(.93);opacity:1}100%{transform:rotate(-12deg) scale(1)}}',
-    '@keyframes settings-pop{0%{transform:scale(.86)}100%{transform:scale(1)}}',
-    '@keyframes settings-out{to{opacity:0;transform:translateX(24px)}}'
+    '@keyframes settings-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}',
+    '@keyframes settings-flash{0%,40%{background-color:var(--selected,var(--fir-t))}100%{background-color:transparent}}',
+    '@keyframes settings-attn{0%,50%{border-color:var(--danger,var(--nar))}100%{border-color:var(--border-2,var(--line-2))}}',
+    '@media (prefers-reduced-motion:reduce){.settings-sec.in,.settings-sec.in-r,.settings-side.in-l,.settings-ex .tgt.swap,.settings-flash{animation:none}}'
   ].join('\n');
 
   /* ------------------------------------------------------------------
@@ -757,14 +751,28 @@
 
   /* ------------------------------------------------------------------
      7. FORM BUILDERS (bound to the draft)
+        group = caption + bordered box of rows (+ optional footnote)
+        row   = label + description on the left, control on the right
      ------------------------------------------------------------------ */
+  function isRow(el) { return !!(el && el.classList && (el.classList.contains('settings-row') || el.classList.contains('settings-raw'))); }
   function card(title, sub, kids, o) {
     o = o || {};
-    return h('section', { class: 'card settings-card' + (o.cls ? ' ' + o.cls : ''), 'data-opt': o.opt || null },
-      h('div', { class: 'card-h' },
-        h('div', null, o.eyebrow ? h('span', { class: 'eyebrow', text: o.eyebrow }) : null, h('h3', { text: title }), sub ? h('p', { class: 'muted small', text: sub }) : null),
-        o.actions ? h('div', { class: 'actions' }, o.actions) : null),
-      h('div', { class: 'stack' }, kids));
+    var box = h('div', { class: 'settings-box' + (o.boxCls ? ' ' + o.boxCls : '') });
+    [].concat(kids || []).forEach(function (k) {
+      if (!k) return;
+      box.appendChild(isRow(k) ? k : h('div', { class: 'settings-row is-block' }, k));
+    });
+    return h('section', { class: 'settings-grp' + (o.cls ? ' ' + o.cls : ''), 'data-opt': o.opt || null },
+      title || o.actions ? h('div', { class: 'settings-cap' }, h('h3', { text: title || '' }), o.actions || null) : null,
+      box,
+      sub ? h('p', { class: 'settings-foot' }, sub) : null);
+  }
+  /* a plain row: label + description left, control right */
+  function rowEl(title, sub, ctl, o) {
+    o = o || {};
+    return h('div', { class: 'settings-row' + (o.cls ? ' ' + o.cls : ''), 'data-opt': o.opt || null },
+      h('div', { class: 'tx' }, h('b', { id: o.tid || null, text: title }), sub ? h('small', { id: o.did || null }, sub) : null, o.extra || null),
+      ctl ? h('div', { class: 'ctl' }, ctl) : null);
   }
   function fieldBox(key, label, control, o) {
     o = o || {};
@@ -774,9 +782,9 @@
     var hint = o.hintEl || (o.hint ? h('span', { class: 'hint', id: 'st-' + key + '-hint' }, o.hint) : null);
     var inp = byIdIn(control, id);
     if (inp) inp.setAttribute('aria-describedby', (hint && hint.id ? hint.id + ' ' : '') + 'st-' + key + '-err');
-    return h('div', { class: 'field' + (o.cls ? ' ' + o.cls : ''), 'data-opt': o.opt || key },
+    return h('div', { class: 'settings-row is-field' + (o.cls ? ' ' + o.cls : ''), 'data-opt': o.opt || key },
       h('label', { for: id }, label, o.optTx ? h('span', { class: 'opt', text: o.optTx }) : null),
-      control, hint, err);
+      h('div', { class: 'fctl' }, control, hint, err));
   }
   function byIdIn(root, id) {
     if (!root) return null;
@@ -792,6 +800,7 @@
     return el;
   }
   function affix(input, suffix) { return h('span', { class: 'settings-affix' }, input, h('span', { 'aria-hidden': 'true', text: suffix })); }
+  /* icon arguments are kept for callers; rows show no icon tiles */
   function switchRow(key, title, sub, icon, icCls, o) {
     o = o || {};
     var id = 'st-' + key, tid = id + '-t';
@@ -801,9 +810,9 @@
       if (o.set) o.set(inp.checked, inp);
       else { Dr[key] = inp.checked; changed(key); }
     });
-    var tx = h('span', { class: 'tx' }, h('b', { id: tid, text: title }), sub ? h('small', { id: id + '-d' }, sub) : null, o.extra || null);
-    var row = h('div', { class: 'list-row settings-sw' + (o.extra ? ' has-extra' : ''), 'data-opt': o.opt || key }, icon ? icTile(icon, icCls) : null, tx,
-      h('span', { class: 'end' }, h('label', { class: 'switch' }, inp, h('span', { 'aria-hidden': 'true' }))));
+    var tx = h('div', { class: 'tx' }, h('b', { id: tid, text: title }), sub ? h('small', { id: id + '-d' }, sub) : null, o.extra || null);
+    var row = h('div', { class: 'settings-row settings-sw', 'data-opt': o.opt || key }, tx,
+      h('div', { class: 'ctl' }, h('label', { class: 'switch' }, inp, h('span', { 'aria-hidden': 'true' }))));
     row.addEventListener('click', function (e) {
       if (e.target.closest('.switch') || e.target.closest('.seg, select, button, a, input')) return;
       inp.click();
@@ -848,64 +857,71 @@
     r._paint = paint;
     return r;
   }
+  /* quiet example line: «Nümunə  source → target» */
   function exBox(k, src, tgt) {
-    var t = h('div', { class: 'tgt' }, tgt);
-    var box = h('div', { class: 'settings-ex', 'aria-live': 'polite' }, h('span', { class: 'k' }, ie('sparkle'), k), src ? h('div', { class: 'src' }, src) : null, t);
+    var t = h('span', { class: 'tgt' }, tgt);
+    var box = h('div', { class: 'settings-ex', 'aria-live': 'polite' }, h('span', { class: 'k', text: k }), src ? h('span', { class: 'src' }, src) : null, t);
     box.set = function (txt) { t.textContent = ''; t.appendChild(typeof txt === 'string' ? D.createTextNode(txt) : txt); t.classList.remove('swap'); void t.offsetWidth; t.classList.add('swap'); };
     return box;
   }
 
   /* ------------------------------------------------------------------
-     8. HERO (profile header) + avatar colour sheet
+     8. PROFILE SUMMARY (top of «Hesab») + avatar colour sheet
      ------------------------------------------------------------------ */
   function avParts(text) {
-    return [h('span', { class: 'sa-star', 'aria-hidden': 'true' }), h('span', { class: 'sa-fill', 'aria-hidden': 'true' }),
-      h('span', { class: 'sa-ring', 'aria-hidden': 'true' }), h('b', { 'aria-hidden': 'true', text: text })];
+    return [h('b', { 'aria-hidden': 'true', text: text })];
   }
   function avCls(c) { for (var i = 0; i < AV_COLORS.length; i++) if (AV_COLORS[i].id === c) return c; return 'av-firuze'; }
   function draftName() { return (String(Dr.first || '').trim() + ' ' + String(Dr.last || '').trim()).trim(); }
+  function paintAv(el, name, cls) {
+    if (!el) return;
+    el.className = (el._base || 'settings-av') + ' ' + cls;
+    var b = el.querySelector('b'); if (!b) return;
+    if (name) b.textContent = initials(name); else b.innerHTML = App.icon('user');
+  }
 
   function buildHero() {
-    V.av = h('button', { class: 'settings-av av-nar', type: 'button', 'aria-label': 'Şəkli dəyiş — avatar rəngini seçin', onclick: avatarSheet },
-      avParts(''), h('span', { class: 'settings-av-edit', 'aria-hidden': 'true', html: App.icon('palette') }));
-    V.avTx = V.av.querySelector('b');
-    V.heroName = h('h2');
-    V.heroMeta = h('p', { class: 'settings-hero-meta' });
-    V.heroMail = h('p', { class: 'settings-hero-meta settings-hero-mail' });
-    V.heroBadges = h('div', { class: 'settings-hero-badges' });
+    V.heroAv = h('span', { class: 'settings-av', 'aria-hidden': 'true' }, avParts(''));
+    V.heroAv._base = 'settings-av';
+    V.heroName = h('b');
+    V.heroMeta = h('small');
+    V.heroMail = h('small', { class: 'truncate' });
+    V.heroBadges = h('span', { class: 'settings-prof-meta' });
     V.compBar = h('i');
-    V.compTx = h('span', { class: 'small' });
-    V.compBtn = h('button', { class: 'link small', type: 'button', onclick: completeNext }, 'Tamamla');
-    V.comp = h('div', { class: 'settings-complete' },
-      h('div', { class: 'row' }, V.compTx, V.compBtn),
-      h('div', { class: 'progress settings-prog thin', role: 'progressbar', 'aria-label': 'Profil tamlığı', 'aria-valuemin': '0', 'aria-valuemax': '100' }, V.compBar));
-    return h('section', { class: 'card settings-hero', 'aria-label': 'Profil' },
-      V.av,
-      h('div', { class: 'settings-hero-tx' }, V.heroName, V.heroMeta, V.heroMail, V.heroBadges),
-      h('div', { class: 'settings-hero-act' },
-        h('button', { class: 'btn btn-sm', type: 'button', onclick: function () { openSection('account', { opt: 'first' }); } }, ie('edit'), 'Profili redaktə et'),
-        h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: avatarSheet }, ie('palette'), 'Şəkli dəyiş')),
-      V.comp);
+    V.compTx = h('small');
+    V.compBtn = h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: completeNext }, 'Tamamla');
+    var prof = h('div', { class: 'settings-row settings-prof' },
+      V.heroAv,
+      h('div', { class: 'tx' }, V.heroName, V.heroMeta, V.heroMail, V.heroBadges),
+      h('div', { class: 'ctl' }, h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: avatarSheet }, 'Rəngi dəyiş')));
+    V.comp = h('div', { class: 'settings-row settings-complete' },
+      h('div', { class: 'tx' }, h('b', { text: 'Profilin tamlığı' }), V.compTx),
+      h('div', { class: 'ctl' },
+        h('div', { class: 'progress thin', role: 'progressbar', 'aria-label': 'Profil tamlığı', 'aria-valuemin': '0', 'aria-valuemax': '100' }, V.compBar),
+        V.compBtn));
+    return card('Profil', null, [prof, V.comp], { opt: 'profile' });
   }
   function filled(v) { return Array.isArray(v) ? v.length > 0 : String(v == null ? '' : v).trim() !== ''; }
   function syncHero() {
-    if (!V || !V.heroName || !Dr) return;
-    var p = App.profile(), name = draftName();
-    V.heroName.textContent = name || 'Profilinizi tamamlayın';
+    if (!V || !Dr) return;
+    var p = App.profile(), name = draftName(), cls = avCls(p.avatarColor);
+    paintAv(V.navAv, name, cls);
+    paintAv(V.heroAv, name, cls);
+    if (!V.heroName || !V.heroName.isConnected) return;
+    V.heroName.textContent = name || 'Adınızı əlavə edin';
     V.heroName.classList.toggle('settings-hero-empty', !name);
-    if (name) V.avTx.textContent = initials(name); else V.avTx.innerHTML = App.icon('user');
-    V.av.className = 'settings-av ' + avCls(p.avatarColor);
     var meta = [Dr.role, Dr.pairs && Dr.pairs.length ? pairsShort(Dr.pairs) : ''].filter(Boolean).join(' · ');
     V.heroMeta.textContent = meta;
     V.heroMeta.hidden = !meta;
-    V.heroMail.textContent = Dr.email || (name ? '' : 'Adınızı və e-poçtunuzu əlavə edin');
-    V.heroMail.hidden = !V.heroMail.textContent;
+    V.heroMail.textContent = Dr.email || '';
+    V.heroMail.hidden = !Dr.email;
     V.heroMail.title = Dr.email || '';
     V.heroBadges.textContent = '';
-    if (App.mode && App.mode() === 'academy' && p.rank) V.heroBadges.appendChild(h('span', { class: 'badge navy' }, ie('medal'), p.rank));
-    if (Dr.notarial) V.heroBadges.appendChild(h('span', { class: 'badge navy' }, ie('stamp'), 'Notarial tərcümə'));
+    if (App.mode && App.mode() === 'academy' && p.rank) V.heroBadges.appendChild(h('span', { class: 'badge' }, p.rank));
+    if (Dr.notarial) V.heroBadges.appendChild(h('span', { class: 'badge' }, 'Notarial tərcümə'));
     var since = p.memberSince ? new Date(p.memberSince) : null;
     if (since && !isNaN(since)) V.heroBadges.appendChild(h('span', { class: 'badge' }, 'Üzv: ' + MONTHS[since.getMonth()] + ' ' + since.getFullYear()));
+    V.heroBadges.hidden = !V.heroBadges.childNodes.length;
     /* completeness */
     var miss = COMPLETE.filter(function (c) { return !filled(Dr[c[0]]); });
     var pct = Math.round((COMPLETE.length - miss.length) / COMPLETE.length * 100);
@@ -913,11 +929,11 @@
     V.compBar.parentNode.setAttribute('aria-valuenow', String(pct));
     V.compTx.textContent = '';
     if (!miss.length) {
-      V.compTx.appendChild(h('b', { text: 'Profil 100% tamamdır' }));
-      V.compTx.appendChild(D.createTextNode(' — hər şey yerindədir'));
+      V.compTx.appendChild(h('b', { text: pct + '%' }));
+      V.compTx.appendChild(D.createTextNode(' · bütün əsas sahələr doldurulub'));
       V.compBtn.hidden = true;
     } else {
-      V.compTx.appendChild(h('b', { text: 'Profil ' + pct + '% tamamdır' }));
+      V.compTx.appendChild(h('b', { text: pct + '%' }));
       V.compTx.appendChild(D.createTextNode(' · qalıb: ' + miss.slice(0, 3).map(function (c) { return c[1]; }).join(', ') + (miss.length > 3 ? '…' : '')));
       V.compBtn.hidden = false;
       V.compMiss = miss[0][0];
@@ -925,7 +941,7 @@
   }
   function completeNext() {
     var k = V && V.compMiss; if (!k) return;
-    openSection(FIELD_SEC[k] || 'work', { opt: k });
+    openSection(FIELD_SEC[k] || 'account', { opt: k });
   }
   function avatarSheet() {
     var p = App.profile(), cur = avCls(p.avatarColor), chosen = cur, name = draftName() || p.name;
@@ -941,20 +957,18 @@
         chosen = c.id;
         each(sw.children, function (x) { x.setAttribute('aria-pressed', String(x === b)); });
         prev.className = 'settings-av big ' + c.id;
-        prev.classList.remove('pop'); void prev.offsetWidth; prev.classList.add('pop');
         setCap(c.id);
       });
       sw.appendChild(b);
     });
     var body = h('div', { class: 'settings-avsheet' }, prev, cap, sw,
-      h('p', { class: 'small muted', text: 'Fotoşəkil əvəzinə baş hərfləriniz xalça gölündə göstərilir.' }));
+      h('p', { class: 'small muted', text: 'Fotoşəkil əvəzinə baş hərfləriniz bu rəngdə göstərilir.' }));
     App.sheet({
-      title: 'Şəkli dəyiş', body: body,
+      title: 'Avatarın rəngi', body: body,
       actions: [{ label: 'Ləğv et', kind: 'ghost' }, { label: 'Yadda saxla', kind: 'primary', onClick: function () {
         if (chosen === cur) return;
         saveProfile({ avatarColor: chosen });
         syncHero();
-        if (V && V.av) { V.av.classList.add('pop'); later(function () { if (V && V.av) { V.av.classList.remove('pop'); burstAt(V.av, 'stars'); } }, 320); }
         var c = null; for (var i = 0; i < AV_COLORS.length; i++) if (AV_COLORS[i].id === chosen) c = AV_COLORS[i];
         toast('Avatar yeniləndi', 'ok', { sub: (c ? c.name : '') + ' rəngi seçildi' });
         nz('success', null, 1400);
@@ -963,7 +977,7 @@
   }
 
   /* ------------------------------------------------------------------
-     9. SECTION: HESAB
+     9. SECTION: HESAB — profile, personal data, work profile, notifications
      ------------------------------------------------------------------ */
   function detectDevice() {
     var ua = navigator.userAgent || '', br = 'Brauzer', os = 'Kompüter';
@@ -975,37 +989,38 @@
   }
 
   function secAccount() {
-    /* personal */
     var roleHint = h('span', { class: 'hint', id: 'st-role-hint' });
-    var student = h('div', { class: 'callout navy', hidden: true }, ie('cap'),
-      h('div', null, h('b', { text: 'Tələbəsiniz? ' }), 'Akademiya rejimində dərslər, missiyalar və rütbələr sizi gözləyir. ',
-        h('button', { class: 'link', type: 'button', onclick: function () { if (App.setMode) App.setMode('academy'); } }, 'Akademiyaya keç')));
+    var student = h('div', { class: 'settings-row', hidden: true },
+      h('div', { class: 'tx' }, h('b', { text: 'Akademiya rejimi' }), h('small', { text: 'Tələbələr üçün dərslər, tapşırıqlar və irəliləyiş.' })),
+      h('div', { class: 'ctl' }, h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: function () { if (App.setMode) App.setMode('academy'); } }, 'Akademiyaya keç')));
     var roles = ROLES.slice();
     if (Dr.role && !roles.some(function (r) { return r.id === Dr.role; })) roles.push({ id: Dr.role, label: Dr.role, hint: '' });
     var roleSel = selectCtl('role', roles);
     function syncRole() {
       var r = null; roles.forEach(function (x) { if (x.id === Dr.role) r = x; });
       roleHint.textContent = r ? r.hint : '';
+      roleHint.hidden = !roleHint.textContent;
       student.hidden = !(Dr.role === 'Tələbə' && (!App.mode || App.mode() !== 'academy'));
     }
     watch('role', syncRole); syncRole();
     var personal = card('Şəxsi məlumatlar', 'Hamısı istəyə bağlıdır və yalnız bu cihazda saxlanılır.', [
-      h('div', { class: 'grid-2' },
-        fieldBox('first', 'Ad', textIn('first', { autocomplete: 'given-name', placeholder: 'Adınız' })),
-        fieldBox('last', 'Soyad', textIn('last', { autocomplete: 'family-name', placeholder: 'Soyadınız' }), { optTx: 'istəyə görə' })),
+      fieldBox('first', 'Ad', textIn('first', { autocomplete: 'given-name', placeholder: 'Adınız' })),
+      fieldBox('last', 'Soyad', textIn('last', { autocomplete: 'family-name', placeholder: 'Soyadınız' }), { optTx: 'istəyə görə' }),
       fieldBox('email', 'E-poçt', textIn('email', { type: 'email', autocomplete: 'email', inputmode: 'email', spellcheck: 'false', placeholder: 'ad@domen.az' })),
-      h('div', { class: 'grid-2' },
-        fieldBox('phone', 'Telefon', textIn('phone', { type: 'tel', autocomplete: 'tel', inputmode: 'tel', placeholder: '+994 50 123 45 67' }), { hint: 'Təcili təhvil məsələləri üçün.' }),
-        fieldBox('role', 'Rol', roleSel, { hintEl: roleHint })),
+      fieldBox('phone', 'Telefon', textIn('phone', { type: 'tel', autocomplete: 'tel', inputmode: 'tel', placeholder: '+994 50 123 45 67' }), { hint: 'Təcili təhvil məsələləri üçün.' }),
+      fieldBox('role', 'Rol', roleSel, { hintEl: roleHint }),
       student
     ]);
+    return h('div', { class: 'settings-sec-part' }, buildHero(), personal);
+  }
 
-    /* site access code: the Worker's ACCESS_CODE. Stored as 'code' (App.store → localStorage
-       'nuanza2:code', JSON) and sent by ai/core.js with every AI request (x-access-code).
-       Saved on its own button — it is not part of the profile draft. */
+  /* site access code: the Worker's ACCESS_CODE. Stored as 'code' (App.store → localStorage
+     'nuanza2:code', JSON) and sent by ai/core.js with every AI request (x-access-code).
+     Saved on its own button — it is not part of the profile draft. */
+  function codeGroup() {
     var codeIn = h('input', { class: 'input', id: 'st-code', type: 'text', autocomplete: 'off', spellcheck: 'false', autocapitalize: 'off',
-      value: String(sget('code', '') || ''), 'aria-describedby': 'st-code-hint' });
-    var codeSave = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, ie('check'), 'Yadda saxla');
+      value: String(sget('code', '') || ''), 'aria-describedby': 'st-code-hint', placeholder: 'Kod' });
+    var codeSave = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, 'Yadda saxla');
     function saveCode() {
       var v = codeIn.value.trim();
       codeIn.value = v;
@@ -1020,19 +1035,15 @@
     }
     codeSave.addEventListener('click', saveCode);
     codeIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); saveCode(); } });
-    var codeCard = card('Sayt girişi', 'Süni intellekt sorğuları bu kodla göndərilir.', [
-      h('div', { class: 'field' },
-        h('label', { for: 'st-code' }, 'Sayt giriş kodu'), codeIn,
-        h('span', { class: 'hint', id: 'st-code-hint', text: 'Saytın sahibi kod qoyubsa, buraya yazın' })),
-      h('div', { class: 'row' }, codeSave)
+    return card('Sayt girişi', null, [
+      h('div', { class: 'settings-row is-field', 'data-opt': 'code' },
+        h('label', { for: 'st-code' }, 'Sayt giriş kodu'),
+        h('div', { class: 'fctl' },
+          h('div', { class: 'settings-row2' }, h('span', { class: 'grow', style: 'flex:1 1 180px;min-width:0' }, codeIn), codeSave),
+          h('span', { class: 'hint', id: 'st-code-hint', text: 'Saytın sahibi kod qoyubsa, buraya yazın. Süni intellekt sorğuları bu kodla göndərilir.' })))
     ], { opt: 'code' });
-
-    return h('div', { class: 'stack-lg' }, personal, codeCard);
   }
 
-  /* ------------------------------------------------------------------
-     10. SECTION: İŞ PROFİLİ
-     ------------------------------------------------------------------ */
   /* göl: stepped carpet diamond centred on (cx, cy), half-diagonal R0, `n` steps per edge */
   function golPts(cx, cy, R0, n) {
     var st = R0 / (n + 1), p = [], i;
@@ -1066,22 +1077,23 @@
           var nx = chips.querySelector('.x'); focusEl(nx || chips.querySelector('.settings-add'));
         });
         chips.appendChild(h('span', { class: 'chip' + (i === 0 ? ' settings-chip-main' : ''), role: 'listitem', title: pairName(pid) + (i === 0 ? ' · əsas cüt' : '') },
-          i === 0 ? ie('target') : null, pairLabel(pid), x));
+          pairLabel(pid), x));
       });
-      chips.appendChild(h('button', { class: 'chip settings-add', type: 'button', onclick: addPairsSheet }, ie('plus'), 'Cüt əlavə et'));
+      chips.appendChild(h('button', { class: 'chip settings-add', type: 'button', onclick: addPairsSheet }, ie('plus'), 'Əlavə et'));
     }
     function addPairsSheet() {
       var avail = allPairs().filter(function (p) { return Dr.pairs.indexOf(p.id) < 0; });
       if (!avail.length) { toast('Bütün dil cütləri artıq əlavə olunub', 'info'); return; }
       var chosen = [];
-      var grid = h('div', { class: 'settings-choices' });
+      var grid = h('div', { class: 'list' });
       avail.forEach(function (p) {
-        var b = h('button', { class: 'choice', type: 'button', 'aria-pressed': 'false' }, icTile('translate', p.beta ? 'gold' : ''),
-          h('span', null, h('b', null, p.label, p.beta ? h('span', { class: 'badge gold', text: 'beta' }) : null), h('small', { text: p.name })));
-        b.addEventListener('click', function () {
+        var cb = h('input', { type: 'checkbox', 'aria-label': p.name });
+        var b = h('label', { class: 'list-row', style: 'min-height:44px' },
+          h('span', { class: 'tx' }, h('b', null, p.label, p.beta ? ' ' : null, p.beta ? h('span', { class: 'badge', text: 'beta' }) : null), h('small', { text: p.name })),
+          h('span', { class: 'end' }, h('span', { class: 'switch' }, cb, h('span', { 'aria-hidden': 'true' }))));
+        cb.addEventListener('change', function () {
           var i = chosen.indexOf(p.id);
-          if (i >= 0) chosen.splice(i, 1); else chosen.push(p.id);
-          b.setAttribute('aria-pressed', String(i < 0));
+          if (cb.checked && i < 0) chosen.push(p.id); else if (!cb.checked && i >= 0) chosen.splice(i, 1);
         });
         grid.appendChild(b);
       });
@@ -1098,7 +1110,8 @@
     }
     drawPairs();
     var pErr = h('span', { class: 'err', role: 'alert', hidden: true }); ERR.pairs = pErr;
-    var pairsCard = card('Dil cütləri', 'Hansı istiqamətlərdə tərcümə edirsiniz. İşarəli birinci cüt əsasdır.', [chips, pErr], { opt: 'pairs' });
+    var pairsRow = h('div', { class: 'settings-row is-field', 'data-opt': 'pairs' },
+      h('span', { class: 'label' }, 'Dil cütləri'), h('div', { class: 'fctl' }, chips, h('span', { class: 'hint', text: 'Birinci cüt əsasdır.' }), pErr));
 
     /* specialties */
     var sChips = h('div', { class: 'chips', id: 'st-specialties', role: 'list', 'aria-label': 'İxtisas sahələri' });
@@ -1109,7 +1122,7 @@
         x.addEventListener('click', function () { Dr.specialties = Dr.specialties.filter(function (q) { return q !== s; }); drawSpecs(); changed('specialties'); focusEl(sChips.querySelector('.x') || sChips.querySelector('.settings-add')); });
         sChips.appendChild(h('span', { class: 'chip', role: 'listitem' }, s, x));
       });
-      sChips.appendChild(h('button', { class: 'chip settings-add', type: 'button', onclick: addSpecSheet }, ie('plus'), 'Sahə əlavə et'));
+      sChips.appendChild(h('button', { class: 'chip settings-add', type: 'button', onclick: addSpecSheet }, ie('plus'), 'Əlavə et'));
     }
     function addSpecSheet() {
       var chosen = [];
@@ -1136,29 +1149,29 @@
       custom.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); var f = sh.el && sh.el.querySelector('.sheet-f .btn-primary'); if (f) f.click(); } });
     }
     drawSpecs();
-    var specCard = card('İxtisas sahələri', 'Nuanza bu sahələrin lüğətlərini və üslub qaydalarını önə çəkir.', [sChips], { opt: 'specialties' });
+    var specRow = h('div', { class: 'settings-row is-field', 'data-opt': 'specialties' },
+      h('span', { class: 'label' }, 'İxtisas sahələri'), h('div', { class: 'fctl' }, sChips, h('span', { class: 'hint', text: 'Bu sahələrin lüğətləri və üslub qaydaları önə çəkilir.' })));
+    var profileCard = card('İş profili', null, [pairsRow, specRow]);
 
     /* rates */
-    var sampleTx = h('div');
-    var sampleBox = h('div', { class: 'callout navy' }, ie('chart'), sampleTx);
+    var sampleTx = h('span', { class: 'settings-calc' });
+    var sampleBox = h('div', { class: 'settings-row' }, h('div', { class: 'tx' }, h('b', { text: 'Nümunə hesab' }), sampleTx));
     function drawSample() {
       var r = parseDec(Dr.rate), pg = parseDec(Dr.ratePage);
       sampleTx.textContent = '';
       sampleBox.hidden = !isFinite(r) && !isFinite(pg);
-      sampleTx.appendChild(h('b', { text: 'Nümunə hesab: ' }));
       sampleTx.appendChild(D.createTextNode('2 400 sözlük müqavilə ≈ '));
       sampleTx.appendChild(h('b', { text: isFinite(r) ? money(2400 * r) : '—' }));
       sampleTx.appendChild(D.createTextNode(' · 7 səhifəlik arayış ≈ '));
       sampleTx.appendChild(h('b', { text: isFinite(pg) ? money(7 * pg) : '—' }));
-      if (Dr.notarial) sampleTx.appendChild(D.createTextNode('. Notarial sifarişlərdə tərcüməçi bəyanı avtomatik əlavə olunur.'));
+      if (Dr.notarial) sampleTx.appendChild(D.createTextNode('. Notarial sifarişlərdə tərcüməçi bəyanı əlavə olunur.'));
     }
     watch('rate', drawSample); watch('ratePage', drawSample); watch('notarial', drawSample);
     drawSample();
-    var ratesCard = card('Öz tarifləriniz', 'İstəyə bağlı. Yazsanız, layihə qiyməti bununla hesablanır.', [
-      h('div', { class: 'grid-2' },
-        fieldBox('rate', 'Söz başına', affix(textIn('rate', { inputmode: 'decimal', placeholder: 'məs. 0,05' }), 'AZN / söz'), { optTx: 'istəyə görə' }),
-        fieldBox('ratePage', 'Səhifə başına', affix(textIn('ratePage', { inputmode: 'decimal', placeholder: 'məs. 10' }), 'AZN / səhifə'), { optTx: 'istəyə görə', hint: '1 səhifə = 1 800 simvol (boşluqlarla).' })),
-      h('div', { class: 'list' }, switchRow('notarial', 'Notarial təsdiqli tərcümə edirəm', 'Notarius üçün imzalı nüsxə və tərcüməçi bəyanı hazırlanır.', 'stamp', 'gold')),
+    var ratesCard = card('Tariflər', 'İstəyə bağlı. Yazsanız, layihə qiyməti bununla hesablanır. 1 səhifə = 1 800 simvol (boşluqlarla).', [
+      fieldBox('rate', 'Söz başına', affix(textIn('rate', { inputmode: 'decimal', placeholder: 'məs. 0,05' }), 'AZN / söz'), { optTx: 'istəyə görə' }),
+      fieldBox('ratePage', 'Səhifə başına', affix(textIn('ratePage', { inputmode: 'decimal', placeholder: 'məs. 10' }), 'AZN / səhifə'), { optTx: 'istəyə görə' }),
+      switchRow('notarial', 'Notarial təsdiqli tərcümə edirəm', 'Notarius üçün imzalı nüsxə və tərcüməçi bəyanı hazırlanır.', 'stamp', ''),
       sampleBox
     ], { opt: 'rates' });
 
@@ -1167,41 +1180,36 @@
     var sgMeta = h('span', { class: 'sg-meta' });
     var sealHost = h('span', { 'aria-hidden': 'true' });
     var sealTimer = null;
-    function drawSign(animate) {
+    function drawSign() {
       var nm = String(Dr.signName || '').trim() || draftName() || 'Ad Soyad';
       sgName.textContent = nm;
       sgMeta.textContent = '';
       sgMeta.appendChild(h('span', { text: 'Tərcüməçi · ' + (pairsShort(Dr.pairs) || '—') }));
       sgMeta.appendChild(h('span', { text: dateAz(new Date()) }));
       clearTimeout(sealTimer);
-      sealTimer = later(function () {
-        sealHost.innerHTML = sealSvg(nm);
-        if (animate && !reduced()) { var s = sealHost.firstChild; if (s && s.classList) s.classList.add('stamp'); }
-      }, animate ? 380 : 0);
+      sealTimer = later(function () { sealHost.innerHTML = sealSvg(nm); }, 0);
     }
-    watch('signName', function () { drawSign(true); });
-    watch('pairs', function () { drawSign(false); });
-    drawSign(false);
+    watch('signName', function () { drawSign(); });
+    watch('pairs', function () { drawSign(); });
+    drawSign();
     var signCard = card('İmza və möhür', 'Tərcüməçi bəyanında, təhvil sənədində və möhür ştampında görünür.', [
       fieldBox('signName', 'İmzada görünən ad', textIn('signName', { autocomplete: 'name', placeholder: 'Ad Soyad' }), { hint: 'Pasportdakı kimi yazın — notarius bu adı yoxlayır.' }),
-      h('div', { class: 'settings-sign', 'aria-label': 'İmza önizləməsi' },
+      h('div', { class: 'settings-row settings-sign', 'aria-label': 'İmza önizləməsi' },
         h('span', { class: 'sg-l' }, h('span', { class: 'sg-k', text: 'Tərcüməni yerinə yetirdi' }), sgName, h('span', { class: 'sg-line', 'aria-hidden': 'true' }), sgMeta),
         sealHost)
     ], { opt: 'sign' });
 
     /* invoice */
     var dl = h('datalist', { id: 'st-banks' }, BANKS.map(function (b) { return h('option', { value: b }); }));
-    var invCard = card('Hesab-faktura məlumatları', 'Hər hesab-fakturada avtomatik görünəcək.', [
-      h('div', { class: 'grid-2' },
-        fieldBox('voen', 'VÖEN', textIn('voen', { inputmode: 'numeric', maxlength: '10', placeholder: '1234567890', spellcheck: 'false' }), { hint: '10 rəqəm — vergi ödəyicisinin eyniləşdirmə nömrəsi.' }),
-        fieldBox('bank', 'Bank', textIn('bank', { list: 'st-banks', placeholder: 'Bankı seçin və ya yazın' }))),
-      dl,
+    var invCard = card('Hesab-faktura rekvizitləri', 'Hər hesab-fakturada avtomatik görünür.', [
+      fieldBox('voen', 'VÖEN', textIn('voen', { inputmode: 'numeric', maxlength: '10', placeholder: '1234567890', spellcheck: 'false' }), { hint: '10 rəqəm — vergi ödəyicisinin eyniləşdirmə nömrəsi.' }),
+      fieldBox('bank', 'Bank', h('span', null, textIn('bank', { list: 'st-banks', placeholder: 'Bankı seçin və ya yazın' }), dl)),
       fieldBox('addr', 'Hüquqi ünvan', textIn('addr', { autocomplete: 'street-address', placeholder: 'Şəhər, rayon, küçə, ev' })),
       fieldBox('iban', 'Hesab nömrəsi (IBAN)', textIn('iban', { placeholder: 'AZ00 XXXX 0000 0000 0000 0000 0000', spellcheck: 'false', autocapitalize: 'characters' }), { hint: 'Ödənişlər bu hesaba yönləndirilir.' }),
-      h('div', { class: 'row' }, h('button', { class: 'btn btn-sm', type: 'button', onclick: invoiceSheet }, ie('file'), 'Nümunə hesab-fakturaya bax'))
+      rowEl('Nümunə hesab-faktura', 'Rekvizitlərin sənəddə necə görünəcəyinə baxın.', h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: invoiceSheet }, 'Bax'))
     ], { opt: 'invoice' });
 
-    return h('div', { class: 'stack-lg' }, pairsCard, specCard, ratesCard, signCard, invCard);
+    return h('div', { class: 'settings-sec-part' }, profileCard, ratesCard, signCard, invCard);
   }
   function invoiceSheet() {
     var r = parseDec(Dr.rate); if (!isFinite(r)) r = 0;
@@ -1209,7 +1217,7 @@
     function val(v, miss) { v = String(v || '').trim(); return v ? h('dd', { text: v }) : h('dd', { class: 'miss', text: miss || 'əlavə edilməyib' }); }
     var today = new Date();
     var body = h('div', { class: 'settings-inv' },
-      h('div', { class: 'row between' }, h('div', null, h('span', { class: 'eyebrow', text: 'Hesab-faktura' }), h('h3', { class: 'serif', text: '№ NZ-' + today.getFullYear() + '-0001' })), h('span', { class: 'badge', text: dateAz(today) })),
+      h('div', { class: 'row between' }, h('div', null, h('span', { class: 'eyebrow', text: 'Hesab-faktura' }), h('h3', { text: '№ NZ-' + today.getFullYear() + '-0001' })), h('span', { class: 'badge', text: dateAz(today) })),
       h('dl', { class: 'kv' },
         h('dt', { text: 'İcraçı' }), h('dd', { text: name }),
         h('dt', { text: 'VÖEN' }), val(Dr.voen),
@@ -1226,44 +1234,25 @@
   }
 
   /* ------------------------------------------------------------------
-     11. SECTION: TƏRCÜMƏ
+     10. SECTION: DİL — interface language + language conventions
      ------------------------------------------------------------------ */
-  function secTranslation() {
-    var regEx = exBox('Nümunə', '«Please submit the documents by Friday.»', REG_EX[Dr.register] || REG_EX.auto);
-    var regHint = h('span', { class: 'hint', id: 'st-register-hint', text: REG_HINT[Dr.register] || '' });
-    watch('register', function (v) { regEx.set(REG_EX[v] || ''); regHint.textContent = REG_HINT[v] || ''; });
-    var regField = h('div', { class: 'field', 'data-opt': 'register' },
-      h('span', { class: 'label', id: 'st-register-l' }, 'Əsas üslub'),
-      segCtl('register', REGS, { label: 'Əsas üslub', cls: 'settings-reg' }), regHint, regEx);
-
-    var qGrid = h('div', { class: 'settings-choices three', id: 'st-quality', role: 'group', 'aria-label': 'Keyfiyyət rejimi' });
-    var meclisLink = h('button', { class: 'link small', type: 'button' }, 'Məclis necə işləyir?');
-    meclisLink.addEventListener('click', function () {
-      if (!App.bigJob) return;
-      App.bigJob('Nümunə: podrat müqaviləsinin 4.2-ci bəndi', { score: 94, text: '«Podratçı» termini ardıcıl işlənib, rəqəmlər və tarixlər mənbə ilə üst-üstə düşür. Türk forması tapılmadı.' });
+  function secLanguage() {
+    var langSeg = segCtl('lang', LANGS_UI, {
+      get: function () { return uiCfg().lang; }, label: 'İnterfeys dili',
+      set: function (v) {
+        setUi({ lang: v }); syncSummaries();
+        if (v === 'az') toast('İnterfeys dili: Azərbaycan', 'ok');
+        else toast('İnterfeys dili: ' + (v === 'en' ? 'English' : 'Русский'), 'info', { sub: 'Prototipdə mətnlər hələlik azərbaycancadır — tərcümələr növbəti buraxılışda.' });
+      }
     });
-    QUALITY.forEach(function (q) {
-      var b = h('button', { class: 'choice', type: 'button', 'aria-pressed': String(Dr.quality === q.id) }, icTile(q.ic, q.cls), h('span', null, h('b', { text: q.label }), h('small', { text: q.hint })));
-      b.addEventListener('click', function () {
-        if (Dr.quality === q.id) return;
-        each(qGrid.children, function (x) { x.setAttribute('aria-pressed', String(x === b)); });
-        Dr.quality = q.id; changed('quality');
-        if (q.id === 'meclis') nz('point', 'Böyük işlərdə beş mirzə tərcüməni bir-bir yoxlayacaq.', 2800);
-      });
-      qGrid.appendChild(b);
-    });
-    var qField = h('div', { class: 'field', 'data-opt': 'quality' }, h('span', { class: 'label' }, 'Keyfiyyət rejimi', meclisLink), qGrid);
-
-    var style = card('Üslub və keyfiyyət', 'Yeni tərcümələr bu ayarlarla başlayır; hər layihədə ayrıca dəyişmək olar.', [
-      regField, qField,
-      h('div', { class: 'list' }, switchRow('enforceTerms', 'Termin bazası məcburidir', 'Lüğətdəki terminlər hər zaman işlənir; uyğunsuzluq olarsa seqment «Yoxlayın» kimi işarələnir.', 'book', ''))
+    var ui = card('İnterfeys', 'Dərhal tətbiq olunur. Tərcümə dilləri «Hesab → İş profili» bölməsində seçilir.', [
+      rowEl('İnterfeys dili', 'Menyular, düymələr və bildirişlər.', langSeg, { opt: 'lang' })
     ]);
 
-    /* formats */
     var now = new Date();
     var addrEx = exBox('Nümunə', '«You can change your password at any time.»', (ADDRS.filter(function (a) { return a.id === Dr.address; })[0] || ADDRS[0]).ex);
     watch('address', function (v) { addrEx.set((ADDRS.filter(function (a) { return a.id === v; })[0] || ADDRS[0]).ex); });
-    var addrField = h('div', { class: 'field', 'data-opt': 'address' }, h('span', { class: 'label' }, 'Müraciət forması («you»)'), segCtl('address', ADDRS, { label: 'Müraciət forması' }), addrEx);
+    var addrRow = rowEl('Müraciət forması', '«you» necə verilsin.', segCtl('address', ADDRS, { label: 'Müraciət forması' }), { opt: 'address', extra: addrEx });
 
     var dateItems = DATE_FMTS.map(function (f) { return { id: f.id, label: f.fn(now) }; });
     function dateNote(v) { var f = DATE_FMTS.filter(function (x) { return x.id === v; })[0] || DATE_FMTS[0]; return f.note.charAt(0).toUpperCase() + f.note.slice(1) + '.'; }
@@ -1271,138 +1260,161 @@
     watch('dateFmt', function (v) { dateHint.textContent = dateNote(v); });
     var srcDate = MONTHS_EN[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
     function dateOut(v) { var f = DATE_FMTS.filter(function (x) { return x.id === v; })[0] || DATE_FMTS[0]; return f.fn(now); }
-    var dateEx = exBox('Canlı nümunə', 'Mənbə: ' + srcDate, dateOut(Dr.dateFmt));
+    var dateEx = exBox('Nümunə', srcDate, dateOut(Dr.dateFmt));
     watch('dateFmt', function (v) { dateEx.set(dateOut(v)); });
 
-    var numEx = exBox('Canlı nümunə', 'Mənbə: 12,480.50 USD', (NUM_FMTS.filter(function (x) { return x.id === Dr.numFmt; })[0] || NUM_FMTS[0]).ex);
+    var numEx = exBox('Nümunə', '12,480.50 USD', (NUM_FMTS.filter(function (x) { return x.id === Dr.numFmt; })[0] || NUM_FMTS[0]).ex);
     watch('numFmt', function (v) { numEx.set((NUM_FMTS.filter(function (x) { return x.id === v; })[0] || NUM_FMTS[0]).ex); });
 
-    var trEx = exBox('Canlı nümunə', 'Mənbə: Щербаков Юрий Алексеевич', (TRANSLIT.filter(function (x) { return x.id === Dr.translit; })[0] || TRANSLIT[0]).ex);
+    var trEx = exBox('Nümunə', 'Щербаков Юрий Алексеевич', (TRANSLIT.filter(function (x) { return x.id === Dr.translit; })[0] || TRANSLIT[0]).ex);
     watch('translit', function (v) { trEx.set((TRANSLIT.filter(function (x) { return x.id === v; })[0] || TRANSLIT[0]).ex); });
 
-    var formats = card('Dil və format', 'Tarixlər, rəqəmlər və adlar bütün sənəddə eyni qaydada yazılır — Möhürdar Mirzə bunu yoxlayır.', [
-      addrField,
-      h('div', { class: 'grid-2' },
-        fieldBox('dateFmt', 'Tarix formatı', selectCtl('dateFmt', dateItems), { hintEl: dateHint }),
-        fieldBox('numFmt', 'Rəqəm formatı', selectCtl('numFmt', NUM_FMTS))),
-      h('div', { class: 'grid-2' }, dateEx, numEx),
-      fieldBox('translit', 'Adların transliterasiyası', selectCtl('translit', TRANSLIT), { hint: 'Rus və digər kiril mənbələrindəki şəxs adları üçün.' }),
-      trEx
+    var formats = card('Tərcümədə format', 'Tarixlər, rəqəmlər və adlar bütün sənəddə eyni qaydada yazılır — Möhürdar Mirzə bunu yoxlayır.', [
+      addrRow,
+      fieldBox('dateFmt', 'Tarix formatı', selectCtl('dateFmt', dateItems), { hintEl: h('span', { class: 'stack-sm' }, dateHint, dateEx) }),
+      fieldBox('numFmt', 'Rəqəm formatı', selectCtl('numFmt', NUM_FMTS), { hintEl: numEx }),
+      fieldBox('translit', 'Adların transliterasiyası', selectCtl('translit', TRANSLIT), { hintEl: h('span', { class: 'stack-sm' }, h('span', { class: 'hint', text: 'Rus və digər kiril mənbələrindəki şəxs adları üçün.' }), trEx) })
     ]);
-
-    /* checks */
-    var turkicChips = h('div', { class: 'chips' }, TURKIC.map(function (t) { return h('span', { class: 'chip' }, h('s', { class: 'muted', text: t[0] }), ' → ', h('b', { text: t[1] })); }));
-    var checks = card('Avtomatik yoxlamalar', null, [
-      h('div', { class: 'list' },
-        switchRow('turkic', 'Türk formalarını yoxla', 'Dilçi Nənə ədəbi normaya uyğun olmayan türk formalarını tapır və düzəliş təklif edir.', 'shield', 'nar', { extra: turkicChips }),
-        switchRow('clarify', 'Dəqiqləşdirici suallar ver', 'Mətn birmənalı olmayanda (məsələn, «you» — sən, yoxsa siz?) Nuanza tərcümədən əvvəl soruşur.', 'help', 'gold'))
-    ]);
-    turkicChips.style.marginTop = '8px';
-
-    return h('div', { class: 'stack-lg' }, style, formats, checks);
+    return h('div', { class: 'settings-sec-part' }, ui, formats);
   }
 
   /* ------------------------------------------------------------------
-     12. SECTION: NUANZA KÖMƏKÇİSİ (live)
+     11. SECTION: TƏRCÜMƏ
      ------------------------------------------------------------------ */
+  function secTranslation() {
+    var regEx = exBox('Nümunə', '«Please submit the documents by Friday.»', REG_EX[Dr.register] || REG_EX.auto);
+    var regHint = h('small', { id: 'st-register-hint', text: REG_HINT[Dr.register] || '' });
+    watch('register', function (v) { regEx.set(REG_EX[v] || ''); regHint.textContent = REG_HINT[v] || ''; });
+    var regField = h('div', { class: 'settings-row wide-ctl', 'data-opt': 'register' },
+      h('div', { class: 'tx' }, h('b', { id: 'st-register-l', text: 'Əsas üslub' }), regHint),
+      h('div', { class: 'ctl' }, segCtl('register', REGS, { label: 'Əsas üslub' })),
+      h('div', { class: 'ctl' }, regEx));
+
+    var style = card('Üslub', 'Yeni tərcümələr bu ayarla başlayır; hər layihədə və tərcümə ekranında ayrıca dəyişmək olar.', [
+      regField,
+      switchRow('enforceTerms', 'Termin bazası məcburidir', 'Lüğətdəki terminlər hər zaman işlənir; uyğunsuzluq olarsa seqment «Yoxlayın» kimi işarələnir.', 'book', '')
+    ]);
+
+    /* checks */
+    var turkicChips = h('div', { class: 'chips' }, TURKIC.map(function (t) { return h('span', { class: 'chip' }, h('s', { text: t[0] }), ' → ', h('span', { text: t[1] })); }));
+    var checks = card('Avtomatik yoxlamalar', null, [
+      switchRow('turkic', 'Türk formalarını yoxla', 'Dilçi Nənə ədəbi normaya uyğun olmayan türk formalarını tapır və düzəliş təklif edir.', 'shield', 'nar', { extra: turkicChips }),
+      switchRow('clarify', 'Dəqiqləşdirici suallar ver', 'Mətn birmənalı olmayanda (məsələn, «you» — sən, yoxsa siz?) tərcümədən əvvəl soruşulur.', 'help', 'gold')
+    ]);
+
+    return h('div', { class: 'settings-sec-part' }, style, checks);
+  }
+
+  /* ------------------------------------------------------------------
+     12. SECTION: AI — quality, access code, companion
+     ------------------------------------------------------------------ */
+  function secAI() {
+    var qList = h('div', { class: 'settings-raw settings-list', id: 'st-quality', role: 'radiogroup', 'aria-label': 'Keyfiyyət rejimi' });
+    function paintQ() {
+      each(qList.children, function (b) { var on = b.getAttribute('data-v') === Dr.quality; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; });
+    }
+    QUALITY.forEach(function (q) {
+      var b = h('button', { class: 'settings-row settings-link-row settings-radio', type: 'button', role: 'radio', 'data-v': q.id },
+        h('div', { class: 'tx' }, h('b', { text: q.label }), h('small', { text: q.hint })),
+        h('div', { class: 'ctl' }, h('span', { class: 'settings-radio-dot', 'aria-hidden': 'true' })));
+      b.addEventListener('click', function () {
+        if (Dr.quality === q.id) return;
+        Dr.quality = q.id; paintQ(); changed('quality');
+        if (q.id === 'meclis') nz('point', 'Böyük işlərdə beş redaktor tərcüməni bir-bir yoxlayacaq.', 2800);
+      });
+      b.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+        e.preventDefault();
+        var l = Array.prototype.slice.call(qList.children), i = l.indexOf(b);
+        var nx = l[(i + (e.key === 'ArrowDown' ? 1 : -1) + l.length) % l.length];
+        focusEl(nx); nx.click();
+      });
+      qList.appendChild(b);
+    });
+    paintQ();
+    var meclisLink = h('button', { class: 'link', type: 'button' }, 'Məclis necə işləyir?');
+    meclisLink.addEventListener('click', function () {
+      if (!App.bigJob) return;
+      App.bigJob('Nümunə: podrat müqaviləsinin 4.2-ci bəndi', { score: 94, text: '«Podratçı» termini ardıcıl işlənib, rəqəmlər və tarixlər mənbə ilə üst-üstə düşür. Türk forması tapılmadı.' });
+    });
+    var quality = card('Keyfiyyət rejimi', 'Yeni tərcümələr bu rejimlə başlayır; tərcümə ekranında istənilən vaxt dəyişə bilərsiniz.', [qList], { opt: 'quality', actions: meclisLink });
+    return h('div', { class: 'settings-sec-part' }, quality, codeGroup(), secCompanion());
+  }
+
+  /* companion settings (live) — a group inside «AI»; changes apply to the corner dock at once */
   function secCompanion() {
     var c = compCfg();
-    var SZ = { sm: 112, md: 140, lg: 172 };
-    var stage = h('div', { class: 'settings-nzstage' + (c.show ? '' : ' off') }, h('div', { class: 'rugband', 'aria-hidden': 'true' }));
-    var inst = null;
-    if (W.Nuanza && typeof W.Nuanza.mount === 'function') {
-      try { inst = W.Nuanza.mount(stage, { size: 'full', width: SZ[sizeKey(c.size)], label: 'Nuanza — canlı önizləmə. Toxunun' }); V.insts.push(inst); } catch (e) { inst = null; }
-    }
-    if (!inst) stage.appendChild(h('div', { class: 'settings-nzfb', html: App.logo ? App.logo('logo') : '' }));
-    function root() { return inst ? (inst.el || inst.root) : null; }
+    function root() { var d = D.querySelector('.companion'); return d || null; }
+    /* explicit «Sına» buttons speak through the dock; setting changes only nudge its state */
     function react(state, text, ms) {
-      if (!inst) return;
-      try {
-        if (text && c.talk !== 'sakit') inst.set(state, { say: text, ms: ms || 2600 });
-        else { inst.set(state, { ms: ms || 1600 }); if (inst.say) inst.say(''); }
-      } catch (e) { /* ignore */ }
+      var co = App.companion; if (!co || typeof co.set !== 'function') return;
+      try { co.set(state, text && c.talk !== 'sakit' ? { say: text, ms: ms || 2600 } : { ms: ms || 1400 }); } catch (e) { /* ignore */ }
     }
-    var cap = h('span');
     var state = h('span', { class: 'badge' });
     function syncCap() {
-      cap.textContent = c.show ? 'Ekranda: ' + dockPx(c.size) + ' px, sağ-aşağı küncdə' : 'Gizlədilib — heç bir ekranda görünməyəcək';
-      state.className = 'badge ' + (c.show ? 'green dot' : '');
-      state.textContent = c.show ? 'Görünür' : 'Gizli';
-      stage.classList.toggle('off', !c.show);
+      state.className = 'badge' + (c.show ? ' green' : '');
+      state.textContent = c.show ? 'Görünür · ' + dockPx(c.size) + ' px' : 'Gizli';
     }
     syncCap();
-    var prevCard = h('section', { class: 'card settings-card settings-nzprev', 'aria-label': 'Canlı önizləmə' },
-      h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow', text: 'Canlı önizləmə' }), h('h3', { text: 'Nuanza' })), state),
-      stage, h('div', { class: 'settings-nzcap settings-mt' }, cap,
-        h('div', { class: 'settings-row2' },
-          h('button', { class: 'btn btn-sm', type: 'button', onclick: function () { react('wave', 'Salam! Mən Nuanzayam — tərcümədə köməkçiniz.', 2800); nz('wave', 'Salam! Buradayam.', 2200); } }, ie('message'), 'Salam de'),
-          h('button', { class: 'btn btn-sm btn-ghost', type: 'button', onclick: function () { var T = App.data && App.data.TIPS && App.data.TIPS.general; react('point', T && T.length ? pick(T) : 'Lüğətə əlavə etdiyiniz termini bütün layihələrdə qoruyuram.', 4200); } }, ie('bulb'), 'Məsləhət ver'))));
 
-    /* controls */
-    var showRow = switchRow('cShow', 'Nuanzanı göstər', 'Ekranın küncündə dayanır, məsləhət verir və böyük işlərdə Mirzə Məclisini çağırır.', 'eye', 'gold', {
+    var showRow = switchRow('cShow', 'Nuanzanı göstər', 'Ekranın küncündə dayanır və yalnız lazım olanda qısa qeyd verir.', 'eye', '', {
       get: function () { return c.show; },
       set: function (v) {
         c.show = v; setComp({ show: v }); syncCap(); syncSummaries();
-        react(v ? 'wave' : 'sad', v ? 'Yenidən buradayam!' : 'Yaxşı, kənarda gözləyəcəyəm…', 2400);
-        toast(v ? 'Nuanza qayıtdı' : 'Nuanza gizləndi', 'info', { sub: v ? 'Küncdə sizi gözləyir' : 'Bu bölmədən istədiyiniz vaxt qaytara bilərsiniz' });
+        toast(v ? 'Nuanza göstərilir' : 'Nuanza gizləndi', 'info', { sub: v ? 'Ekranın küncündədir' : 'Bu bölmədən istədiyiniz vaxt qaytara bilərsiniz' });
       }
     });
-    var SIZE_SAY = { sm: 'Kiçik və diqqəti yayındırmayan.', md: 'Klassik ölçü — tam ortada.', lg: 'Belə sizi daha yaxşı görürəm!' };
     var sizeSeg = segCtl('cSize', [{ id: 'sm', label: 'Kiçik' }, { id: 'md', label: 'Orta' }, { id: 'lg', label: 'Böyük' }], {
-      get: function () { return sizeKey(c.size); }, label: 'Köməkçinin ölçüsü', block: true,
+      get: function () { return sizeKey(c.size); }, label: 'Köməkçinin ölçüsü',
       set: function (v) {
         c.size = v === 'md' ? 'dock' : v;
-        var r = root(); if (r) r.style.setProperty('--nz-w', SZ[v] + 'px');
         setComp({ size: c.size }); syncCap();
-        react(v === 'lg' ? 'celebrate' : 'surprised', SIZE_SAY[v], 2200);
       }
     });
     var TALK_HINT = {
       sakit: 'Heç vaxt danışmır — yalnız küncdə görünür. Nəticələr bildirişlərdə qalır.',
-      normal: 'Yalnız toxunanda və iş bitəndə danışır: yoxlama, QA, Məclisin yekunu. Standart seçim.',
-      cox: 'Bundan əlavə ekranlara keçəndə qısa məsləhətlər verir və salamlaşır — öyrənənlər üçün.'
+      normal: 'Yalnız toxunanda və iş bitəndə danışır: yoxlama, QA, Məclisin yekunu.',
+      cox: 'Bundan əlavə ekranlara keçəndə qısa məsləhətlər verir — öyrənənlər üçün.'
     };
-    var talkHint = h('span', { class: 'hint', text: TALK_HINT[c.talk] || '' });
+    var talkHint = h('small', { text: TALK_HINT[c.talk] || '' });
     var talkSeg = segCtl('cTalk', [{ id: 'sakit', label: 'Sakit' }, { id: 'normal', label: 'Normal' }, { id: 'cox', label: 'Çox' }], {
-      get: function () { return c.talk; }, label: 'Danışma tezliyi', block: true,
+      get: function () { return c.talk; }, label: 'Danışma tezliyi',
       set: function (v) {
         c.talk = v; c.chatty = v !== 'sakit';
         setComp({ talk: v, chatty: c.chatty }); talkHint.textContent = TALK_HINT[v]; syncSummaries();
-        if (v === 'sakit') react('idle', null, 1200);
-        else if (v === 'normal') react('wave', 'Lazım olanda bir-iki kəlmə deyəcəyəm.', 2600);
-        else { amb.lastTip = Date.now() - 120000; react('celebrate', 'Hər fürsətdə məsləhət verəcəyəm!', 2600); }
+        if (v === 'cox') amb.lastTip = Date.now() - 120000;
       }
     });
     function intLabel(v) { return v === 0 ? 'Hərəkətsiz' : v < 40 ? 'Sakit' : v < 75 ? 'Təbii' : 'Canlı'; }
     var intVal = h('span', { class: 'settings-rangeval', text: intLabel(c.intensity) + ' · ' + c.intensity + '%' });
     function applyPreviewRate(v) {
       var r = root(); if (!r) return;
-      r.classList.toggle('nz-calm', v === 0);
       if (v > 0) setRate(r, 0.5 + v / 100);
     }
     var range = rangeCtl('st-cMotion', 0, 100, 10, c.intensity,
-      function (v) { intVal.textContent = intLabel(v) + ' · ' + v + '%'; applyPreviewRate(v); },
+      function (v) { intVal.textContent = intLabel(v) + ' · ' + v + '%'; },
       function (v) {
         c.intensity = v; c.motion = v > 0;
         setComp({ intensity: v, motion: v > 0 });
         later(function () { applyPreviewRate(v); }, 80);
-        react('point', v === 0 ? 'Hərəkətsiz dayanacağam.' : v < 40 ? 'Sakit və təmkinli olacağam.' : v < 75 ? 'Təbii tempdə.' : 'Enerjim tükənməzdir!', 2400);
       }, 'Animasiya intensivliyi');
-    applyPreviewRate(c.intensity);
-    V.secTimers.push(setInterval(function () { var v = Number(range.value); if (v > 0) applyPreviewRate(v); }, 1200));
 
-    var ctlCard = card('Davranış', 'Dəyişikliklər dərhal tətbiq olunur — önizləmədə və ekranın küncündə.', [
-      h('div', { class: 'list' }, showRow),
-      h('div', { class: 'field', 'data-opt': 'cSize' }, h('span', { class: 'label' }, 'Ölçü'), sizeSeg),
-      h('div', { class: 'field', 'data-opt': 'cTalk' }, h('span', { class: 'label' }, 'Danışma tezliyi'), talkSeg, talkHint),
-      h('div', { class: 'field', 'data-opt': 'cMotion' },
-        h('label', { for: 'st-cMotion' }, 'Animasiya intensivliyi', intVal),
-        h('div', { class: 'settings-rangewrap' }, range, h('div', { class: 'ticks', 'aria-hidden': 'true' }, h('span', { text: 'Hərəkətsiz' }), h('span', { text: 'Təbii' }), h('span', { text: 'Canlı' }))),
-        h('span', { class: 'hint' }, 'Göz qırpma, hörük və lələyin yellənməsi. Ümumi animasiya rejimi (o cümlədən cihazda «hərəkəti azalt» açıq olanda) — ',
-          h('button', { class: 'link small', type: 'button', onclick: function () { openSection('appearance', { opt: 'motion' }); } }, 'Görünüş → Animasiyalar'), '.'))
-    ]);
-    later(function () { react('wave', null, 1600); }, 450);
-    return h('div', { class: 'settings-nzgrid' }, prevCard, ctlCard);
+    var talkRow = rowEl('Danışma tezliyi', null, talkSeg, { opt: 'cTalk', extra: talkHint });
+    var motionRow = h('div', { class: 'settings-row', 'data-opt': 'cMotion' },
+      h('div', { class: 'tx' }, h('b', null, h('label', { for: 'st-cMotion', text: 'Animasiya intensivliyi' })),
+        h('small', null, 'Göz qırpma və yüngül hərəkət. Ümumi animasiya rejimi — ',
+          h('button', { class: 'link', type: 'button', onclick: function () { openSection('appearance', { opt: 'motion' }); } }, 'Görünüş → Animasiyalar'), '.')),
+      h('div', { class: 'ctl' }, h('div', { class: 'settings-rangewrap' }, h('div', { class: 'grow' }, range), intVal)));
+    var tryRow = rowEl('Sınaq', 'Nuanzanın necə səsləndiyini yoxlayın.', h('div', { class: 'settings-row2' },
+      h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: function () { react('wave', 'Salam! Mən Nuanzayam — tərcümədə köməkçiniz.', 2800); } }, 'Salam de'),
+      h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: function () { var T = App.data && App.data.TIPS && App.data.TIPS.general; react('point', T && T.length ? pick(T) : 'Lüğətə əlavə etdiyiniz termini bütün layihələrdə qoruyuram.', 4200); } }, 'Məsləhət ver')));
+    return card('Köməkçi — Nuanza', 'Dərhal tətbiq olunur — ekranın küncündəki köməkçidə.', [
+      showRow,
+      rowEl('Ölçü', null, sizeSeg, { opt: 'cSize' }),
+      talkRow,
+      motionRow,
+      tryRow
+    ], { opt: 'companion', actions: state });
   }
 
   /* ------------------------------------------------------------------
@@ -1410,63 +1422,50 @@
      ------------------------------------------------------------------ */
   function artLayer(kind, extra) {
     return h('span', { class: 'settings-art ' + kind + (extra ? ' ' + extra : '') },
-      h('i', { class: 'a-top' }), h('i', { class: 'a-band' }), h('i', { class: 'a-logo' }), h('i', { class: 'a-side' }), h('i', { class: 'a-s1' }), h('i', { class: 'a-s2' }),
+      h('i', { class: 'a-side' }), h('i', { class: 'a-s1' }), h('i', { class: 'a-s2' }), h('i', { class: 'a-s3' }), h('i', { class: 'a-top' }),
       h('i', { class: 'a-card' }), h('i', { class: 'a-l1' }), h('i', { class: 'a-l2' }), h('i', { class: 'a-l3' }), h('i', { class: 'a-btn' }));
   }
   function setThemeFx(t, origin) {
-    var apply = function () { if (App.setTheme) App.setTheme(t); };
-    if (origin && typeof D.startViewTransition === 'function' && !reduced()) {
-      var r = origin.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
-      try {
-        var vt = D.startViewTransition(apply);
-        vt.ready.then(function () {
-          var rad = Math.hypot(Math.max(x, W.innerWidth - x), Math.max(y, W.innerHeight - y));
-          R.animate({ clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + rad + 'px at ' + x + 'px ' + y + 'px)'] },
-            { duration: 560, easing: 'cubic-bezier(.2,.8,.2,1)', pseudoElement: '::view-transition-new(root)' });
-        }).catch(function () { /* ignore */ });
-        return;
-      } catch (e) { /* fall through */ }
-    }
-    apply();
+    /* a calm theme change: no circular reveal */
+    if (App.setTheme) App.setTheme(t);
+    void origin;
   }
+  function curTheme() { var t = App.theme ? App.theme() : 'light'; return t === 'dark' || t === 'system' ? t : 'light'; }
   function secAppearance() {
     var ui = uiCfg();
-    var cur = App.theme ? App.theme() : 'dark';
-    var tiles = h('div', { class: 'settings-theme', role: 'group', 'aria-label': 'Tema', id: 'st-theme' });
+    var cur = curTheme();
+    var tiles = h('div', { class: 'settings-theme settings-raw', role: 'group', 'aria-label': 'Tema', id: 'st-theme' });
     function markTiles(t) { each(tiles.children, function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === t)); }); }
     THEMES.forEach(function (t) {
       var art = t.id === 'system' ? [artLayer('lt'), artLayer('dk', 'half')] : [artLayer(t.id === 'dark' ? 'dk' : 'lt')];
       var b = h('button', { class: 'settings-tt', type: 'button', 'aria-pressed': String(t.id === cur), 'data-v': t.id },
-        h('span', { class: 'settings-tt-art', 'aria-hidden': 'true' }, art), h('span', { class: 'tt-ck', 'aria-hidden': 'true' }), h('b', null, ie(t.ic), t.label));
+        h('span', { class: 'settings-tt-art', 'aria-hidden': 'true' }, art), h('b', null, h('span', { class: 'tt-ck', 'aria-hidden': 'true' }), t.label));
       b.addEventListener('click', function () {
-        if ((App.theme ? App.theme() : 'dark') === t.id) return;
+        if (curTheme() === t.id) return;
         markTiles(t.id);
         setThemeFx(t.id, b);
         syncSummaries();
-        if (t.id === 'dark') nz('surprised', 'Gecə rejimi — gözlərinizi qoruyaq.', 2200);
-        else if (t.id === 'light') nz('success', 'Gün işığı kimi aydın.', 2000);
-        else nz('idle', 'Cihazınızın ayarına uyğunlaşacağam.', 2200);
       });
       tiles.appendChild(b);
     });
-    V.onTheme = function () { markTiles(App.theme ? App.theme() : 'dark'); };
+    V.onTheme = function () { markTiles(curTheme()); };
 
     /* font size */
     var fsVal = h('span', { class: 'settings-rangeval' });
-    var resetFs = h('button', { class: 'link small', type: 'button', hidden: ui.fontScale === 100 }, 'Standarta qaytar');
+    var resetFs = h('button', { class: 'btn btn-sm btn-ghost', type: 'button', hidden: ui.fontScale === 100 }, 'Standart');
     function fsLabel(v) { fsVal.textContent = v + '%' + (v === 100 ? ' · standart' : ''); }
     fsLabel(ui.fontScale);
     var fsRange = rangeCtl('st-fontScale', 85, 125, 5, ui.fontScale,
       function (v) { fsLabel(v); applyFont(v); },
       function (v) { setUi({ fontScale: v }); resetFs.hidden = v === 100; syncSummaries(); }, 'Şrift ölçüsü');
     resetFs.addEventListener('click', function () { fsRange.value = '100'; fsRange._paint(); fsLabel(100); setUi({ fontScale: 100 }); resetFs.hidden = true; syncSummaries(); toast('Şrift ölçüsü standarta qaytarıldı', 'info'); });
-    var fsField = h('div', { class: 'field', 'data-opt': 'fontScale' },
-      h('label', { for: 'st-fontScale' }, 'Şrift ölçüsü', fsVal),
-      h('div', { class: 'settings-aa' }, h('span', { 'aria-hidden': 'true', text: 'A' }), h('div', { class: 'grow' }, fsRange), h('span', { 'aria-hidden': 'true', text: 'A' })),
-      h('p', { class: 'settings-sample', text: 'Mətnin mənasını birlikdə tutacağıq.' }),
-      h('div', { class: 'row between' }, h('span', { class: 'hint', text: 'Bütün interfeys mütənasib böyüyür və ya kiçilir.' }), resetFs));
+    var fsField = h('div', { class: 'settings-row', 'data-opt': 'fontScale' },
+      h('div', { class: 'tx' }, h('b', null, h('label', { for: 'st-fontScale', text: 'Şrift ölçüsü' })), h('small', { text: 'Bütün interfeys mütənasib böyüyür və ya kiçilir.' })),
+      h('div', { class: 'ctl' },
+        h('div', { class: 'settings-rangewrap' }, h('span', { class: 'a1', 'aria-hidden': 'true', text: 'A' }), h('div', { class: 'grow' }, fsRange), h('span', { class: 'a2', 'aria-hidden': 'true', text: 'A' }), fsVal),
+        resetFs));
 
-    var compactRow = switchRow('compact', 'Kompakt rejim', 'Kartlar, siyahılar və düymələr daha sıx — kiçik ekranda daha çox seqment görünür.', 'grid', '', {
+    var compactRow = switchRow('compact', 'Kompakt rejim', 'Siyahılar, cədvəllər və düymələr daha sıx — ekranda daha çox seqment görünür.', 'grid', '', {
       get: function () { return uiCfg().compact; },
       set: function (v) { setUi({ compact: v }); toast(v ? 'Kompakt rejim aktivdir' : 'Adi sıxlıq bərpa olundu', 'info'); }
     });
@@ -1474,46 +1473,34 @@
     var osReduce = false;
     try { osReduce = !!W.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { osReduce = false; }
     var MOTION_HINT = {
-      full: 'Nuanza nəfəs alır, göz qırpır, baxışı ilə sizi izləyir; Mirzə Məclisi tam səhnə ilə işləyir — cihazda «hərəkəti azalt» açıq olsa belə.',
-      system: osReduce ? 'Cihazınızda «hərəkəti azalt» açıqdır — ona görə animasiyalar indi minimuma endirilib.' : 'Cihazın «hərəkəti azalt» ayarına uyğunlaşır. Hazırda cihaz tam animasiyaya icazə verir.',
-      reduce: 'Keçidlər və animasiyalar demək olar ki, dayanır. Nuanza sakit dayanır, Məclis yalnız yumşaq keçidlərlə görünür.'
+      full: 'Keçidlər, köməkçi və Mirzə Məclisinin səhnəsi tam işləyir — cihazda «hərəkəti azalt» açıq olsa belə.',
+      system: osReduce ? 'Cihazınızda «hərəkəti azalt» açıqdır — animasiyalar minimuma endirilib.' : 'Cihazın «hərəkəti azalt» ayarına uyğunlaşır. Hazırda cihaz tam animasiyaya icazə verir.',
+      reduce: 'Keçidlər və animasiyalar demək olar ki, dayanır. Köməkçi sakit dayanır, Məclis yalnız yumşaq keçidlərlə görünür.'
     };
     function motionNow() { var m = App.motion ? App.motion() : sget('motion', 'full'); return m === 'reduce' || m === true ? 'reduce' : m === 'system' ? 'system' : 'full'; }
-    var motionHint = h('span', { class: 'hint', text: MOTION_HINT[motionNow()] });
-    var motionSeg = segCtl('motion', [{ id: 'full', label: 'Həmişə tam' }, { id: 'system', label: 'Sistemə görə' }, { id: 'reduce', label: 'Azaldılmış' }], {
-      get: motionNow, label: 'Animasiyalar', block: true,
+    var motionHint = h('small', { text: MOTION_HINT[motionNow()] });
+    var motionSeg = segCtl('motion', [{ id: 'full', label: 'Tam' }, { id: 'system', label: 'Sistemə görə' }, { id: 'reduce', label: 'Azaldılmış' }], {
+      get: motionNow, label: 'Animasiyalar',
       set: function (v) {
         if (App.setMotion) App.setMotion(v); else sset('motion', v);
         motionHint.textContent = MOTION_HINT[v]; syncSummaries();
-        if (v === 'reduce') { toast('Animasiyalar azaldıldı', 'info', { sub: 'Nuanza və Məclis sakit rejimdədir' }); nz('idle', null, 1200); }
-        else if (v === 'system') { toast('Animasiyalar sistemə görə', 'info', { sub: osReduce ? 'Cihaz hərəkəti azaltmağı istəyir' : 'Cihaz tam animasiyaya icazə verir' }); nz('read', null, 1400); }
-        else { toast('Animasiyalar tam', 'ok', { sub: 'Nuanza yenidən canlıdır' }); nz('celebrate', 'Yenidən hərəkətdəyəm!', 2200); }
+        if (v === 'reduce') toast('Animasiyalar azaldıldı', 'info');
+        else if (v === 'system') toast('Animasiyalar sistemə görə', 'info', { sub: osReduce ? 'Cihaz hərəkəti azaltmağı istəyir' : 'Cihaz tam animasiyaya icazə verir' });
+        else toast('Animasiyalar tam', 'ok');
       }
     });
-    var motionField = h('div', { class: 'field', 'data-opt': 'motion' },
-      h('span', { class: 'label' }, 'Animasiyalar'), motionSeg, motionHint);
-    var langSeg = segCtl('lang', LANGS_UI, {
-      get: function () { return uiCfg().lang; }, label: 'İnterfeys dili', block: true,
-      set: function (v) {
-        setUi({ lang: v }); syncSummaries();
-        if (v === 'az') toast('İnterfeys dili: Azərbaycan', 'ok');
-        else toast('İnterfeys dili: ' + (v === 'en' ? 'English' : 'Русский'), 'info', { sub: 'Prototipdə mətnlər hələlik azərbaycancadır — tərcümələr növbəti buraxılışda.' });
-      }
-    });
-    var introRow = h('button', { class: 'list-row', type: 'button', 'data-opt': 'intro', onclick: function () { if (App.onboarding) App.onboarding(); } },
-      icTile('info'), h('span', { class: 'tx' }, h('b', { text: 'Girişi yenidən göstər' }), h('small', { text: 'Rejim, dil cütləri və ad — ilk quraşdırma' })), h('span', { class: 'end' }, ie('chevron')));
+    var motionField = h('div', { class: 'settings-row', 'data-opt': 'motion' },
+      h('div', { class: 'tx' }, h('b', { text: 'Animasiyalar' }), motionHint), h('div', { class: 'ctl' }, motionSeg));
 
-    return h('div', { class: 'stack-lg' },
-      card('Tema', 'Sistem rejimi gündüz işıqlı, axşam qaranlıq görünür.', [tiles], { opt: 'theme' }),
-      card('Mətn və sıxlıq', null, [fsField, h('div', { class: 'list' }, compactRow)]),
-      card('Hərəkət', 'Nuanzanın canlılığı, Mirzə Məclisinin səhnəsi və ekran keçidləri.', [motionField], { opt: 'motionCard' }),
-      card('Dil', null, [h('div', { class: 'field', 'data-opt': 'lang' }, h('span', { class: 'label' }, 'İnterfeys dili'), langSeg,
-        h('span', { class: 'hint', text: 'Tərcümə dilləri «İş profili» bölməsində seçilir.' })), h('div', { class: 'list' }, introRow)])
+    return h('div', { class: 'settings-sec-part' },
+      card('Tema', 'Sistem rejimi cihazınızın ayarına uyğunlaşır.', [tiles], { opt: 'theme' }),
+      card('Mətn və sıxlıq', null, [fsField, compactRow]),
+      card('Hərəkət', null, [motionField], { opt: 'motionCard' })
     );
   }
 
   /* ------------------------------------------------------------------
-     14. SECTION: BİLDİRİŞLƏR
+     14. BİLDİRİŞLƏR (part of «Hesab»)
      ------------------------------------------------------------------ */
   function newCode() {
     var A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', s = 'NZ-';
@@ -1524,43 +1511,52 @@
   function secNotifications() {
     /* reminders */
     var leadSeg = segCtl('nLead', LEADS, { label: 'Nə qədər əvvəl', sm: true });
-    var dRow = switchRow('nDeadline', 'Son tarix xatırlatması', 'Təhvilə az qalanda Telegramda və brauzerdə xəbər veririk.', 'clock', 'nar', { extra: leadSeg });
+    var dRow = switchRow('nDeadline', 'Son tarix xatırlatması', 'Təhvilə az qalanda Telegramda və brauzerdə xəbər verilir.', 'clock', 'nar', { extra: leadSeg });
     function syncLead() { dRow._tx.setAttribute('aria-disabled', String(!Dr.nDeadline)); each(leadSeg.children, function (b) { b.disabled = !Dr.nDeadline; }); }
     watch('nDeadline', syncLead); syncLead();
-    var remind = card('Xatırlatmalar', 'Nə vaxt və nə barədə xəbər verək.', [h('div', { class: 'list' },
+
+    /* e-mail */
+    var daySel = selectCtl('nWeeklyDay', WEEK_DAYS, { label: 'Göndərmə vaxtı' });
+    var wRow = switchRow('nWeekly', 'Həftəlik e-poçt hesabatı', 'Həftənin işi və yaxınlaşan son tarixlər — bir məktubda.', 'mail', 'gold', { extra: daySel });
+    function syncDay() { wRow._tx.setAttribute('aria-disabled', String(!Dr.nWeekly)); daySel.disabled = !Dr.nWeekly; }
+    watch('nWeekly', syncDay); syncDay();
+
+    var remind = card('Bildirişlər', null, [
       dRow,
-      switchRow('nMeclis', 'Mirzə Məclisinin hökmü hazır olanda', 'Dərin yoxlama və ya böyük sənədin tərcüməsi bitəndə.', 'shield', ''),
+      switchRow('nMeclis', 'Mirzə Məclisinin rəyi hazır olanda', 'Dərin yoxlama və ya böyük sənədin tərcüməsi bitəndə.', 'shield', ''),
       switchRow('nComments', 'Müştəri şərh yazanda', 'Təhvil paketinə yazılan qeydlər və düzəliş istəkləri.', 'message', ''),
-      switchRow('nStreak', 'Akademiya: seriya xatırlatması', 'Hər axşam 20:00-da, əgər həmin gün dərs etməmisinizsə.', 'flame', 'gold'))], { opt: 'nDeadline' });
+      switchRow('nStreak', 'Akademiya: gündəlik xatırlatma', 'Hər axşam 20:00-da, əgər həmin gün dərs etməmisinizsə.', 'flame', 'gold'),
+      wRow
+    ], { opt: 'nDeadline' });
 
     /* telegram */
-    var tgBody = h('div', { class: 'stack' });
-    var tgCard = card('Telegram bot', 'Bildirişləri və qısa tərcümələri birbaşa Telegramda alın.', [tgBody], { opt: 'telegram' });
+    var tgBox = h('div', { class: 'settings-raw settings-list' });
+    var tgCard = card('Telegram', 'Bildirişləri və qısa tərcümələri birbaşa Telegramda alın.', [tgBox], { opt: 'telegram' });
     var codeTimer = null;
     function drawTg() {
       clearInterval(codeTimer);
-      tgBody.textContent = '';
+      tgBox.textContent = '';
       var t = tgLink();
-      if (Dr.local) tgBody.appendChild(h('div', { class: 'callout' }, ie('alert'), h('div', null, h('b', { text: 'Lokal rejim seçilib. ' }), 'Yadda saxladıqdan sonra Telegram bildirişləri dayandırılacaq.')));
+      if (Dr.local) tgBox.appendChild(rowEl('Lokal rejim seçilib', 'Yadda saxladıqdan sonra Telegram bildirişləri dayandırılacaq.', null));
       if (t.linked) {
-        var test = h('button', { class: 'btn btn-sm', type: 'button' }, ie('send'), 'Test mesajı');
+        var test = h('button', { class: 'btn btn-sm btn-secondary', type: 'button' }, 'Test mesajı');
         test.addEventListener('click', function () {
           busy(test, true);
           later(function () { busy(test, false); toast('Test mesajı göndərildi', 'ok', { sub: '@MirzeBot: «Salam' + (Dr.first ? ', ' + Dr.first : '') + '! Bildirişlər işləyir.»', icon: 'telegram' }); }, 900);
         });
-        var off = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, 'Ayır');
+        var off = h('button', { class: 'btn btn-sm btn-ghost', type: 'button' }, 'Ayır');
         off.addEventListener('click', function () {
-          App.confirm({ title: 'Telegram bot ayrılsın?', text: 'Xatırlatmalar və Məclis hökmləri artıq Telegrama gəlməyəcək.', okLabel: 'Ayır', danger: true }).then(function (ok) {
+          App.confirm({ title: 'Telegram bot ayrılsın?', text: 'Xatırlatmalar və Məclisin rəyləri artıq Telegrama gəlməyəcək.', okLabel: 'Ayır', danger: true }).then(function (ok) {
             if (!ok) return;
             sset('tg-link', { linked: false });
             if (V) { drawTg(); syncSummaries(); }
             toast('Telegram bot ayrıldı', 'info');
           });
         });
-        tgBody.appendChild(h('div', { class: 'list' }, h('div', { class: 'list-row' }, icTile('telegram', 'green'),
-          h('span', { class: 'tx' }, h('b', null, t.handle || 'Telegram', ' ', h('span', { class: 'badge green dot', text: 'Qoşulub' })),
-            h('small', { text: 'Bildirişlər @MirzeBot vasitəsilə gəlir' + (t.since ? ' · ' + fmtDate(t.since) + ' tarixindən' : '') })))));
-        tgBody.appendChild(h('div', { class: 'settings-row2' }, test, off));
+        tgBox.appendChild(h('div', { class: 'settings-row' },
+          h('div', { class: 'tx' }, h('b', null, (t.handle || 'Telegram') + ' ', h('span', { class: 'badge green', text: 'Qoşulub' })),
+            h('small', { text: 'Bildirişlər @MirzeBot vasitəsilə gəlir' + (t.since ? ' · ' + fmtDate(t.since) + ' tarixindən' : '') })),
+          h('div', { class: 'ctl' }, test, off)));
         return;
       }
       if (!tgCode || tgCode.exp < Date.now()) tgCode = newCode();
@@ -1575,7 +1571,7 @@
       tick();
       codeTimer = setInterval(function () { if (!V || !codeB.isConnected) { clearInterval(codeTimer); return; } tick(); }, 1000);
       V.secTimers.push(codeTimer);
-      var copy = h('button', { class: 'btn btn-sm', type: 'button' }, ie('copy'), 'Kopyala');
+      var copy = h('button', { class: 'btn btn-sm btn-secondary', type: 'button' }, ie('copy'), 'Kopyala');
       copy.addEventListener('click', function () {
         var done = function () { toast('Kod kopyalandı', 'ok', { sub: tgCode.code }); };
         try {
@@ -1585,7 +1581,7 @@
       });
       var renew = h('button', { class: 'icon-btn sm ghost', type: 'button', 'aria-label': 'Yeni kod', title: 'Yeni kod', html: App.icon('refresh') });
       renew.addEventListener('click', function () { tgCode = newCode(); codeB.textContent = tgCode.code; tick(); toast('Yeni kod yaradıldı', 'info'); });
-      var verify = h('button', { class: 'btn btn-secondary', type: 'button' }, ie('telegram'), 'Bağlantını yoxla');
+      var verify = h('button', { class: 'btn btn-sm btn-primary', type: 'button' }, 'Bağlantını yoxla');
       verify.addEventListener('click', function () {
         busy(verify, true);
         later(function () {
@@ -1594,33 +1590,26 @@
           sset('tg-link', { linked: true, handle: handle, since: new Date().toISOString() });
           tgCode = null;
           if (!V) return;
-          burstAt(verify, 'confetti');
           drawTg(); syncSummaries();
           toast('Telegram bot qoşuldu', 'ok', { sub: '@MirzeBot artıq sizə yazacaq', icon: 'telegram' });
-          nz('celebrate', 'Artıq Telegramda da yanınızdayam!', 2800);
+          nz('celebrate', 'Artıq Telegramda da yanınızdayam.', 2800);
         }, 1600);
       });
-      tgBody.appendChild(h('ol', { class: 'settings-steps' },
-        h('li', null, 'Telegramda ', h('b', { text: '@MirzeBot' }), ' botunu açın və ', h('b', { text: 'Start' }), ' düyməsinə basın.'),
-        h('li', null, 'Aşağıdakı kodu bota mesaj kimi göndərin.'),
-        h('li', null, '«Bağlantını yoxla» düyməsinə basın.')));
-      tgBody.appendChild(h('div', { class: 'settings-code' }, h('div', null, codeB, left), h('div', { class: 'settings-row2' }, renew, copy)));
-      tgBody.appendChild(h('div', { class: 'row' }, verify));
+      tgBox.appendChild(h('div', { class: 'settings-row is-block' },
+        h('ol', { class: 'settings-steps' },
+          h('li', null, 'Telegramda ', h('b', { text: '@MirzeBot' }), ' botunu açın və ', h('b', { text: 'Start' }), ' düyməsinə basın.'),
+          h('li', null, 'Aşağıdakı kodu bota mesaj kimi göndərin.'),
+          h('li', null, '«Bağlantını yoxla» düyməsinə basın.')),
+        h('div', { class: 'settings-code' }, h('div', null, codeB, left), h('div', { class: 'settings-row2' }, renew, copy)),
+        h('div', { class: 'row' }, verify)));
     }
     watch('local', drawTg);
     drawTg();
 
-    /* e-mail */
-    var daySel = selectCtl('nWeeklyDay', WEEK_DAYS, { label: 'Göndərmə vaxtı' });
-    var wRow = switchRow('nWeekly', 'Həftəlik hesabat', 'Həftənin işi və yaxınlaşan son tarixlər — bir məktubda.', 'mail', 'gold', { extra: daySel });
-    function syncDay() { wRow._tx.setAttribute('aria-disabled', String(!Dr.nWeekly)); daySel.disabled = !Dr.nWeekly; }
-    watch('nWeekly', syncDay); syncDay();
-    var mailCard = card('E-poçt', null, [h('div', { class: 'list' }, wRow)], { opt: 'nWeekly' });
-
-    return h('div', { class: 'stack-lg' }, remind, tgCard, mailCard);
+    return h('div', { class: 'settings-sec-part' }, remind, tgCard);
   }
   /* ------------------------------------------------------------------
-     15. SECTION: MƏXFİLİK VƏ MƏLUMAT
+     15. SECTION: MƏXFİLİK
      ------------------------------------------------------------------ */
   function maskLine(on) {
     function tok(t) { return h('span', { class: 'settings-tok', text: t }); }
@@ -1628,71 +1617,78 @@
     return h('span', null, 'Cənab ', tok('AD_1'), ' ', tok('MƏBLƏĞ_1'), ' AZN məbləğini ', tok('TARİX_1'), ' tarixinədək ödəməlidir.');
   }
   function secPrivacy() {
-    var localNote = h('div', { class: 'callout' });
+    var localNote = h('small');
     function drawLocal() {
-      localNote.className = 'callout ' + (Dr.local ? 'green' : 'navy');
-      localNote.textContent = '';
-      localNote.appendChild(ie(Dr.local ? 'lock' : 'info'));
-      localNote.appendChild(Dr.local
-        ? h('div', null, h('b', { text: 'Lokal rejim: ' }), 'layihələr, tərcümə yaddaşı və lüğət yalnız bu cihazda saxlanılır. Bulud sinxronizasiyası və Telegram bot dayanır; AI tərcüməsi üçün yalnız seçdiyiniz seqment şifrəli kanalla göndərilir və saxlanılmır.')
-        : h('div', null, h('b', { text: 'Bulud rejimi: ' }), 'layihələr şifrələnmiş şəkildə Bakıdakı məlumat mərkəzində saxlanılır və bütün cihazlarınızda sinxronlaşır. Mətnləriniz AI modellərini öyrətmək üçün istifadə olunmur.'));
+      localNote.textContent = Dr.local
+        ? 'Layihələr, tərcümə yaddaşı və lüğət yalnız bu cihazda saxlanılır. Bulud sinxronizasiyası və Telegram bot dayanır; tərcümə üçün yalnız seçdiyiniz seqment şifrəli kanalla göndərilir və saxlanılmır.'
+        : 'Bulud rejimi: layihələr şifrələnmiş şəkildə saxlanılır və cihazlarınız arasında sinxronlaşır. Mətnləriniz modelləri öyrətmək üçün istifadə olunmur.';
     }
     watch('local', drawLocal); drawLocal();
-    var maskOut = h('div', { class: 'tgt' }, maskLine(Dr.mask));
+    var localRow = switchRow('local', 'Lokal rejim', null, 'lock', 'green', { extra: localNote });
+
+    var maskOut = h('span', { class: 'tgt' }, maskLine(Dr.mask));
     var maskK = h('span', { class: 'k' });
     function drawMask() {
-      maskK.textContent = '';
-      maskK.appendChild(ie(Dr.mask ? 'eyeoff' : 'eye'));
-      maskK.appendChild(D.createTextNode(Dr.mask ? 'AI-a belə gedir' : 'AI-a olduğu kimi gedir'));
+      maskK.textContent = Dr.mask ? 'Göndərilən mətn' : 'Olduğu kimi göndərilir';
       maskOut.textContent = ''; maskOut.appendChild(maskLine(Dr.mask));
       maskOut.classList.remove('swap'); void maskOut.offsetWidth; maskOut.classList.add('swap');
     }
     drawMask(); watch('mask', drawMask);
-    var maskEx = h('div', { class: 'settings-ex', 'aria-live': 'polite' }, maskK, maskOut,
-      h('span', { class: 'small muted', text: 'Cavab gələndə adlar, məbləğlər və tarixlər öz yerinə qaytarılır.' }));
+    var maskEx = h('div', { class: 'settings-ex block', 'aria-live': 'polite' }, maskK, maskOut);
+    var maskRow = switchRow('mask', 'Adları və rəqəmləri maskala', 'AI-a göndərməzdən əvvəl şəxs adları, məbləğlər, tarixlər və hesab nömrələri yer tutucularla əvəz olunur; cavab gələndə öz yerinə qaytarılır.', 'eyeoff', '', { extra: maskEx });
 
-    var dataCard = card('Məlumat necə işlənir', null, [
-      h('div', { class: 'list' }, switchRow('local', 'Lokal rejim', 'Hassas sənədlər üçün: məlumatlar cihazdan çıxmır.', 'lock', 'green')),
-      localNote,
-      h('div', { class: 'list' }, switchRow('mask', 'AI-a göndərməzdən əvvəl adları və rəqəmləri maskala', 'Şəxs adları, məbləğlər, tarixlər və hesab nömrələri yer tutucularla əvəz olunur.', 'eyeoff', '')),
-      maskEx,
-      fieldBox('retention', 'Avtomatik silmə müddəti', selectCtl('retention', RETENTION), { hint: 'Tamamlanmış layihələrin mətnləri silinir; lüğət və tərcümə yaddaşı qalır.' })
+    var dataCard = card('Saxlama', null, [
+      localRow,
+      fieldBox('retention', 'Avtomatik silmə', selectCtl('retention', RETENTION), { hint: 'Tamamlanmış layihələrin mətnləri silinir; lüğət və tərcümə yaddaşı qalır.' })
     ]);
+    var aiCard = card('Süni intellekt', null, [maskRow], { opt: 'mask' });
+    return h('div', { class: 'settings-sec-part' }, dataCard, aiCard);
+  }
 
-    /* export: a real JSON file of everything Nuanza keeps in this browser */
-    function exportJson() {
-      var data = {};
-      try {
-        var ls = W.localStorage;
-        for (var i = 0; i < ls.length; i++) {
-          var k = ls.key(i);
-          if (k && k.indexOf('nuanza2:') === 0 && k !== 'nuanza2:code') { var raw = ls.getItem(k); try { data[k.slice(8)] = JSON.parse(raw); } catch (e) { data[k.slice(8)] = raw; } }
-        }
-      } catch (e) { /* storage blocked */ }
-      var file = 'nuanza-' + isoToday() + '.json';
-      try {
-        var blob = new Blob([JSON.stringify({ app: 'Mirzə', exported: new Date().toISOString(), data: data }, null, 2)], { type: 'application/json' });
-        var url = URL.createObjectURL(blob), a = h('a', { href: url, download: file });
-        D.body.appendChild(a); a.click(); a.remove();
-        later(function () { URL.revokeObjectURL(url); }, 4000);
-        toast('Yükləndi', 'ok', { sub: file, icon: 'download' });
-      } catch (e) { toast('Fayl yaradılmadı', 'warn', { sub: 'Brauzer yükləməyə icazə vermədi' }); }
-    }
-    var tiles = h('div', { class: 'tiles settings-exp' },
-      h('button', { class: 'tile', type: 'button', 'aria-label': 'JSON ixrac et — profil, layihələr və ayarlar', onclick: exportJson }, icTile('database'),
-        h('span', null, h('b', { text: 'JSON' }), h('small', { text: 'Profil, layihələr, ayarlar' }))));
-    var exportCard = card('Məlumatlarımı ixrac et', 'Hər şey sizindir — istənilən vaxt açıq standartlarda götürün.', [tiles], { opt: 'export' });
+  /* ------------------------------------------------------------------
+     16. SECTION: MƏLUMATLAR — export + delete
+     ------------------------------------------------------------------ */
+  /* export: a real JSON file of everything Nuanza keeps in this browser */
+  function exportJson() {
+    var data = {};
+    try {
+      var ls = W.localStorage;
+      for (var i = 0; i < ls.length; i++) {
+        var k = ls.key(i);
+        if (k && k.indexOf('nuanza2:') === 0 && k !== 'nuanza2:code') { var raw = ls.getItem(k); try { data[k.slice(8)] = JSON.parse(raw); } catch (e) { data[k.slice(8)] = raw; } }
+      }
+    } catch (e) { /* storage blocked */ }
+    var file = 'nuanza-' + isoToday() + '.json';
+    try {
+      var blob = new Blob([JSON.stringify({ app: 'Mirzə', exported: new Date().toISOString(), data: data }, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob), a = h('a', { href: url, download: file });
+      D.body.appendChild(a); a.click(); a.remove();
+      later(function () { URL.revokeObjectURL(url); }, 4000);
+      toast('Yükləndi', 'ok', { sub: file, icon: 'download' });
+    } catch (e) { toast('Fayl yaradılmadı', 'warn', { sub: 'Brauzer yükləməyə icazə vermədi' }); }
+  }
+  function storageUse() {
+    var n = 0, bytes = 0;
+    try {
+      var ls = W.localStorage;
+      for (var i = 0; i < ls.length; i++) { var k = ls.key(i); if (k && k.indexOf('nuanza2:') === 0) { n++; bytes += k.length + String(ls.getItem(k) || '').length; } }
+    } catch (e) { return null; }
+    return { n: n, kb: Math.max(1, Math.round(bytes * 2 / 1024)) };
+  }
+  function secData() {
+    var use = storageUse();
+    var exportCard = card('İxrac', 'Giriş kodu ixraca daxil edilmir.', [
+      rowEl('Yerli məlumat', use ? num(use.n) + ' qeyd · təxminən ' + num(use.kb) + ' KB · bu brauzerdə' : 'Brauzer yaddaşına giriş yoxdur.', null),
+      rowEl('Məlumatlarımı ixrac et', 'JSON faylı: profil, layihələr, lüğət və ayarlar.', h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: exportJson }, ie('download'), 'İxrac et'), { opt: 'export' })
+    ], { opt: 'export' });
 
-    /* danger */
-    var wipeBtn = h('button', { class: 'btn btn-danger', type: 'button' }, ie('trash'), 'Hər şeyi sil');
+    var wipeBtn = h('button', { class: 'btn btn-sm btn-danger', type: 'button' }, 'Hər şeyi sil');
     wipeBtn.addEventListener('click', function () { wipeAll(wipeBtn); });
-    var danger = h('section', { class: 'card settings-card danger', 'data-opt': 'wipe' },
-      h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow plain', text: 'Təhlükəli zona' }), h('h3', { text: 'Bütün məlumatları sil' }))),
-      h('div', { class: 'settings-danger-row' },
-        h('p', { text: 'Layihələr, tərcümə yaddaşı, lüğət, Akademiya irəliləyişi və ayarlar həmişəlik silinəcək. Əvvəlcə ixrac etməyi tövsiyə edirik.' }),
-        wipeBtn));
+    var danger = card('Təhlükəli zona', null, [
+      rowEl('Bütün məlumatları sil', 'Layihələr, tərcümə yaddaşı, lüğət, Akademiya irəliləyişi və ayarlar bu cihazdan həmişəlik silinəcək. Əvvəlcə ixrac etməyi tövsiyə edirik.', wipeBtn)
+    ], { opt: 'wipe', cls: 'settings-danger' });
 
-    return h('div', { class: 'stack-lg' }, dataCard, exportCard, danger);
+    return h('div', { class: 'settings-sec-part' }, exportCard, danger);
   }
   function isoToday() { var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
   function isSil(v) { v = String(v || '').trim(); return upper(v) === 'SİL' || v.toUpperCase() === 'SIL'; }
@@ -1715,7 +1711,7 @@
       later(function () { focusEl(inp); }, 120);
     }
     pr.then(function (yes) {
-      if (!yes || !isSil(inp.value)) { if (!yes) nz('success', 'Uf, yaxşı ki fikrinizi dəyişdiniz.', 2200); return; }
+      if (!yes || !isSil(inp.value)) { if (!yes) nz('success', null, 1400); return; }
       busy(btn, true);
       nz('worried', null, 1400);
       later(function () {
@@ -1724,7 +1720,7 @@
         R.style.removeProperty('font-size'); R.removeAttribute('data-density');
         tgCode = null;
         if (V) { S0 = loadSaved(); Dr = clone(S0); }
-        toast('Bütün məlumatlar silindi', 'ok', { sub: 'Mirzə ilk günkü kimi təmizdir' });
+        toast('Bütün məlumatlar silindi', 'ok', { sub: 'Mirzə ilk açılışdakı vəziyyətindədir' });
         later(function () {
           if (App.go) App.go('home');
           later(function () { if (App.onboarding) App.onboarding(); }, 350);
@@ -1749,9 +1745,9 @@
      ------------------------------------------------------------------ */
   function secShortcuts() {
     var rows = [];
-    var tbody = h('tbody');
+    var groups = [];
     SHORTCUTS.forEach(function (g) {
-      tbody.appendChild(h('tr', { class: 'grp' }, h('td', { colspan: '2', text: g.grp })));
+      var tbody = h('tbody');
       g.rows.forEach(function (r) {
         var kb = [];
         r[0].forEach(function (k, i) {
@@ -1762,16 +1758,14 @@
         tr._keys = r[0];
         rows.push(tr); tbody.appendChild(tr);
       });
+      groups.push(card(g.grp, null, [h('div', { class: 'settings-raw' }, h('table', { class: 'settings-keys', 'aria-label': g.grp }, tbody))], g === SHORTCUTS[0] ? { opt: 'keys' } : null));
     });
     V.keyRows = rows;
     V.keyDown = {};
-    var table = h('div', { class: 'table-wrap', 'data-opt': 'keys' }, h('table', { class: 'table compact settings-keys' },
-      h('thead', null, h('tr', null, h('th', { text: 'Əməliyyat' }), h('th', { style: 'text-align:right', text: 'Qısayol' }))), tbody));
-    return h('div', { class: 'stack-lg' },
-      h('div', { class: 'callout navy' }, ie('keyboard'), h('div', null, h('b', { text: 'Sınayın: ' }), 'klaviaturada düymələri basın — uyğun qısayol cədvəldə işıqlanacaq.')),
-      table,
-      h('div', { class: 'row' }, h('button', { class: 'btn btn-sm', type: 'button', onclick: function () { if (App.shortcuts) App.shortcuts(); } }, ie('keyboard'), 'Qısa siyahını pəncərədə aç'),
-        h('span', { class: 'small muted' }, 'və ya istənilən ekranda ', h('kbd', { class: 'kbd', text: '?' }), ' basın')));
+    return h('div', { class: 'settings-sec-part' },
+      h('p', { class: 'settings-foot', text: 'Düymələri basın — uyğun qısayol cədvəldə işıqlanacaq.' }),
+      groups,
+      card(null, null, [rowEl('Qısa siyahı', 'İstənilən ekranda «?» basaraq açılır.', h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: function () { if (App.shortcuts) App.shortcuts(); } }, 'Aç'))]));
   }
   function keyName(e) {
     var k = e.key;
@@ -1803,15 +1797,15 @@
   var LEGAL = {
     privacy: { title: 'Məxfilik siyasəti', paras: [
       'Mirzə mətnlərinizi yalnız tərcümə və yoxlama üçün emal edir. Mətnləriniz süni intellekt modellərini öyrətmək üçün istifadə olunmur.',
-      'Bulud rejimində məlumatlar şifrələnmiş şəkildə Bakıdakı məlumat mərkəzində saxlanılır. Lokal rejimdə isə cihazınızdan çıxmır.',
+      'Bulud rejimində məlumatlar şifrələnmiş şəkildə saxlanılır. Lokal rejimdə isə cihazınızdan çıxmır.',
       'Maskalama aktiv olanda şəxs adları, məbləğlər, tarixlər və hesab nömrələri AI-a göndərilməzdən əvvəl yer tutucularla əvəz olunur.',
-      'İstənilən vaxt bütün məlumatlarınızı JSON, TMX və TBX formatında ixrac edə və ya həmişəlik silə bilərsiniz.'] },
+      'İstənilən vaxt bütün məlumatlarınızı ixrac edə və ya həmişəlik silə bilərsiniz.'] },
     terms: { title: 'İstifadə şərtləri', paras: [
       'Tərcümələrin müəllif hüquqları sizə və ya sifarişçinizə məxsusdur. Mirzə alət rolunu oynayır və tərcümə üzərində hüquq iddia etmir.',
-      'Notarial və hüquqi sənədlərdə yekun məsuliyyət imzalayan tərcüməçinin üzərindədir. Mirzə Məclisinin hökmü tövsiyə xarakterlidir.'] },
+      'Notarial və hüquqi sənədlərdə yekun məsuliyyət imzalayan tərcüməçinin üzərindədir. Mirzə Məclisinin rəyi tövsiyə xarakterlidir.'] },
     licenses: { title: 'Açıq mənbə lisenziyaları', paras: [
-      'Unbounded və Plus Jakarta Sans şriftləri — SIL Open Font License 1.1.',
-      'Xalça naxışları və göl motivi Mirzə komandası tərəfindən çəkilib.',
+      'Inter, JetBrains Mono və Plus Jakarta Sans şriftləri — SIL Open Font License 1.1.',
+      'Göl motivi Mirzə komandası tərəfindən çəkilib.',
       'Nuanza və Mirzə Məclisi personajları — © 2026 Mirzə, Bakı.',
       'Akademiyadakı real xəbər mətnləri — NTREX-128 (Microsoft), CC BY-SA 4.0; səhv annotasiyaları və düzəldilmiş tərcümələr Mirzənindir və eyni lisenziya (CC BY-SA 4.0) ilə paylaşılır.',
       'İnsan Hüquqları haqqında Ümumi Bəyannamə (BMT, 1948) — rəsmi ingilis mətni və rəsmi Azərbaycan tərcüməsi.'] }
@@ -1819,11 +1813,11 @@
   function legalSheet(id) {
     var L = LEGAL[id];
     App.sheet({ title: L.title, body: h('div', { class: 'prose' }, L.paras.map(function (t) { return h('p', { text: t }); }),
-      h('p', { class: 'small muted', text: 'Son yenilənmə: 7 oktyabr 2026' })), actions: [{ label: 'Aydındır', kind: 'primary' }] });
+      h('p', { class: 'small muted', text: 'Son yenilənmə: 7 oktyabr 2026' })), actions: [{ label: 'Bağla', kind: 'primary' }] });
   }
   function feedbackSheet() {
     var kind = 'idea', rating = 0;
-    var kinds = segCtl('fbKind', [{ id: 'idea', label: 'Təklif', ic: 'bulb' }, { id: 'bug', label: 'Xəta', ic: 'alert' }, { id: 'thanks', label: 'Təşəkkür', ic: 'heart' }], {
+    var kinds = segCtl('fbKind', [{ id: 'idea', label: 'Təklif' }, { id: 'bug', label: 'Xəta' }, { id: 'thanks', label: 'Təşəkkür' }], {
       get: function () { return kind; }, set: function (v) { kind = v; ta.placeholder = PH[v]; }, label: 'Rəyin növü', block: true, noId: true });
     var PH = {
       idea: 'Məsələn: hüquqi üslubda «shall» həmişə «-məlidir» kimi verilsin.',
@@ -1836,7 +1830,7 @@
     var err = h('span', { class: 'err', id: taId + '-e', role: 'alert', hidden: true });
     ta.addEventListener('input', function () { cnt.textContent = ta.value.length + ' / 1000'; if (ta.value.trim().length >= 10) { err.hidden = true; ta.removeAttribute('aria-invalid'); } });
     var stars = h('div', { class: 'settings-stars', role: 'radiogroup', 'aria-label': 'Mirzəni qiymətləndirin' });
-    var STAR_TX = ['', 'Pis', 'Orta', 'Yaxşı', 'Çox yaxşı', 'Əla!'];
+    var STAR_TX = ['', 'Pis', 'Orta', 'Yaxşı', 'Çox yaxşı', 'Əla'];
     var starTx = h('span', { class: 'small muted', 'aria-live': 'polite' });
     [1, 2, 3, 4, 5].forEach(function (i) {
       var b = h('button', { type: 'button', role: 'radio', 'aria-checked': 'false', 'aria-label': i + ' ulduz' }, h('span', { 'aria-hidden': 'true' }));
@@ -1844,7 +1838,6 @@
         rating = i;
         each(stars.children, function (x, j) { x.classList.toggle('on', j < i); x.setAttribute('aria-checked', String(j + 1 === i)); });
         starTx.textContent = STAR_TX[i];
-        if (i === 5) burstAt(b, 'stars');
       });
       stars.appendChild(b);
     });
@@ -1858,7 +1851,7 @@
         h('span', { class: 'end' }, h('label', { class: 'switch', 'aria-label': 'Texniki məlumatı əlavə et' }, inc, h('span', { 'aria-hidden': 'true' })))));
     App.sheet({
       title: 'Rəy göndər', body: body,
-      actions: [{ label: 'Ləğv et', kind: 'ghost' }, { label: 'Göndər', kind: 'primary', icon: 'send', onClick: function () {
+      actions: [{ label: 'Ləğv et', kind: 'ghost' }, { label: 'Göndər', kind: 'primary', onClick: function () {
         if (ta.value.trim().length < 10) {
           err.textContent = ''; err.appendChild(ie('alert')); err.appendChild(D.createTextNode('Bir-iki cümlə yazın — ən azı 10 simvol.'));
           err.hidden = false; ta.setAttribute('aria-invalid', 'true'); focusEl(ta);
@@ -1867,53 +1860,67 @@
         return new Promise(function (res) {
           later(function () {
             res(true);
-            toast('Rəyiniz göndərildi', 'ok', { sub: 'Təşəkkürlər! Komandamız 2 iş günü ərzində baxacaq.' });
-            nz('celebrate', rating >= 4 ? 'Çox sağ olun! Bu, bizim üçün çox dəyərlidir.' : 'Rəyiniz üçün sağ olun — düzəldəcəyik!', 2800);
+            toast('Rəyiniz göndərildi', 'ok', { sub: 'Təşəkkür edirik. Komanda 2 iş günü ərzində baxacaq.' });
+            nz('success', null, 1600);
+            void rating;
           }, 1100);
         });
       } }]
     });
   }
+  function linkRow(title, sub, onClick, o) {
+    o = o || {};
+    var b = h('button', { class: 'settings-row settings-link-row', type: 'button', 'data-opt': o.opt || null, onclick: onClick },
+      h('div', { class: 'tx' }, h('b', { text: title }), sub ? h('small', { text: sub }) : null),
+      h('div', { class: 'ctl' }, ie(o.icon || 'chevron')));
+    return b;
+  }
   function secAbout() {
-    var ver = App.version || '2.0';
-    var upd = h('button', { class: 'btn btn-sm', type: 'button' }, ie('refresh'), 'Yenilikləri yoxla');
+    var ver = App.version || '3.0';
+    var upd = h('button', { class: 'btn btn-sm btn-secondary', type: 'button' }, 'Yenilikləri yoxla');
     upd.addEventListener('click', function () {
       busy(upd, true);
-      later(function () { busy(upd, false); toast('Ən son versiyadasınız', 'ok', { sub: 'Mirzə ' + ver + ' · 7 oktyabr 2026' }); }, 1200);
+      later(function () { busy(upd, false); toast('Ən son versiyadasınız', 'ok', { sub: 'Mirzə ' + ver }); }, 1200);
     });
-    var hero = h('section', { class: 'card framed settings-about carpet', 'data-opt': 'version' },
-      h('span', { html: App.logo ? App.logo('logo') : '' }),
-      h('h2', { text: 'Mirzə' }),
-      h('p', { class: 'muted', text: 'Versiya ' + ver + ' · buraxılış 2026.10 · Bakı' }),
-      h('div', { class: 'row' }, upd,
-        h('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-opt': 'feedback', onclick: feedbackSheet }, ie('message'), 'Rəy göndər')),
-      h('div', { class: 'settings-legal', 'data-opt': 'legal' },
-        h('button', { class: 'link', type: 'button', onclick: function () { legalSheet('privacy'); } }, 'Məxfilik siyasəti'),
-        h('button', { class: 'link', type: 'button', onclick: function () { legalSheet('terms'); } }, 'İstifadə şərtləri'),
-        h('button', { class: 'link', type: 'button', onclick: function () { legalSheet('licenses'); } }, 'Lisenziyalar')));
-    var info = card('Texniki məlumat', null, [h('dl', { class: 'kv' },
-      h('dt', { text: 'Mühərrik' }), h('dd', { text: 'Mirzə Məclisi 2.0 · 5 mirzə' }),
-      h('dt', { text: 'Dillər' }), h('dd', { text: 'AZ · EN · RU · TR' }),
-      h('dt', { text: 'Telegram bot' }), h('dd', { text: '@MirzeBot' }),
-      h('dt', { text: 'Məlumat mərkəzi' }), h('dd', { text: 'Bakı, Azərbaycan' }),
-      h('dt', { text: 'Cihaz' }), h('dd', { text: detectDevice() }))]);
+    var app = card(null, null, [
+      h('div', { class: 'settings-row settings-app', 'data-opt': 'version' },
+        h('span', { class: 'logo-wrap', html: App.logo ? App.logo('logo') : '' }),
+        h('div', { class: 'tx' }, h('b', { text: 'Mirzə' }), h('small', { text: 'Versiya ' + ver + ' · tərcüməçinin iş masası' })),
+        h('div', { class: 'ctl' }, upd))
+    ]);
+    function kv(k, v) { return h('div', { class: 'settings-row' }, h('dl', { class: 'settings-kv', style: 'width:100%' }, h('dt', { text: k }), h('dd', { text: v }))); }
+    var info = card('Texniki məlumat', null, [
+      kv('Mühərrik', 'Mirzə Məclisi · 5 redaktor'),
+      kv('Dillər', 'AZ · EN · RU · TR'),
+      kv('Telegram bot', '@MirzeBot'),
+      kv('Cihaz', detectDevice())
+    ]);
     var CHANGES = [
-      ['3.0', 'Noyabr 2026', 'Yeni ad — Mirzə. Yeni rəng palitrası, yalnız tərcümə: Kitabxana, 7 peşəkar sahə, «Səhvi tap».'],
+      ['3.0', 'Noyabr 2026', 'Yeni ad — Mirzə. Yeni iş masası, Kitabxana, 7 peşəkar sahə, «Səhvi tap».'],
       ['2.0', 'Oktyabr 2026', 'Mirzə Məclisi, Akademiya rejimi və köməkçi Nuanza.'],
       ['1.6', 'İyul 2026', 'Telegram bot, TMX/TBX ixracı və lokal rejim.'],
       ['1.4', 'Aprel 2026', 'Türk formalarının aşkarlanması və üslubun avtomatik tanınması.']
     ];
-    var news = card('Yeniliklər', null, [h('div', { class: 'list' }, CHANGES.map(function (c, i) {
-      return h('div', { class: 'list-row' }, h('span', { class: 'medal sm' + (i ? ' locked' : ''), 'aria-hidden': 'true' }, h('b', { text: c[0].split('.')[0] })),
-        h('span', { class: 'tx' }, h('b', null, 'Mirzə ' + c[0], ' ', i === 0 ? h('span', { class: 'badge gold', text: 'Yeni' }) : null), h('small', { text: c[1] + ' · ' + c[2] })));
-    }))]);
-    return h('div', { class: 'stack-lg' }, hero, info, news,
-      h('p', { class: 'small muted', style: 'text-align:center', text: 'Bakıda, çay və səbirlə hazırlanıb.' }));
+    var news = card('Yeniliklər', null, CHANGES.map(function (c) {
+      return h('div', { class: 'settings-row', style: 'flex-wrap:nowrap;align-items:flex-start' }, h('span', { class: 'settings-ver', text: c[0] }),
+        h('div', { class: 'tx' }, h('b', { text: c[1] }), h('small', { text: c[2] })));
+    }));
+    var help = card('Kömək', null, [
+      linkRow('Rəy göndər', 'Təklif, xəta və ya təşəkkür.', feedbackSheet, { opt: 'feedback' }),
+      linkRow('Girişi yenidən göstər', 'Rejim, dil cütləri və ad — ilk quraşdırma.', function () { if (App.onboarding) App.onboarding(); }, { opt: 'intro' })
+    ]);
+    var legal = card('Hüquqi', null, [
+      linkRow('Məxfilik siyasəti', null, function () { legalSheet('privacy'); }, { opt: 'legal' }),
+      linkRow('İstifadə şərtləri', null, function () { legalSheet('terms'); }),
+      linkRow('Lisenziyalar', null, function () { legalSheet('licenses'); })
+    ]);
+    return h('div', { class: 'settings-sec-part' }, app, info, news, help, legal);
   }
 
   var BUILD = {
-    account: secAccount, work: secWork, translation: secTranslation, companion: secCompanion, appearance: secAppearance,
-    notifications: secNotifications, privacy: secPrivacy, shortcuts: secShortcuts, about: secAbout
+    account: function () { return [secAccount(), secWork(), secNotifications()]; },
+    appearance: secAppearance, language: secLanguage, translation: secTranslation, ai: secAI,
+    privacy: secPrivacy, shortcuts: secShortcuts, data: secData, about: secAbout
   };
 
   /* ------------------------------------------------------------------
@@ -1921,14 +1928,14 @@
      ------------------------------------------------------------------ */
   function summaryOf(id) {
     try {
-      if (id === 'account') return draftName() || Dr.email || 'Profilinizi tamamlayın';
-      if (id === 'work') { var r = parseDec(Dr.rate); return (pairsShort(Dr.pairs) || '—') + (isFinite(r) ? ' · ' + num(r) + ' AZN/söz' : ''); }
-      if (id === 'translation') return (REG_SHORT[Dr.register] || '') + ' · ' + (Q_SHORT[Dr.quality] || '');
-      if (id === 'companion') { var c = compCfg(); return c.show ? 'Görünür · ' + ({ sakit: 'sakit', normal: 'normal danışır', cox: 'çox danışır' }[c.talk] || '') : 'Gizlədilib'; }
-      if (id === 'appearance') { var t = App.theme ? App.theme() : 'dark'; var mo = App.motion ? App.motion() : 'full'; return ({ system: 'Sistem', light: 'İşıqlı', dark: 'Qaranlıq' }[t] || '') + ' · şrift ' + uiCfg().fontScale + '%' + (mo === 'reduce' ? ' · az animasiya' : mo === 'system' ? ' · animasiya sistemə görə' : ''); }
-      if (id === 'notifications') return tgLink().linked ? 'Telegram qoşulub' : 'Telegram qoşulmayıb';
+      if (id === 'account') return draftName() || Dr.email || 'Profil, iş profili, bildirişlər';
+      if (id === 'appearance') { var t = curTheme(); var mo = App.motion ? App.motion() : 'full'; return ({ system: 'Sistem', light: 'İşıqlı', dark: 'Qaranlıq' }[t] || '') + ' · şrift ' + uiCfg().fontScale + '%' + (mo === 'reduce' ? ' · az animasiya' : mo === 'system' ? ' · animasiya sistemə görə' : ''); }
+      if (id === 'language') { var l = uiCfg().lang; return ({ az: 'Azərbaycan', en: 'English', ru: 'Русский' }[l] || 'Azərbaycan') + ' · müraciət: ' + ((ADDRS.filter(function (a) { return a.id === Dr.address; })[0] || ADDRS[0]).label); }
+      if (id === 'translation') return (REG_SHORT[Dr.register] || '') + (Dr.enforceTerms ? ' · termin bazası məcburi' : '');
+      if (id === 'ai') { var c = compCfg(); return (Q_SHORT[Dr.quality] || '') + ' · Nuanza ' + (c.show ? 'görünür' : 'gizli'); }
       if (id === 'privacy') return Dr.local ? 'Lokal rejim' : (Dr.mask ? 'Bulud · maskalama aktiv' : 'Bulud rejimi');
       if (id === 'shortcuts') { var n = 0; SHORTCUTS.forEach(function (g) { n += g.rows.length; }); return n + ' qısayol'; }
+      if (id === 'data') return 'İxrac və silmə';
       if (id === 'about') return 'Mirzə ' + (App.version || '3.0');
     } catch (e) { /* ignore */ }
     return '';
@@ -1939,21 +1946,23 @@
   }
   function buildNav() {
     V.navRows = {}; V.navSmall = {}; V.navDot = {};
-    var wrap = h('div', { class: 'stack-lg settings-groups' });
+    var wrap = h('div', { class: 'settings-groups' });
     GROUPS.forEach(function (g) {
-      var hid = uid('grp');
-      var list = h('div', { class: 'list' });
+      var list = h('div', { class: 'settings-navgrp', role: 'group', 'aria-label': g });
       SECTIONS.filter(function (s) { return s.grp === g; }).forEach(function (s) {
         var sm = h('small');
         var dot = h('span', { class: 'settings-dot', hidden: true, title: 'Saxlanılmamış dəyişiklik' }, h('span', { class: 'sr-only', text: 'saxlanılmamış dəyişiklik var' }));
-        var b = h('button', { class: 'list-row settings-nav-row', type: 'button', 'data-sec': s.id },
-          icTile(s.icon, s.cls), h('span', { class: 'tx' }, h('b', { text: s.title }), sm), h('span', { class: 'end' }, dot, ie('chevron')));
+        var lead;
+        if (s.id === 'account') { V.navAv = h('span', { class: 'settings-av', 'aria-hidden': 'true' }, avParts('')); V.navAv._base = 'settings-av'; lead = V.navAv; }
+        else lead = h('span', { class: 'settings-nav-ic', 'aria-hidden': 'true', html: App.icon(s.icon) });
+        var b = h('button', { class: 'settings-nav-row', type: 'button', 'data-sec': s.id },
+          lead, h('span', { class: 'tx' }, h('b', { text: s.title }), sm), h('span', { class: 'end' }, dot, ie('chevron', 'chev')));
+        var chev = b.querySelector('.end svg'); if (chev) chev.classList.add('chev');
         b.addEventListener('click', function () { openSection(s.id); });
         V.navRows[s.id] = b; V.navSmall[s.id] = sm; V.navDot[s.id] = dot;
         list.appendChild(b);
       });
-      wrap.appendChild(h('div', { class: 'settings-grp', role: 'group', 'aria-labelledby': hid },
-        h('div', { class: 'settings-grp-h', id: hid, text: g }), h('div', { class: 'card settings-navcard' }, list)));
+      wrap.appendChild(list);
     });
     wrap.addEventListener('keydown', function (e) {
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
@@ -1999,20 +2008,19 @@
     V.groups.hidden = true; V.results.hidden = false; V.results.textContent = '';
     V.srStatus.textContent = out.length ? out.length + ' nəticə' : 'Heç nə tapılmadı';
     if (!out.length) {
-      V.results.appendChild(h('div', { class: 'empty settings-noresult' }, h('div', { class: 'empty-art' }),
-        h('h3', { text: '«' + raw.trim() + '» tapılmadı' }),
-        h('p', { text: 'Başqa sözlə yoxlayın: məsələn, «tema», «VÖEN», «Telegram» və ya «maskala».' })));
+      V.results.appendChild(h('div', { class: 'settings-noresult' },
+        h('b', { text: '«' + raw.trim() + '» tapılmadı' }),
+        h('span', { text: 'Başqa sözlə yoxlayın: «tema», «VÖEN», «Telegram» və ya «maskala».' })));
       return;
     }
-    V.results.appendChild(h('div', { class: 'settings-grp' }, h('div', { class: 'settings-grp-h', text: out.length + ' nəticə' }),
-      h('div', { class: 'card settings-navcard settings-results' }, h('div', { class: 'list' }, out.map(function (r) {
-        var s = SEC[r.sec];
-        var b = h('button', { class: 'list-row settings-res-row', type: 'button' }, icTile(s.icon, s.cls),
-          h('span', { class: 'tx' }, h('b', null, markText(r.label, toks)), h('small', { text: r.opt ? s.title + ' › ' + r.label : 'Bölmə · ' + s.desc })),
-          h('span', { class: 'end' }, ie('chevron')));
-        b.addEventListener('click', function () { openSection(r.sec, { opt: r.opt }); });
-        return b;
-      })))));
+    V.results.appendChild(h('div', { class: 'settings-navgrp' }, out.map(function (r) {
+      var s = SEC[r.sec];
+      var b = h('button', { class: 'settings-nav-row settings-res-row', type: 'button' }, h('span', { class: 'settings-nav-ic', 'aria-hidden': 'true', html: App.icon(s.icon) }),
+        h('span', { class: 'tx' }, h('b', null, markText(r.label, toks)), h('small', { text: r.opt ? s.title : 'Bölmə' })),
+        h('span', { class: 'end' }, ie('chevron')));
+      b.addEventListener('click', function () { openSection(r.sec, { opt: r.opt }); });
+      return b;
+    })));
   }
 
   /* ------------------------------------------------------------------
@@ -2025,6 +2033,7 @@
     (V.secTimers || []).forEach(function (t) { clearInterval(t); clearTimeout(t); });
     V.secTimers = [];
     V.keyRows = null; V.onTheme = null;
+    V.heroName = null; V.heroAv = null;
     WATCH = {}; ERR = {};
   }
   function renderSection(o) {
@@ -2035,22 +2044,31 @@
     try { body = BUILD[s.id](); }
     catch (e) {
       try { console.error('[Nuanza settings]', e); } catch (x) { /* ignore */ }
-      body = h('div', { class: 'empty' }, h('div', { class: 'empty-art' }), h('h3', { text: 'Bu bölmə açılmadı' }), h('p', { text: 'Bir az sonra yenidən cəhd edin.' }));
+      body = h('div', { class: 'settings-noresult' }, h('b', { text: 'Bu bölmə açılmadı' }), h('span', { text: 'Səhifəni yeniləyin və ya bir az sonra yenidən cəhd edin.' }));
     }
     V.secTitle = h('h2', { tabindex: '-1', text: s.title });
     var head = h('div', { class: 'settings-subh' },
       h('button', { class: 'btn btn-ghost btn-sm settings-back', type: 'button', onclick: goBack }, ie('back'), 'Ayarlar'),
-      h('div', { class: 'settings-subh-t' }, icTile(s.icon, (s.cls ? s.cls + ' ' : '') + 'lg'),
-        h('div', { class: 'grow' }, V.secTitle, h('p', { text: s.desc }), s.live ? h('span', { class: 'badge green dot', text: 'Dərhal tətbiq olunur' }) : null)));
-    var sec = h('div', { class: 'settings-sec' + (o.noAnim ? '' : (ST.wide ? ' in' : ' in-r')), 'data-sec': s.id }, head, body);
+      V.secTitle, h('p', { text: s.desc }));
+    var parts = [].concat(body);
+    var sec = h('div', { class: 'settings-sec' + (o.noAnim ? '' : (ST.wide ? ' in' : ' in-r')), 'data-sec': s.id }, head);
+    parts.forEach(function (p) {
+      if (!p) return;
+      if (p.classList && p.classList.contains('settings-sec-part')) { while (p.firstChild) sec.appendChild(p.firstChild); }
+      else sec.appendChild(p);
+    });
     V.main.textContent = '';
     V.main.appendChild(sec);
     V.secEl = sec;
+    syncHero();
     if (V.pendingErrs) { showErrors(V.pendingErrs); V.pendingErrs = null; }
   }
   function openSection(id, o) {
     o = o || {};
-    if (!V || !SEC[id]) return;
+    if (!V) return;
+    id = secId(id);
+    if (o.opt && OPT_SEC[o.opt] && OPT_SEC[o.opt] !== id && FIELD_SEC[o.opt] !== id) id = OPT_SEC[o.opt];
+    if (!id || !SEC[id]) return;
     var prev = ST.sec;
     if (!ST.wide && !prev) ST.listScroll = W.scrollY || W.pageYOffset || 0;
     var same = prev === id && V.secEl && V.secEl.isConnected;
@@ -2104,7 +2122,7 @@
     if (!V || !V.main) return;
     var el = V.main.querySelector('[data-opt="' + opt + '"]');
     var ctl = byId('st-' + opt);
-    if (!el && ctl) el = ctl.closest('.field, .list-row, .card') || ctl;
+    if (!el && ctl) el = ctl.closest('.settings-row, .settings-grp') || ctl;
     if (!el) return;
     try { el.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); } catch (e) { el.scrollIntoView(); }
     el.classList.remove('settings-flash'); void el.offsetWidth; el.classList.add('settings-flash');
@@ -2143,7 +2161,7 @@
     V.bar.classList.toggle('on', n > 0);
     V.bar.setAttribute('aria-hidden', String(!n));
     var names = secs.map(function (s) { return SEC[s].title; }).join(', ');
-    V.barB.textContent = ST.wide ? 'Yadda saxlanılmamış dəyişikliklər' : n + ' dəyişiklik';
+    V.barB.textContent = ST.wide ? 'Saxlanılmamış dəyişikliklər' : n + ' dəyişiklik';
     V.barS.textContent = ST.wide ? n + ' dəyişiklik · ' + names : names;
     SECTIONS.forEach(function (s) { var d = V.navDot[s.id]; if (d) d.hidden = secs.indexOf(s.id) < 0; });
     syncSummaries();
@@ -2160,7 +2178,7 @@
       else { showErrors(errs); focusOpt(first); }
       V.bar.classList.remove('shake'); void V.bar.offsetWidth; V.bar.classList.add('shake');
       toast(ek.length === 1 ? 'Bir sahədə düzəliş lazımdır' : ek.length + ' sahədə düzəliş lazımdır', 'err', { sub: errs[first] });
-      nz('worried', 'Bir şey düz deyil — qırmızı sahəyə baxın.', 2600);
+      nz('worried', null, 1600);
       return;
     }
     busy(V.saveBtn, true);
@@ -2187,12 +2205,10 @@
     if (keys.indexOf('local') >= 0) { var t = tgLink(); if (Dr.local && t.linked) toast('Telegram bildirişləri dayandırıldı', 'info', { sub: 'Lokal rejimdə məlumat cihazdan çıxmır' }); }
     S0 = clone(Dr);
     TEXT_KEYS.forEach(function (k) { var el = byId('st-' + k); if (el && el.value !== Dr[k]) el.value = Dr[k]; });
-    var r = V.bar.getBoundingClientRect();
     updateDirty();
     var names = secsOf(keys).map(function (s) { return SEC[s].title; });
     toast('Yadda saxlanıldı', 'ok', { sub: names.join(' · ') });
-    try { if (App.fx && App.fx.burst && r.width) App.fx.burst(r.right - 60, r.top + r.height / 2, 'stars'); } catch (e) { /* ignore */ }
-    nz('success', pick(['Hazırdır! Yeni ayarlar artıq işləyir.', 'Yadda saxladım — növbəti tərcümədə nəzərə alacağam.', 'Hər şey yerindədir.']), 2600);
+    nz('success', null, 1600);
   }
   function cancel() {
     if (!V) return;
@@ -2239,7 +2255,8 @@
     var hs = String(W.location.hash || '');
     if (hs.replace(/^#\/?/, '').split(/[?/]/)[0] !== 'settings') return;
     var m = /[?&]s=([^&]+)/.exec(hs), id = m ? decodeURIComponent(m[1]) : null;
-    if (id && SEC[id]) { if (ST.sec !== id) openSection(id, { fromPop: true, noPush: true }); }
+    if (id) id = secId(id);
+    if (id) { if (ST.sec !== id) openSection(id, { fromPop: true, noPush: true }); }
     else { ST.pushed = false; if (!ST.wide && ST.sec) showList(); }
   }
 
@@ -2257,19 +2274,19 @@
     WATCH = {}; ERR = {};
 
     /* header */
-    var head = h('div', { class: 'page-h' },
-      h('div', null, h('h1', { html: 'Profil və <em>ayarlar</em>' }),
-        h('p', { text: 'Mirzəni iş üslubunuza uyğunlaşdırın. Formlar qaralama kimi saxlanılır — «Yadda saxla» basana qədər heç nə dəyişmir.' })));
+    var head = h('div', { class: 'page-h settings-head' },
+      h('div', null, h('h1', { text: 'Ayarlar' }),
+        h('p', { text: 'Profil, iş üslubu və tətbiq. Formlar «Yadda saxla» basılana qədər qaralama kimi qalır.' })));
 
     /* side: search + nav + results */
-    V.search = h('input', { class: 'input', type: 'search', id: 'st-search', placeholder: 'Ayarlarda axtar…', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Ayarlarda axtar', 'aria-controls': 'st-results', enterkeyhint: 'search' });
+    V.search = h('input', { class: 'input', type: 'search', id: 'st-search', placeholder: 'Ayarlarda axtar', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Ayarlarda axtar', 'aria-controls': 'st-results', enterkeyhint: 'search' });
     V.search.addEventListener('input', runSearch);
     V.search.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && V.search.value) { e.preventDefault(); e.stopPropagation(); V.search.value = ''; runSearch(); }
       else if (e.key === 'Enter') { var f = V.results.querySelector('.settings-res-row'); if (f) { e.preventDefault(); f.click(); } }
       else if (e.key === 'ArrowDown') { var g = V.results.querySelector('.settings-res-row') || V.groups.querySelector('.settings-nav-row'); if (g) { e.preventDefault(); focusEl(g); } }
     });
-    V.results = h('div', { id: 'st-results', hidden: true });
+    V.results = h('div', { id: 'st-results', class: 'settings-results', hidden: true });
     V.results.addEventListener('keydown', function (e) {
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
       var rows = Array.prototype.slice.call(V.results.querySelectorAll('.settings-res-row')), i = rows.indexOf(D.activeElement);
@@ -2288,19 +2305,19 @@
     V.barB = h('b'); V.barS = h('small');
     V.saveBtn = h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: save }, 'Yadda saxla', h('kbd', { class: 'kbd', 'aria-hidden': 'true', text: MOD + ' S' }));
     V.bar = h('div', { class: 'settings-savebar', role: 'region', 'aria-label': 'Yadda saxlanılmamış dəyişikliklər', 'aria-hidden': 'true' },
-      h('span', { class: 'sb-ic', html: App.icon('alert') }), h('span', { class: 'sb-tx' }, V.barB, V.barS),
+      h('span', { class: 'sb-ic', 'aria-hidden': 'true' }), h('span', { class: 'sb-tx' }, V.barB, V.barS),
       h('span', { class: 'sb-act' }, h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: cancel }, 'Ləğv et'), V.saveBtn));
 
     V.wrap = h('div', { class: 'settings-wrap' }, V.side, V.main, V.bar);
-    V.page = h('div', { class: 'page settings-page', 'data-view': 'list' }, head, buildHero(), V.wrap);
+    V.page = h('div', { class: 'page settings-page', 'data-view': 'list' }, head, V.wrap);
     el.appendChild(V.page);
     try { var hdr = D.querySelector('.hdr'); V.hdrH = hdr ? hdr.getBoundingClientRect().height : 70; } catch (e) { V.hdrH = 70; }
 
     /* initial view */
     ST.wide = measureWide();
     V.page.classList.toggle('is-wide', ST.wide);
-    var want = params.s || params.section || params.id || keepSec || null;
-    if (want && !SEC[want]) want = null;
+    var want = secId(params.s || params.section || params.id || keepSec || null);
+    if (want && params.opt && OPT_SEC[params.opt] && OPT_SEC[params.opt] !== want && FIELD_SEC[params.opt] !== want) want = OPT_SEC[params.opt];
     if (want) openSection(want, { noPush: true, noScroll: true, noAnim: true, noFocus: true });
     else if (ST.wide) openSection('account', { noPush: true, noScroll: true, noAnim: true, noFocus: true });
     else V.page.setAttribute('data-view', 'list');
