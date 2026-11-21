@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Mirzə — Azərbaycan dili ilə işləyən tərcüməçilər üçün iş masası: layihələr, redaktor, keyfiyyət yoxlaması, Mirzə Məclisi və Akademiya.">
-<meta name="theme-color" content="#0A0F14">
+<meta name="theme-color" content="#F7F5F0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mirzə">
@@ -16,7 +16,7 @@
 <title>Mirzə — tərcüməçinin iş masası</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;600&display=swap">
 <link rel="stylesheet" href="app.css">
 <script>
   /* Apply saved theme + mode before first paint (no flash). */
@@ -26,12 +26,12 @@
     try {
       /* dark is the default look; 'system' follows the OS, 'light' is opt-in */
       var t = JSON.parse(localStorage.getItem('nuanza2:theme'));
-      if (t !== 'system') r.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+      if (t !== 'system') r.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
       var m = JSON.parse(localStorage.getItem('nuanza2:mode'));
       r.setAttribute('data-mode', m === 'academy' ? 'academy' : 'pro');
       var mo = JSON.parse(localStorage.getItem('nuanza2:motion'));
       r.setAttribute('data-motion', (mo === 'reduce' || mo === true) ? 'reduce' : mo === 'system' ? 'system' : 'full');
-    } catch (e) { r.setAttribute('data-mode', 'pro'); r.setAttribute('data-theme', 'dark'); }
+    } catch (e) { r.setAttribute('data-mode', 'pro'); r.setAttribute('data-theme', 'light'); }
   })();
 </script>
 

@@ -83,7 +83,7 @@
   function storeWatch(key) {
     if (!started) return;
     try {
-      if (key === 'theme') applyTheme(store.get('theme', 'dark'));
+      if (key === 'theme') applyTheme(store.get('theme', 'light'));
       else if (key === 'motion') applyMotion();
       else if (key === 'companion') { clearTimeout(watchTimer); watchTimer = later(mountCompanion, 30); }
       else if (key === 'profile') renderProfile();
@@ -2371,7 +2371,7 @@
     try { W.history.scrollRestoration = 'manual'; } catch (e) { /* ignore */ }
     css('shell', SHELL_CSS);
     var m = store.get('mode', 'pro'); curMode = m === 'academy' ? 'academy' : 'pro';
-    applyTheme(store.get('theme', 'dark'));
+    applyTheme(store.get('theme', 'light'));
     applyMotion();
     buildShell();
     syncModeUI();
@@ -2480,7 +2480,7 @@
     intro: onboarding,
     openDrawer: openDrawer,
     closeDrawer: function () { closeDrawer(false); },
-    theme: function () { return store.get('theme', 'dark'); },
+    theme: function () { return store.get('theme', 'light'); },
     effectiveTheme: effectiveTheme,
     setTheme: function (t) { setTheme(t, null); },
     toggleTheme: function () { toggleTheme(null); },

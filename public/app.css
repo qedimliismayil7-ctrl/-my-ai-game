@@ -1,6 +1,6 @@
 /* =====================================================================
    NUANZA — design system (app.css)
-   Mirzə: ink #0A0F14 (default) or parchment light; teal for links and state, copper for the one main action.
+   Mirzə workstation: ivory light (default) or charcoal dark; one olive/green-blue accent for state and the main action.
    Type: Plus Jakarta Sans throughout (carries ə/Ə). Flat surfaces, no glows. The carpet shape is the göl.
    Layout: mobile-first app shell — quiet sticky header with a 1px hairline,
    left drawer (persistent sidebar ≥1024px), one 1040px page column, 16px gutters, 8px rhythm.
@@ -12,48 +12,50 @@
    1. TOKENS — light values on bare :root, dark below (two blocks)
    --------------------------------------------------------------------- */
 :root{
-  /* Mirzə palette — ink #0A0F14 · deep teal #0F3D3E · teal #2E6F73 · mist #7FB3B8 · parchment #EADCC8 · copper #C6601F
-     Light theme: parchment paper, ink text, teal links, copper actions. */
-  --bg:#F3ECE1; --surface:#FBF8F3; --surface2:#EFE5D6; --surface3:#FFFFFF;
-  --ink:#0A0F14; --soft:#4B5A5D; --faint:#5C6869;
-  --line:#E2D6C4; --line-2:#CDBDA5;
-  /* --firuze is the brand/interactive colour (links, active, focus, progress) — teal in Mirzə */
-  --firuze:#2E6F73; --fir-t:rgba(46,111,115,.12); --on-firuze:#FFFFFF;
-  /* copper: the one action colour (primary buttons, key calls to action) */
-  --accent:#B5561B; --accent-t:rgba(181,86,27,.12); --on-accent:#FFFFFF;
-  --heading:#0F3D3E; --heading-em:#B5561B;
-  --lacquer:#2E6F73; --nar:#B3261E; --zafaran:#A86A12; --ivory:#FFFFFF;
-  --zafaran-ink:#7A4C08; --gold-hi:#E4B868;
-  --rug:#C6601F;
-  /* deep panels (hero cards, drawer profile) — deep teal with parchment text in both themes */
-  --deep:#0F3D3E; --deep-2:#0B2E2F; --on-deep:#F2E9DB; --on-deep-soft:rgba(242,233,219,.72);
-  /* text on solid accent fills */
-  --on-nar:#FFFFFF; --on-lacquer:#FFFFFF; --on-zafaran:#0A0F14;
-  /* semantic + tints */
-  --ok:#2E6F4A; --ok-t:rgba(46,111,74,.12);
-  --nar-t:rgba(179,38,30,.09); --zaf-t:rgba(168,106,18,.13); --lac-t:rgba(46,111,115,.10);
-  --conf-high:#2E6F4A; --conf-mid:#A86A12; --conf-low:#B3261E;
-  /* utility colors */
-  --focus:#2E6F73; --scrim:rgba(10,15,20,.46); --hl:rgba(255,255,255,.7); --shimmer:rgba(255,255,255,.78);
+  /* Mirzə workstation tokens — light (ivory) is the default theme.
+     Accent (olive / green-blue) only for: active state, primary action, progress, important status.
+     Red = error · amber = warning · green = success. No gradients. */
+  /* semantic names (use these in new code) */
+  --text:#1D1F21; --text-2:#62676C; --text-3:#7C8186;
+  --border:#E4E0D8; --border-2:#D3CEC4;
+  --canvas:#F7F5F0; --panel:#FFFFFF; --sunken:#F1EEE7; --hover:rgba(29,31,33,.04); --selected:rgba(47,90,85,.08);
+  --accent:#2F5A55; --accent-h:#264A46; --accent-t:rgba(47,90,85,.10); --accent-line:rgba(47,90,85,.45); --on-accent:#FFFFFF;
+  --danger:#B42318; --danger-t:rgba(180,35,24,.08); --warning:#9A6700; --warning-t:rgba(154,103,0,.10); --success:#2E7D4F; --success-t:rgba(46,125,79,.09);
+  /* legacy names, remapped to the system above (screens still use them) */
+  --bg:var(--canvas); --surface:var(--panel); --surface2:var(--sunken); --surface3:#FFFFFF;
+  --ink:var(--text); --soft:var(--text-2); --faint:var(--text-3);
+  --line:var(--border); --line-2:var(--border-2);
+  --firuze:var(--accent); --fir-t:var(--accent-t); --on-firuze:#FFFFFF;
+  --heading:var(--text); --heading-em:var(--accent);
+  --lacquer:#4D5B6A; --nar:var(--danger); --zafaran:var(--warning); --ivory:#FFFFFF;
+  --zafaran-ink:#7A5200; --gold-hi:#D9B35A;
+  --rug:var(--accent);
+  /* deep panels are neutral now — no coloured hero panels */
+  --deep:#22262A; --deep-2:#1A1D20; --on-deep:#F2F1EE; --on-deep-soft:rgba(242,241,238,.72);
+  --on-nar:#FFFFFF; --on-lacquer:#FFFFFF; --on-zafaran:#FFFFFF;
+  --ok:var(--success); --ok-t:var(--success-t);
+  --nar-t:var(--danger-t); --zaf-t:var(--warning-t); --lac-t:rgba(77,91,106,.08);
+  --conf-high:var(--success); --conf-mid:var(--warning); --conf-low:var(--danger);
+  --focus:var(--accent); --scrim:rgba(20,22,24,.36); --hl:rgba(255,255,255,.7); --shimmer:rgba(255,255,255,.7);
   --knob:#FFFFFF;
-  /* inverted surfaces (toasts) */
-  --inv-bg:#0A0F14; --inv-ink:#EADCC8; --inv-soft:rgba(234,220,200,.68);
-  --inv-ok:#8FD1A8; --inv-bad:#F2928A; --inv-gold:#E9BE74; --inv-info:#7FB3B8;
-  /* avatar palette (always light initials) */
-  --av-nar:#9E3A2C; --av-lacquer:#0F3D3E; --av-zafaran:#A86A12; --av-firuze:#2E6F73; --av-benovse:#5B4B7A; --av-zeytun:#56632A; --on-av:#FFFFFF;
+  --inv-bg:#1D1F21; --inv-ink:#F2F1EE; --inv-soft:rgba(242,241,238,.68);
+  --inv-ok:#86C9A1; --inv-bad:#F19A92; --inv-gold:#E2BE6E; --inv-info:#9CC4BE;
+  --av-nar:#8C3B32; --av-lacquer:#3F4E5E; --av-zafaran:#7A5A1E; --av-firuze:#2F5A55; --av-benovse:#5A4E72; --av-zeytun:#56632A; --on-av:#FFFFFF;
 
   /* shadows */
-  --sh-pop:0 1px 2px rgba(10,15,20,.06);
+  --sh-pop:0 1px 2px rgba(29,31,33,.06);
   --sh-1:none;
-  --sh-2:0 4px 14px rgba(10,15,20,.08);
-  --sh-3:0 12px 32px rgba(10,15,20,.16);
+  --sh-2:0 4px 12px rgba(29,31,33,.08),0 0 0 1px rgba(29,31,33,.04);
+  --sh-3:0 12px 32px rgba(29,31,33,.14),0 0 0 1px rgba(29,31,33,.05);
   /* sidebar + hover surfaces */
   --side:#EEE6D9; --hover:rgba(10,15,20,.05); --sel:rgba(10,15,20,.07);
 
   /* type */
-  --f-display:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-  --f-body:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-  --f-mono:ui-monospace,"SFMono-Regular","Cascadia Mono",Menlo,Consolas,monospace;
+  --f-display:"Inter","Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --f-body:"Inter","Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular","Cascadia Mono",Menlo,Consolas,monospace;
+  /* type scale: Display 28/34 · H1 22/28 · H2 17/24 · H3 15/20 · Body 14/21 · Small 13/18 · Caption 12/16 · Micro 11/14 */
+  --t-display:1.75rem; --t-h1:1.375rem; --t-h2:1.0625rem; --t-h3:.9375rem; --t-body:.875rem; --t-small:.8125rem; --t-caption:.75rem; --t-micro:.6875rem;
   --fs-xs:.75rem; --fs-sm:.8125rem; --fs-base:.9375rem; --fs-md:1rem; --fs-lg:1.125rem; --fs-xl:1.25rem;
   --fs-2xl:clamp(1.5rem,1.36rem + .6vw,1.75rem);
   --fs-3xl:clamp(1.75rem,1.5rem + 1.1vw,2.25rem);
@@ -85,57 +87,63 @@
 }
 
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0A0F14; --surface:#0F171D; --surface2:#142229; --surface3:#1A2C33;
-  --ink:#EADCC8; --soft:#A3B3B1; --faint:#7A8E90;
-  --line:#1C2B32; --line-2:#284049;
-  --firuze:#7FB3B8; --fir-t:rgba(127,179,184,.12); --on-firuze:#0A0F14;
-  --accent:#D06A28; --accent-t:rgba(208,106,40,.14); --on-accent:#0A0F14;
-  --heading:#EADCC8; --heading-em:#7FB3B8;
-  --lacquer:#7FB3B8; --nar:#E86F64; --zafaran:#DDA64A; --ivory:#F2E9DB;
-  --zafaran-ink:#DDA64A; --gold-hi:#E9BE74;
-  --rug:#C6601F;
-  --deep:#0F3D3E; --deep-2:#0B2E2F; --on-deep:#F2E9DB; --on-deep-soft:rgba(242,233,219,.72);
-  --on-nar:#0A0F14; --on-lacquer:#0A0F14; --on-zafaran:#0A0F14;
-  --ok:#7CC49A; --ok-t:rgba(124,196,154,.13);
-  --nar-t:rgba(232,111,100,.13); --zaf-t:rgba(221,166,74,.13); --lac-t:rgba(127,179,184,.11);
-  --conf-high:#7CC49A; --conf-mid:#DDA64A; --conf-low:#E86F64;
-  --focus:#7FB3B8; --scrim:rgba(0,0,0,.62); --hl:rgba(255,255,255,.03); --shimmer:rgba(255,255,255,.06);
-  --knob:#EADCC8;
-  --inv-bg:#EADCC8; --inv-ink:#0A0F14; --inv-soft:rgba(10,15,20,.66);
-  --inv-ok:#2E6F4A; --inv-bad:#B3261E; --inv-gold:#7A4C08; --inv-info:#0F3D3E;
-  --av-nar:#9E3A2C; --av-lacquer:#2E6F73; --av-zafaran:#A86A12; --av-firuze:#2E6F73; --av-benovse:#5B4B7A; --av-zeytun:#56632A; --on-av:#FFFFFF;
+  --text:#E8E6E1; --text-2:#9BA1A6; --text-3:#80878D;
+  --border:#2A2F33; --border-2:#383E43;
+  --canvas:#121416; --panel:#181B1E; --sunken:#1E2226; --hover:rgba(255,255,255,.04); --selected:rgba(111,165,157,.12);
+  --accent:#6FA59D; --accent-h:#82B5AD; --accent-t:rgba(111,165,157,.14); --accent-line:rgba(111,165,157,.55); --on-accent:#0F1412;
+  --danger:#F0857A; --danger-t:rgba(240,133,122,.12); --warning:#E0B252; --warning-t:rgba(224,178,82,.12); --success:#7CC39A; --success-t:rgba(124,195,154,.12);
+  --bg:var(--canvas); --surface:var(--panel); --surface2:var(--sunken); --surface3:#23282C;
+  --ink:var(--text); --soft:var(--text-2); --faint:var(--text-3);
+  --line:var(--border); --line-2:var(--border-2);
+  --firuze:var(--accent); --fir-t:var(--accent-t); --on-firuze:#0F1412;
+  --heading:var(--text); --heading-em:var(--accent);
+  --lacquer:#9AA8B8; --nar:var(--danger); --zafaran:var(--warning); --ivory:#F2F1EE;
+  --zafaran-ink:var(--warning); --gold-hi:#E2BE6E;
+  --rug:var(--accent);
+  --deep:#202428; --deep-2:#191C1F; --on-deep:#ECEAE5; --on-deep-soft:rgba(236,234,229,.7);
+  --on-nar:#121416; --on-lacquer:#121416; --on-zafaran:#121416;
+  --ok:var(--success); --ok-t:var(--success-t);
+  --nar-t:var(--danger-t); --zaf-t:var(--warning-t); --lac-t:rgba(154,168,184,.1);
+  --conf-high:var(--success); --conf-mid:var(--warning); --conf-low:var(--danger);
+  --focus:var(--accent); --scrim:rgba(0,0,0,.55); --hl:rgba(255,255,255,.03); --shimmer:rgba(255,255,255,.06);
+  --knob:#E8E6E1;
+  --inv-bg:#E8E6E1; --inv-ink:#121416; --inv-soft:rgba(18,20,22,.66);
+  --inv-ok:#2E7D4F; --inv-bad:#B42318; --inv-gold:#7A5200; --inv-info:#2F5A55;
+  --av-nar:#8C3B32; --av-lacquer:#3F4E5E; --av-zafaran:#7A5A1E; --av-firuze:#3E6F69; --av-benovse:#5A4E72; --av-zeytun:#56632A; --on-av:#FFFFFF;
   --sh-pop:0 1px 2px rgba(0,0,0,.35);
   --sh-1:none;
-  --sh-2:0 4px 16px rgba(0,0,0,.4);
-  --sh-3:0 14px 36px rgba(0,0,0,.55);
-  --side:#0C1318; --hover:rgba(234,220,200,.05); --sel:rgba(234,220,200,.08);
+  --sh-2:0 4px 14px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.04);
+  --sh-3:0 14px 36px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.05);
   color-scheme:dark;
 }}
 :root[data-theme="dark"]{
-  --bg:#0A0F14; --surface:#0F171D; --surface2:#142229; --surface3:#1A2C33;
-  --ink:#EADCC8; --soft:#A3B3B1; --faint:#7A8E90;
-  --line:#1C2B32; --line-2:#284049;
-  --firuze:#7FB3B8; --fir-t:rgba(127,179,184,.12); --on-firuze:#0A0F14;
-  --accent:#D06A28; --accent-t:rgba(208,106,40,.14); --on-accent:#0A0F14;
-  --heading:#EADCC8; --heading-em:#7FB3B8;
-  --lacquer:#7FB3B8; --nar:#E86F64; --zafaran:#DDA64A; --ivory:#F2E9DB;
-  --zafaran-ink:#DDA64A; --gold-hi:#E9BE74;
-  --rug:#C6601F;
-  --deep:#0F3D3E; --deep-2:#0B2E2F; --on-deep:#F2E9DB; --on-deep-soft:rgba(242,233,219,.72);
-  --on-nar:#0A0F14; --on-lacquer:#0A0F14; --on-zafaran:#0A0F14;
-  --ok:#7CC49A; --ok-t:rgba(124,196,154,.13);
-  --nar-t:rgba(232,111,100,.13); --zaf-t:rgba(221,166,74,.13); --lac-t:rgba(127,179,184,.11);
-  --conf-high:#7CC49A; --conf-mid:#DDA64A; --conf-low:#E86F64;
-  --focus:#7FB3B8; --scrim:rgba(0,0,0,.62); --hl:rgba(255,255,255,.03); --shimmer:rgba(255,255,255,.06);
-  --knob:#EADCC8;
-  --inv-bg:#EADCC8; --inv-ink:#0A0F14; --inv-soft:rgba(10,15,20,.66);
-  --inv-ok:#2E6F4A; --inv-bad:#B3261E; --inv-gold:#7A4C08; --inv-info:#0F3D3E;
-  --av-nar:#9E3A2C; --av-lacquer:#2E6F73; --av-zafaran:#A86A12; --av-firuze:#2E6F73; --av-benovse:#5B4B7A; --av-zeytun:#56632A; --on-av:#FFFFFF;
+  --text:#E8E6E1; --text-2:#9BA1A6; --text-3:#80878D;
+  --border:#2A2F33; --border-2:#383E43;
+  --canvas:#121416; --panel:#181B1E; --sunken:#1E2226; --hover:rgba(255,255,255,.04); --selected:rgba(111,165,157,.12);
+  --accent:#6FA59D; --accent-h:#82B5AD; --accent-t:rgba(111,165,157,.14); --accent-line:rgba(111,165,157,.55); --on-accent:#0F1412;
+  --danger:#F0857A; --danger-t:rgba(240,133,122,.12); --warning:#E0B252; --warning-t:rgba(224,178,82,.12); --success:#7CC39A; --success-t:rgba(124,195,154,.12);
+  --bg:var(--canvas); --surface:var(--panel); --surface2:var(--sunken); --surface3:#23282C;
+  --ink:var(--text); --soft:var(--text-2); --faint:var(--text-3);
+  --line:var(--border); --line-2:var(--border-2);
+  --firuze:var(--accent); --fir-t:var(--accent-t); --on-firuze:#0F1412;
+  --heading:var(--text); --heading-em:var(--accent);
+  --lacquer:#9AA8B8; --nar:var(--danger); --zafaran:var(--warning); --ivory:#F2F1EE;
+  --zafaran-ink:var(--warning); --gold-hi:#E2BE6E;
+  --rug:var(--accent);
+  --deep:#202428; --deep-2:#191C1F; --on-deep:#ECEAE5; --on-deep-soft:rgba(236,234,229,.7);
+  --on-nar:#121416; --on-lacquer:#121416; --on-zafaran:#121416;
+  --ok:var(--success); --ok-t:var(--success-t);
+  --nar-t:var(--danger-t); --zaf-t:var(--warning-t); --lac-t:rgba(154,168,184,.1);
+  --conf-high:var(--success); --conf-mid:var(--warning); --conf-low:var(--danger);
+  --focus:var(--accent); --scrim:rgba(0,0,0,.55); --hl:rgba(255,255,255,.03); --shimmer:rgba(255,255,255,.06);
+  --knob:#E8E6E1;
+  --inv-bg:#E8E6E1; --inv-ink:#121416; --inv-soft:rgba(18,20,22,.66);
+  --inv-ok:#2E7D4F; --inv-bad:#B42318; --inv-gold:#7A5200; --inv-info:#2F5A55;
+  --av-nar:#8C3B32; --av-lacquer:#3F4E5E; --av-zafaran:#7A5A1E; --av-firuze:#3E6F69; --av-benovse:#5A4E72; --av-zeytun:#56632A; --on-av:#FFFFFF;
   --sh-pop:0 1px 2px rgba(0,0,0,.35);
   --sh-1:none;
-  --sh-2:0 4px 16px rgba(0,0,0,.4);
-  --sh-3:0 14px 36px rgba(0,0,0,.55);
-  --side:#0C1318; --hover:rgba(234,220,200,.05); --sel:rgba(234,220,200,.08);
+  --sh-2:0 4px 14px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.04);
+  --sh-3:0 14px 36px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.05);
   color-scheme:dark;
 }
 
