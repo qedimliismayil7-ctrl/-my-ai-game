@@ -6,16 +6,17 @@ import { WebView } from 'react-native-webview';
 
 const SITE_URL = 'https://SAYTINIZ.netlify.app';
 
-const C = { ink: '#0A0F14', deep: '#0F3D3E', teal: '#2E6F73', mist: '#7FB3B8', paper: '#EADCC8', copper: '#C6601F' };
+// Mirzə workstation palette: ivory canvas, charcoal text, one olive/green-blue accent
+const C = { bg: '#F7F5F0', text: '#1D1F21', text2: '#62676C', accent: '#2F5A55', white: '#FFFFFF' };
 
 // göl — the stepped carpet diamond from the site logo, drawn with plain Views
 function Gol({ size = 56 }) {
   const s = size;
   return (
     <View style={{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ position: 'absolute', width: s * 0.7, height: s * 0.7, backgroundColor: C.copper, transform: [{ rotate: '45deg' }] }} />
-      <View style={{ position: 'absolute', width: s * 0.36, height: s * 0.36, backgroundColor: C.paper, transform: [{ rotate: '45deg' }] }} />
-      <View style={{ position: 'absolute', width: s * 0.17, height: s * 0.17, backgroundColor: C.teal, transform: [{ rotate: '45deg' }] }} />
+      <View style={{ position: 'absolute', width: s * 0.7, height: s * 0.7, backgroundColor: C.accent, transform: [{ rotate: '45deg' }] }} />
+      <View style={{ position: 'absolute', width: s * 0.36, height: s * 0.36, backgroundColor: C.white, transform: [{ rotate: '45deg' }] }} />
+      <View style={{ position: 'absolute', width: s * 0.17, height: s * 0.17, backgroundColor: C.text, transform: [{ rotate: '45deg' }] }} />
     </View>
   );
 }
@@ -51,7 +52,7 @@ export default function App() {
   if (notSet) {
     return (
       <View style={[styles.full, styles.center]}>
-        <StatusBar barStyle="light-content" backgroundColor={C.ink} />
+        <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
         <Gol />
         <Text style={styles.title}>Mirzə</Text>
         <Text style={styles.text}>App.js faylında SITE_URL sətrinə saytınızın ünvanını yazın.</Text>
@@ -61,7 +62,7 @@ export default function App() {
 
   return (
     <View style={styles.full}>
-      <StatusBar barStyle="light-content" backgroundColor={C.ink} />
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
       <View style={styles.full}>
         {!failed && (
           <WebView
@@ -84,10 +85,10 @@ export default function App() {
           />
         )}
         {loading && !failed && (
-          <View style={[StyleSheet.absoluteFill, styles.center, { backgroundColor: C.ink }]}>
+          <View style={[StyleSheet.absoluteFill, styles.center, { backgroundColor: C.bg }]}>
             <Gol />
             <Text style={styles.title}>Mirzə</Text>
-            <ActivityIndicator color={C.mist} style={{ marginTop: 18 }} />
+            <ActivityIndicator color={C.accent} style={{ marginTop: 18 }} />
           </View>
         )}
         {failed && (
@@ -106,11 +107,11 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  full: { flex: 1, backgroundColor: C.ink, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0 },
-  web: { flex: 1, backgroundColor: C.ink },
+  full: { flex: 1, backgroundColor: C.bg, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0 },
+  web: { flex: 1, backgroundColor: C.bg },
   center: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  title: { color: C.paper, fontSize: 22, fontWeight: '700', marginTop: 16, letterSpacing: -0.2 },
-  text: { color: C.mist, fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: 8 },
-  btn: { marginTop: 22, backgroundColor: C.copper, paddingVertical: 12, paddingHorizontal: 22, borderRadius: 10 },
-  btnText: { color: C.ink, fontSize: 15, fontWeight: '700' },
+  title: { color: C.text, fontSize: 20, fontWeight: '600', marginTop: 16, letterSpacing: -0.2 },
+  text: { color: C.text2, fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 8 },
+  btn: { marginTop: 20, backgroundColor: C.accent, paddingVertical: 10, paddingHorizontal: 18, borderRadius: 6 },
+  btnText: { color: C.white, fontSize: 14, fontWeight: '600' },
 });

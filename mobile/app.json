@@ -4,10 +4,10 @@
     "slug": "mirze",
     "version": "3.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#0A0F14",
-    "splash": { "backgroundColor": "#0A0F14" },
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F7F5F0",
+    "splash": { "backgroundColor": "#F7F5F0" },
     "ios": { "supportsTablet": true, "bundleIdentifier": "az.mirze.app" },
-    "android": { "package": "az.mirze.app", "adaptiveIcon": { "backgroundColor": "#0A0F14" } }
+    "android": { "package": "az.mirze.app", "adaptiveIcon": { "backgroundColor": "#F7F5F0" } }
   }
 }
