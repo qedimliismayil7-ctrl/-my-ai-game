@@ -2302,7 +2302,7 @@
       chk.addEventListener('click', function () { runCheck(r); });
       box.appendChild(h('div', { class: 'editor-qa-h' },
         h('div', null, h('b', { text: list.length ? list.length + ' qeyd' : 'Qeyd yoxdur' }),
-          h('small', { text: r.checkScore != null ? 'Mirzələr yoxladı · bal ' + r.checkScore : 'Yerli yoxlama: rəqəm, termin, türk forması, durğu' })),
+          h('small', { text: r.checkScore != null ? (r.checkLive ? 'Mirzələr yoxladı' : 'Yerli yoxlama') + ' · bal ' + r.checkScore : 'Yerli yoxlama: rəqəm, termin, türk forması, durğu' })),
         chk));
       if (r.checking) {
         box.appendChild(h('div', { class: 'pj-sk-stack', 'aria-busy': 'true', 'aria-label': 'Yoxlanılır', style: 'padding:12px 0' }, h('span', { class: 'pj-sk', style: 'width:45%' }), h('span', { class: 'pj-sk', style: 'width:90%' }), h('span', { class: 'pj-sk', style: 'width:70%' })));
@@ -2340,7 +2340,7 @@
         }
         /* live engine failed (fakeAI already showed why): say that only the local checks ran */
         var liveFail = !!(c && c.ok === false);
-        r.extra = extra; r.extraFor = r.st.t; r.checked = Date.now(); r.checkScore = tx.trim() ? sc : null;
+        r.extra = extra; r.extraFor = r.st.t; r.checked = Date.now(); r.checkScore = tx.trim() ? sc : null; r.checkLive = !liveFail;
         r.checkNote = liveFail ? 'Dərin yoxlama alınmadı — burada yalnız yerli yoxlamalar göstərilir. Bağlantını yoxlayın və bir az sonra yenidən cəhd edin.' : '';
         if (cur === r) renderInsp(true); else tabCounts(cur);
         var n = iss.length + extra.length;
