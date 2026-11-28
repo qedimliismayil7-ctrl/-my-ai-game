@@ -2257,7 +2257,7 @@
     }
     function inspSug(r, box) {
       var d = r.d, alts = altsOf(r);
-      if (!alts.length && !String(r.st.t || '').trim() && (d.ai || d.t)) alts = [[d.ai || d.t, 'İlkin qaralama', null]];
+      if (!alts.length && !String(r.st.t || '').trim() && (d.ai || d.t) && (p.sample || !(App.isLive && App.isLive()))) alts = [[d.ai || d.t, 'İlkin qaralama', null]];
       if (!alts.length) {
         box.appendChild(sec('Mirzə təklifi', h('p', { class: 'editor-p', text: 'Bu seqment üçün əlavə variant yoxdur — cari tərcümə tərcümə yaddaşı və lüğətlə uyğundur.' })));
         if (d.why) box.appendChild(sec('İzah', h('p', { class: 'editor-p', text: d.why })));
