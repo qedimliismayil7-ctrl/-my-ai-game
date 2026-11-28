@@ -1745,6 +1745,7 @@
         '<div class="dr-tools"><button class="dr-search" type="button"></button></div>' +
         '<div class="dr-nav"></div>' +
         '<div class="dr-foot"><button class="dr-profile" type="button"><span class="avatar av-firuze" aria-hidden="true"></span><span class="who"><b></b><small></small><span class="badge"></span></span></button>' +
+        '<button class="icon-btn ghost sm dr-nz" type="button" aria-label="Nuanza — məsləhətlər" title="Nuanza" data-icon="bulb"></button>' +
         '<button class="icon-btn ghost sm theme-toggle" type="button" aria-label="Rəng rejimini dəyiş"></button><span class="ver">Mirzə ' + VERSION + '</span></div></nav>' +
         '<div class="scrim" aria-hidden="true"></div><main class="main" id="main"></main><nav class="bnav" aria-label="Sürətli keçid"></nav><div class="companion" aria-label="Nuanza"></div>';
       D.body.insertBefore(app, D.body.firstChild);
@@ -1776,6 +1777,7 @@
     els.themeToggle = $('.theme-toggle', app);
     els.search = $('.dr-search', app);
     els.bnav = $('.bnav', app);
+    els.drNz = $('.dr-nz', app);
     if (!els.bnav) { els.bnav = h('nav', { class: 'bnav', 'aria-label': 'Sürətli keçid' }); app.insertBefore(els.bnav, els.companion || null); }
     if (!els.companion) { els.companion = h('div', { class: 'companion', 'aria-label': 'Nuanza' }); app.appendChild(els.companion); }
     if (!$('.toasts')) D.body.appendChild(h('div', { class: 'toasts', 'aria-live': 'polite' }));
@@ -2487,6 +2489,7 @@
     (els.brands || []).forEach(function (b) { b.addEventListener('click', function (e) { navGo(NAV[0], e); }); });
     if (els.hdrSearch) els.hdrSearch.addEventListener('click', function () { palette(); });
     if (els.hdrKeys) els.hdrKeys.addEventListener('click', function () { shortcuts(); });
+    if (els.drNz) els.drNz.addEventListener('click', function () { closeDrawer(false); later(companionMenu, 60); });
     if (els.hdrAvatar) els.hdrAvatar.addEventListener('click', function () { if (screens.settings) go('settings'); else toast('Ayarlar hələ yüklənməyib', 'info'); });
     if (els.drProfile) els.drProfile.addEventListener('click', function () { if (screens.settings) go('settings'); else toast(profile().name, 'info', { sub: profile().role }); });
     if (els.modeSeg) els.modeSeg.addEventListener('click', function (e) { var b = e.target.closest('button[data-mode]'); if (b) setMode(b.getAttribute('data-mode')); });

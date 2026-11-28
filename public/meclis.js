@@ -539,7 +539,7 @@
 .mc-elder .mc-mono{width:36px;height:36px;border-radius:50%;display:block}
 .mc-elder .mc-mono svg{width:100%;height:100%}
 .mc-elder small{display:block;max-width:100%;font-size:var(--t-micro,.6875rem);line-height:1.3;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media (max-width:559px){.mc-elder small{display:none}.mc-elder .mc-mono{width:30px;height:30px}}
+@media (max-width:559px){.mc-elder small,.mc-plate b{display:none}.mc-elder{padding:8px 2px 6px}.mc-elder .mc-mono{width:30px;height:30px}.mc-plate{min-height:14px}}
 .mc.is-work .mc-elder:not(.is-on){opacity:.62}
 .mc .mc-elder.is-done,.mc .mc-elder.is-warn{opacity:1}
 .mc-elder.is-on{border-color:var(--accent);background:var(--selected)}

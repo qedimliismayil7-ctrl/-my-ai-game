@@ -104,7 +104,7 @@
     '.nz[data-size="dock"] svg.nz-svg{transition:opacity .16s}',
     '.nz-disc-bg{fill:var(--surface2,#F1EEE7)}',
     '.nz-disc-ring{stroke:var(--line-2,#D3CEC4)}',
-    '@media (max-width:767px){.companion .nz[data-size="dock"]{--nz-w:44px}}',
+    '@media (max-width:1199px){.companion .nz[data-size="dock"]{--nz-w:min(44px,var(--nz-dock,44px))}}',
     '@media (hover:hover){.nz[data-size="dock"] .nz-hit:hover svg.nz-svg{opacity:.92}}',
     '.nz[data-size="dock"]{animation:nz-dock-in .18s var(--ease-out,ease) both}',
     '.nz-dot{position:absolute;top:1px;right:1px;width:10px;height:10px;border-radius:50%;background:var(--accent,#2F5A55);box-shadow:0 0 0 2px var(--bg,#F7F5F0);transform:scale(0);transition:transform .2s var(--ease-out,ease)}',

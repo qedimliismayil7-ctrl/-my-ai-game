@@ -710,7 +710,10 @@
     '.acad-fixed p{font-size:var(--t-body);line-height:21px}',
     /* ---- TASK ---- */
     '.task-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 16px;min-width:0}',
-    '.task-bar .seg button{min-height:28px;padding:3px 10px;font-size:var(--t-small)}',
+    '.task-bar .seg,.lessons-bar .seg{padding:2px}',
+    '.task-bar .seg button,.lessons-bar .seg button{min-height:26px;padding:2px 10px;font-size:var(--t-small)}',
+    '.task-bar .select,.lessons-bar .select,.cards-bar .select,.glossary-tools .select{height:32px;min-height:32px;font-size:var(--t-small)}',
+    '.task-bar .btn{height:32px;min-height:32px}',
     '.task-f-col{flex:1 1 180px;max-width:240px}',
     '.task-f-dom{flex:1 1 200px;max-width:280px}',
     '.task-bar-new{margin-left:auto}',
@@ -777,7 +780,7 @@
     '.task-hunt{display:grid;gap:14px;min-width:0;padding:16px 20px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel)}',
     '@media (max-width:639px){.task-hunt{padding:14px 16px}}',
     '.task-hunt-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}',
-    '.task-hunt-h > div{display:grid;gap:2px;min-width:0}',
+    '.task-hunt-h > div:first-child{display:grid;gap:2px;min-width:0}',
     '.task-hunt-h h2{font-size:var(--t-h2);line-height:24px;font-weight:600}',
     '.task-hunt-sheet{display:grid;gap:16px;min-width:0}',
     '.task-hunt-sheet .task-hunt{padding:0;border:0;background:none}',
@@ -829,7 +832,8 @@
     '.practice-det{display:grid;gap:14px;min-width:0;padding:16px 20px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);scroll-margin-top:calc(var(--hdr-h) + 16px)}',
     '@media (max-width:639px){.practice-det{padding:14px 16px}}',
     '.practice-det-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}',
-    '.practice-det-h > div{display:grid;gap:2px;min-width:0}',
+    '.practice-det-h > div:first-child{display:grid;gap:2px;min-width:0}',
+    '.practice-det-h .acad-act{flex-wrap:nowrap;gap:4px}',
     '.practice-det-h h2{font-size:var(--t-h2);line-height:24px;font-weight:600}',
     '.practice-q{display:grid;gap:16px}',
     '.practice-q-top{display:flex;align-items:center;gap:12px}',
@@ -970,6 +974,7 @@
     '.progress-t td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}',
     '.progress-t tbody tr:last-child td{border-bottom:0}',
     '.progress-t .num{text-align:right;font-family:var(--f-mono);font-size:var(--t-caption);font-variant-numeric:tabular-nums;white-space:nowrap}',
+    '.progress-t th.num{font-family:var(--f-body);font-size:var(--t-micro)}',
     '.progress-t td.bar{width:22%;min-width:72px}',
     '.progress-t td small{display:block;color:var(--text-3);font-size:var(--t-caption);line-height:16px}',
     '.progress-t tr.clickable{cursor:pointer;transition:background-color var(--t-fast) ease}',
@@ -1016,15 +1021,20 @@
     '.progress-week-card .btn,.progress-week-card .acad-status{justify-self:start}',
     /* ---- LESSONS ---- */
     '.lessons-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 16px;min-width:0;padding-bottom:16px;border-bottom:1px solid var(--border)}',
-    '.lessons-bar .seg button{min-height:28px;padding:3px 10px;font-size:var(--t-small)}',
     '.lessons-f-q{flex:1 1 220px;min-width:0}',
     '.lessons-f-q .input{height:32px;min-height:32px}',
     '.lessons-f-sel{flex:0 1 150px}',
     '@media (max-width:639px){.lessons-f-col,.lessons-f-col .seg{width:100%}.lessons-f-col .seg button{flex:1 1 0;padding-inline:6px}.lessons-f-sel{flex:1 1 120px}}',
     '.lessons-grp{min-width:0;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);overflow:hidden}',
-    '.lessons-gh{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--sunken)}',
+    '.lessons-gh{display:flex;align-items:center;gap:6px 14px;width:100%;padding:10px 16px;border:0;border-bottom:1px solid var(--border);background:var(--sunken);color:inherit;font:inherit;text-align:left;cursor:pointer}',
+    '.lessons-gh:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    '.lessons-gh .lessons-tg{display:inline-flex;color:var(--text-3);transition:transform var(--t-fast) ease}',
+    '.lessons-gh .lessons-tg svg{width:14px;height:14px}',
+    '.lessons-gh[aria-expanded="true"] .lessons-tg{transform:rotate(90deg)}',
+    '.lessons-gh[aria-expanded="false"]{border-bottom:0}',
+    '.lessons-grp.th .lessons-gh{cursor:default}',
     '.lessons-gh svg{width:16px;height:16px;color:var(--text-2)}',
-    '.lessons-gh h3{flex:1 1 auto;min-width:0;font-size:var(--t-h3);line-height:20px;font-weight:600}',
+    '.lessons-gh b{flex:1 1 auto;min-width:0;font-size:var(--t-h3);line-height:20px;font-weight:600}',
     '.lessons-gh .acad-bar{width:72px}',
     '.lessons-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto 14px;align-items:center;gap:4px 14px;width:100%;min-height:48px;padding:9px 16px;border:0;border-bottom:1px solid var(--border);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color var(--t-fast) ease}',
     '.lessons-row:last-child{border-bottom:0}',
@@ -1067,10 +1077,10 @@
     '.lessons-res:empty{display:none}',
     /* ---- GLOSSARY ---- */
     '.glossary-layout{display:grid;gap:16px;min-width:0}',
-    '@media (min-width:1100px){.glossary-layout{grid-template-columns:220px minmax(0,1fr);align-items:start;gap:24px}}',
+    '@media (min-width:1100px){.glossary-layout{grid-template-columns:232px minmax(0,1fr);align-items:start;gap:24px}}',
     '.glossary-doms{display:none}',
-    '@media (min-width:1100px){.glossary-doms{display:grid;gap:1px;position:sticky;top:calc(var(--hdr-h) + 16px)}.glossary-sel{display:none}}',
-    '.glossary-dom{display:flex;align-items:center;gap:10px;width:100%;min-height:32px;padding:6px 10px;border:0;border-radius:var(--r-xs);background:transparent;color:var(--text-2);font:500 var(--t-small)/18px var(--f-body);text-align:left;cursor:pointer;transition:background-color var(--t-fast) ease,color var(--t-fast) ease}',
+    '@media (min-width:1100px){.glossary-doms{display:grid;grid-template-columns:minmax(0,1fr);gap:1px;min-width:0;position:sticky;top:calc(var(--hdr-h) + 16px)}.glossary-sel{display:none}}',
+    '.glossary-dom{display:flex;align-items:center;gap:10px;width:100%;min-width:0;min-height:32px;padding:6px 10px;border:0;border-radius:var(--r-xs);background:transparent;color:var(--text-2);font:500 var(--t-small)/18px var(--f-body);text-align:left;cursor:pointer;transition:background-color var(--t-fast) ease,color var(--t-fast) ease}',
     '.glossary-dom svg{width:16px;height:16px;flex:none}',
     '.glossary-dom span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
     '.glossary-dom small{color:var(--text-3);font:500 var(--t-micro)/14px var(--f-mono)}',
@@ -1133,7 +1143,7 @@
   }
   function metaLine(items, cls) {
     return h('div', { class: 'acad-meta' + (cls ? ' ' + cls : '') }, items.filter(function (x) { return x !== null && x !== undefined && x !== ''; })
-      .map(function (x) { return typeof x === 'object' && x.nodeType ? x : h('span', { text: String(x) }); }));
+      .map(function (x) { return typeof x === 'object' && x.nodeType ? (x.classList && x.classList.contains('acad-lv') ? h('span', null, x) : x) : h('span', { text: String(x) }); }));
   }
   function lvTag(id) { var lv = levelById(id); return h('span', { class: 'acad-lv', title: lv ? lv.id + ' · ' + lv.name : String(id || ''), text: String(id || '—') }); }
   function sevTag(sev) { return h('span', { class: 'acad-sev', 'data-sev': sev || 'mid' }, h('i', { 'aria-hidden': 'true' }), SEV_LABEL[sev] || SEV_LABEL.mid); }
@@ -2132,7 +2142,7 @@
     if (!P || !P.grid) return;
     P.grid.textContent = '';
     P.grid.appendChild(h('div', { class: 'practice-lh', 'aria-hidden': 'true' },
-      h('span'), h('span', { text: 'Məşq' }), h('span', { text: 'Bacarıq' }), h('span', { text: 'Çətinlik' }), h('span', { text: 'Ən yaxşı nəticə' }), h('span')));
+      h('span'), h('span', { text: 'Məşq' }), h('span', { text: 'Bacarıq' }), h('span', { text: 'Çətinlik' }), h('span', { text: 'Rekord' }), h('span')));
     GAMES.forEach(function (g) { P.grid.appendChild(gameCard(g)); });
   }
 
@@ -3009,7 +3019,7 @@
         level, with status from the score history. A row opens the task flow.
         The desk's «Dərsə başla» lands here with { lesson } → lesson page.
      ------------------------------------------------------------------ */
-  var LSF = { col: 'base', lv: '', st: '', q: '' }; /* filters, kept for the session */
+  var LSF = { col: 'base', lv: '', st: '', q: '', closed: {} }; /* filters, kept for the session */
 
   function theoryList() { var L = (App.data && App.data.LESSONS) || []; return Array.isArray(L) ? L.filter(function (x) { return x && x.id && x.title; }) : []; }
   function theoryDone() { var d = sget('home:lessons-done', {}); return d && typeof d === 'object' ? d : {}; }
@@ -3129,10 +3139,17 @@
       }
       groups.forEach(function (x) {
         var g = x.g, dn = g.items.filter(function (t) { return statusOf(t) === 'done'; }).length;
-        listSec.appendChild(h('div', { class: 'lessons-grp', role: 'group', 'aria-label': g.name },
-          h('div', { class: 'lessons-gh', title: g.why || null }, ie(g.icon), h('h3', { text: g.name }),
-            h('span', { class: 'acad-count', text: dn + ' / ' + g.items.length }), bar(g.items.length ? dn / g.items.length * 100 : 0)),
-          x.rows.map(function (t) { return taskRow(t, res[t.title + '|' + t.level], t.id === draftId); })));
+        var open = !LSF.closed[g.key] || !!f;
+        var rowsBox = h('div', { id: 'lessons-g-' + g.key.replace(/[^\w-]/g, ''), hidden: !open }, x.rows.map(function (t) { return taskRow(t, res[t.title + '|' + t.level], t.id === draftId); }));
+        var head = h('button', { class: 'lessons-gh', type: 'button', 'aria-expanded': open ? 'true' : 'false', 'aria-controls': rowsBox.id, title: g.why || null },
+          h('span', { class: 'lessons-tg', html: App.icon('chevron'), 'aria-hidden': 'true' }), ie(g.icon), h('b', { text: g.name }),
+          h('span', { class: 'acad-count', text: dn + ' / ' + g.items.length + ' yoxlanılıb' }), bar(g.items.length ? dn / g.items.length * 100 : 0));
+        head.addEventListener('click', function () {
+          var o = head.getAttribute('aria-expanded') !== 'true';
+          head.setAttribute('aria-expanded', o ? 'true' : 'false'); rowsBox.hidden = !o;
+          if (o) delete LSF.closed[g.key]; else LSF.closed[g.key] = true;
+        });
+        listSec.appendChild(h('div', { class: 'lessons-grp', role: 'group', 'aria-label': g.name }, head, rowsBox));
       });
     }
     paintList();
@@ -3145,7 +3162,7 @@
     else status = h('span', { class: 'lessons-st', text: 'Başlanmayıb' });
     var b = h('button', { class: 'lessons-row', type: 'button', 'aria-label': t.level + ' · ' + t.title + ' · ' + (r ? 'ən yaxşı bal ' + r.best : inProg ? 'davam edir' : 'başlanmayıb') },
       lvTag(t.level),
-      h('span', { class: 'lessons-t' }, h('b', { text: t.title }), h('small', { text: [t.sim ? 'Simulyator' : null, t.client, t.domain !== t.client ? t.domain : null].filter(Boolean).join(' · ') })),
+      h('span', { class: 'lessons-t' }, h('b', { text: t.title }), h('small', { text: [t.sim ? 'Simulyator' : null, t.client, !t.dkey && !t.col && t.domain !== t.client ? t.domain : null].filter(Boolean).join(' · ') })),
       h('span', { class: 'lessons-len', text: words(t.src) + ' söz · ' + t.minutes + ' dəq' }),
       status,
       h('span', { class: 'lessons-chev', html: App.icon('chevron'), 'aria-hidden': 'true' }));
@@ -3273,12 +3290,13 @@
          page: domain filter + search + term · translation · note table.
          Same data as App.academyGlossary (the quick sheet).
      ------------------------------------------------------------------ */
-  var GF = { dom: '', q: '' };
+  var GF = { dom: null, q: '' }; /* null → the first domain on first visit */
 
   function renderGlossary(page, params) {
-    if (params.dom != null && (params.dom === '' || domByKey(params.dom))) GF.dom = params.dom;
-    if (GF.dom && !domByKey(GF.dom)) GF.dom = '';
     var groups = DOMAINS.filter(function (d) { return d.glossary.length; });
+    if (params.dom != null && (params.dom === '' || domByKey(params.dom))) GF.dom = params.dom;
+    if (GF.dom == null) GF.dom = groups.length ? groups[0].key : '';
+    if (GF.dom && !domByKey(GF.dom)) GF.dom = '';
     var total = groups.reduce(function (s, d) { return s + d.glossary.length; }, 0);
     page.appendChild(acadNav('glossary'));
     page.appendChild(pageHead('Lüğət', groups.length + ' peşəkar sahə · ' + total + ' termin. İngiliscə termin, Azərbaycan dilində qəbul olunmuş qarşılığı və istifadə qeydi.', [
@@ -3325,8 +3343,13 @@
       });
       table.hidden = !n;
       emptySlot.textContent = '';
-      if (!n) emptySlot.appendChild(emptyNote('Heç nə tapılmadı', 'Başqa sözlə axtarın və ya bütün sahələrə baxın.', [
-        h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { GF.q = ''; q.value = ''; GF.dom = ''; paint(); } }, 'Axtarışı təmizlə')]));
+      var elsewhere = 0;
+      if (d && f) groups.forEach(function (g) { if (g !== d) elsewhere += g.glossary.filter(function (x) { return fold(x.en + ' ' + x.az + ' ' + x.note).indexOf(f) >= 0; }).length; });
+      if (!n) emptySlot.appendChild(emptyNote('Heç nə tapılmadı', elsewhere ? 'Bu sahədə uyğun termin yoxdur, digər sahələrdə ' + elsewhere + ' termin var.' : 'Başqa sözlə axtarın və ya bütün sahələrə baxın.', [
+        elsewhere ? h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { GF.dom = ''; paint(); } }, 'Bütün sahələrdə göstər') :
+          h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { GF.q = ''; q.value = ''; GF.dom = ''; paint(); } }, 'Axtarışı təmizlə')]));
+      else if (elsewhere) emptySlot.appendChild(h('p', { class: 'acad-note' }, 'Digər sahələrdə daha ' + elsewhere + ' termin. ',
+        h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: function () { GF.dom = ''; paint(); } }, 'Bütün sahələrdə göstər')));
       count.textContent = f ? n + ' termin tapıldı' : n + ' termin' + (d ? '' : ' · ' + groups.length + ' sahə');
     }
     page.appendChild(h('div', { class: 'glossary-layout' },
@@ -3336,7 +3359,7 @@
           field('Sahə', sel, 'glossary-sel'),
           h('label', { class: 'acad-field', style: 'flex:1 1 260px' }, h('span', { text: 'Axtarış' }), h('span', { class: 'input-ic' }, ie('search'), q))),
         h('div', { class: 'acad-sec-h' }, why, count),
-        table, emptySlot)));
+        emptySlot, table)));
     paint();
   }
 

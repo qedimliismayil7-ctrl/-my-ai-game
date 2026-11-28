@@ -1,14 +1,16 @@
 /* =====================================================================
    NUANZA — s-projects.js
    Peşəkar rejim ekranları:
-     • 'projects' — layihə kartları / cədvəl, axtarış, filtrlər, «Yeni layihə» vərəqi
-                    (fayl yükləmə, situasiya, tələblər, məxfilik qeydi).
-     • 'editor'   — seqment redaktoru: AI ilkin tərcümə (Mirzə Məclisi), situasiya kartı,
-                    lüğət çipləri, status və etibarlılıq, TM uyğunluğu, canlı yoxlama və
-                    tez düzəlişlər, Nuanzanın sualı, klaviatura qısayolları.
-     • 'qa'       — keyfiyyət yoxlaması: bal halqası, kateqoriyalar, qeydlər, türk formaları,
-                    termin ardıcıllığı, müştəri tələbləri, təhvil faylları, Dərin QA.
-   Plain browser JS. Uses App.* (app.js) and app.css components. Screen CSS: projects-/editor-/qa-.
+     • 'projects' — layihə cədvəli (layihə · müştəri · dil cütü · hazırlıq · status · təhvil),
+                    axtarış + status filtri, «Yeni layihə» vərəqi (fayl, situasiya, tələblər).
+     • 'editor'   — CAT redaktoru, üç panel: seqment naviqatoru (filtr, status nöqtələri) ·
+                    mənbə + tərcümə (təsdiq, ilkin tərcümə — Mirzə Məclisi, sual, tez düzəlişlər) ·
+                    inspektor (Kontekst · Lüğət · TM · Təklif · Yoxlama). Planşetdə inspektor yan
+                    vərəq, mobildə naviqator çəkməcə, inspektor alt vərəqdir.
+     • 'qa'       — rəyçi interfeysi: bal xülasəsi, ciddilik (Kritik/Əsas/Kiçik) və növ filtrləri,
+                    Mənbə · Tərcümə · Düzəliş · Problem · Yoxlayan cədvəli, türk formaları,
+                    termin ardıcıllığı, müştəri tələbləri, təhvil faylları, dərin yoxlama.
+   Plain browser JS. Uses App.* (app.js) and app.css components. Screen CSS: pj-/projects-/editor-/qa-.
    ===================================================================== */
 (function () {
   'use strict';
@@ -58,7 +60,8 @@
     try { c.set(state, text && chatty(state || 'idle') ? { say: text, ms: ms || 3000 } : { ms: ms || 1600 }); } catch (e) { /* ignore */ }
   }
   function toast(text, kind, o) { try { return App.toast(text, kind, o); } catch (e) { return null; } }
-  function burstAt(el, kind) { try { if (App.fx && App.fx.burstAt && el && el.isConnected) App.fx.burstAt(el, kind || 'stars'); } catch (e) { /* ignore */ } }
+  /* Work screens stay calm: state changes (dot, label) are the feedback — no particle bursts. */
+  function burstAt(el, kind) { return el && kind ? null : null; }
   function xpAt(el, text) {
     try {
       if (!App.fx || !App.fx.xp || !el || !el.isConnected) return;
@@ -148,13 +151,12 @@
   var REG_IDS = ['danisiq', 'neytral', 'resmi', 'huquqi'];
   var FIELDS = ['Hüquq', 'Bank-maliyyə', 'Neft-qaz', 'Tibb', 'İnterfeys və IT', 'Marketinq', 'Turizm', 'Təhsil', 'Ümumi'];
   var SEV_W = { high: 4, mid: 2, low: 1 };
-  var SEV_L = { high: ['Kritik', 'red'], mid: ['Orta', 'gold'], low: ['Kiçik', 'navy'] };
+  var SEV_L = { high: ['Kritik', 'red'], mid: ['Əsas', 'gold'], low: ['Kiçik', 'navy'] };
   var CONF_L = { high: 'Əmin', mid: 'Yoxlayın', low: 'Şübhəli' };
   var ELDER = {
     'Termin': 'Lüğətçi Mirzə', 'Məna': 'Mənaçı Mirzə', 'Boş seqment': 'Mənaçı Mirzə', 'Üslub': 'Üslubçu Mirzə', 'Ardıcıllıq': 'Üslubçu Mirzə',
     'Türk forması': 'Dilçi Nənə', 'Orfoqrafiya': 'Dilçi Nənə', 'Durğu': 'Dilçi Nənə', 'Rəqəm': 'Möhürdar Mirzə', 'Ad': 'Möhürdar Mirzə', 'Tarix': 'Möhürdar Mirzə'
   };
-  var ELDER_AV = { 'Lüğətçi Mirzə': ['L', 'av-lacquer'], 'Mənaçı Mirzə': ['M', 'av-firuze'], 'Üslubçu Mirzə': ['Ü', 'av-nar'], 'Dilçi Nənə': ['D', 'av-benovse'], 'Möhürdar Mirzə': ['M', 'av-zafaran'] };
   var CATS = [
     { key: 'terms', label: 'Terminlər', types: ['Termin'] },
     { key: 'numbers', label: 'Rəqəm və tarix', types: ['Rəqəm', 'Tarix'] },
@@ -559,7 +561,7 @@
     var t = String(st.t || ''), out = [];
     if (!t.trim()) { out.push({ type: 'Boş seqment', sev: 'high', was: '', now: d.ai || d.t || '', text: 'Seqment hələ tərcümə edilməyib.', fix: 'fill' }); return out; }
     if (d.q && !st.ans && hasWord(t, d.q.bad, true)) {
-      out.push({ type: 'Məna', sev: 'high', was: d.q.bad, now: '', text: '«' + d.q.word + '» kimə aiddir? Hüquqi mətndə tərəfin adı açıq yazılmalıdır.', fix: 'ask' });
+      out.push({ type: 'Məna', sev: 'high', was: d.q.bad, now: '', src: d.q.word, text: '«' + d.q.word + '» kimə aiddir? Hüquqi mətndə tərəfin adı açıq yazılmalıdır.', fix: 'ask' });
     }
     var A = numsOf(d.s, ctx.set.src === 'en' ? 'en' : 'eu'), B = numsOf(t, 'eu'), used = [], missing = [];
     A.forEach(function (x) {
@@ -569,8 +571,8 @@
     });
     if (missing.length) {
       var extra = B.filter(function (y, k) { return !used[k]; }), x0 = missing[0], y0 = extra[0];
-      if (y0) out.push({ type: 'Rəqəm', sev: 'high', was: y0.raw, now: fmtAz(x0.v, x0.raw), text: 'Mənbədə ' + x0.raw + ', tərcümədə ' + y0.raw + ' — rəqəm uyğun gəlmir.', fix: 'raw' });
-      else out.push({ type: 'Rəqəm', sev: 'high', was: x0.raw, now: '', text: 'Mənbədəki «' + x0.raw + '» tərcümədə yoxdur.', fix: null });
+      if (y0) out.push({ type: 'Rəqəm', sev: 'high', was: y0.raw, now: fmtAz(x0.v, x0.raw), src: x0.raw, text: 'Mənbədə ' + x0.raw + ', tərcümədə ' + y0.raw + ' — rəqəm uyğun gəlmir.', fix: 'raw' });
+      else out.push({ type: 'Rəqəm', sev: 'high', was: x0.raw, now: '', src: x0.raw, text: 'Mənbədəki «' + x0.raw + '» tərcümədə yoxdur.', fix: null });
     }
     ctx.gl.forEach(function (g) {
       (g.bad || []).some(function (pr) {
@@ -619,264 +621,506 @@
   function qaCls(v) { return v == null ? '' : v >= 85 ? 'green' : v >= 70 ? 'gold' : 'red'; }
   function srcFor(s, g) { return g && g.ex ? String(s).split(g.ex).join(' ') : String(s); }
   function issKey(n, iss) { return n + '|' + iss.type + '|' + iss.was; }
-
   /* ------------------------------------------------------------------
-     5. CSS (tokens only; prefixes projects-, editor-, qa-)
+     5. CSS (tokens only; prefixes pj- (shared), projects-, editor-, qa-)
      ------------------------------------------------------------------ */
   var CSS = [
+    /* shared */
+    '.pj-mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums;letter-spacing:0}',
+    '.pj-cap{font:600 var(--t-caption)/1.3333 var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--text-2)}',
+    '.pj-dot{flex:none;display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--text-3);transition:background var(--t-fast),box-shadow var(--t-fast)}',
+    '.pj-dot.is-empty{background:transparent;box-shadow:inset 0 0 0 1.5px var(--border-2)}',
+    '.pj-dot.is-draft{background:var(--text-3)}',
+    '.pj-dot.is-edit{background:var(--accent)}',
+    '.pj-dot.is-ok{background:var(--success)}',
+    '.pj-dot.is-warn{background:var(--warning)}',
+    '.pj-dot.is-err{background:var(--danger)}',
+    '.pj-dot.is-busy{background:transparent;box-shadow:inset 0 0 0 1.5px var(--accent);animation:pj-pulse 1.1s ease-in-out infinite}',
+    '.pj-track{position:relative;display:block;height:4px;border-radius:2px;background:var(--sunken);box-shadow:inset 0 0 0 1px var(--border);overflow:hidden}',
+    '.pj-track > i{display:block;height:100%;width:0;background:var(--accent);transition:width 180ms ease}',
+    '.pj-track.ok > i,.pj-track.green > i{background:var(--success)}',
+    '.pj-track.gold > i{background:var(--warning)}',
+    '.pj-track.red > i{background:var(--danger)}',
+    '.pj-tag{display:inline-flex;align-items:center;height:18px;padding:0 6px;border:1px solid var(--border);border-radius:4px;color:var(--text-2);font:500 var(--t-micro)/1 var(--f-body);white-space:nowrap}',
+    '.pj-tag.new{border-color:var(--accent-line);color:var(--accent)}',
+    '.pj-av{flex:none;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--border-2);background:var(--panel);color:var(--text-2);font:600 10px/1 var(--f-body);letter-spacing:.01em}',
+    '.pj-sk{display:block;height:10px;border-radius:4px;background:var(--sunken);animation:pj-pulse 1.2s ease-in-out infinite}',
+    '.pj-sk-stack{display:grid;gap:10px;align-content:start}',
+    '.pj-spin{flex:none;display:inline-block;width:12px;height:12px;border-radius:50%;border:1.5px solid var(--border-2);border-top-color:var(--accent);animation:spin .8s linear infinite}',
+    '.pj-empty{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:20px 16px}',
+    '.pj-empty-ic{flex:none;width:32px;height:32px;display:grid;place-items:center;border-radius:6px;background:var(--sunken);color:var(--text-2)}',
+    '.pj-empty-ic svg{width:16px;height:16px}',
+    '.pj-empty-tx{flex:1 1 240px;min-width:0;display:grid;gap:2px}',
+    '.pj-empty-tx b{font:600 var(--t-body)/1.5 var(--f-body);color:var(--text)}',
+    '.pj-empty-tx span{font-size:var(--t-small);line-height:1.4;color:var(--text-2)}',
+    '.pj-empty-act{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}',
+    '.pj-empty.block{border:1px solid var(--border);border-radius:8px;background:var(--panel)}',
+    '.pj-x .btn{min-height:28px;padding:0 10px;font-size:var(--t-small)}',
+    ':is(.projects,.editor,.qa) .page-h h1{font:600 var(--t-h1)/1.2727 var(--f-display);letter-spacing:-.01em}',
+    ':is(.projects,.projects-new,.editor,.qa) .link.small{font-size:var(--t-small)}',
     /* projects — list */
-    '.projects-statcard{padding:18px 20px}',
-    '.projects-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px}',
-    '@media (min-width:640px){.projects-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}',
-    '.projects-stats .stat{padding-left:14px;border-left:2px solid var(--line)}',
-    '.projects-stats .stat:first-child{border-left-color:var(--firuze)}',
-    '.projects-stats .stat > b{font-size:1.5rem}',
-    '.ic.projects-fir{background:var(--fir-t);color:var(--firuze)}',
-    '.projects-tools{display:grid;gap:10px}',
-    '.projects-tools-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}',
-    '.projects-tools .input-ic{flex:1 1 220px}',
-    '.projects-tools .input[type=search]::-webkit-search-cancel-button{opacity:.5}',
-    '.projects-grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}',
-    '@media (min-width:720px){.projects-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}',
-    '.projects-card{display:grid;gap:14px;align-content:start;transition:border-color var(--t-fast),background var(--t-fast)}',
-    '@media (hover:hover){.projects-card:hover{border-color:var(--line-2)}}',
-    '.projects-top{display:flex;align-items:center;gap:12px;min-width:0}',
-    '.projects-who{flex:1;min-width:0;display:grid;gap:4px}',
-    '.projects-who > span{font-size:var(--fs-sm);font-weight:600;color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.projects-tags{display:flex;flex-wrap:wrap;gap:6px}',
-    '.projects-open{display:block;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;outline:none}',
-    '.projects-open::after{content:"";position:absolute;inset:0;z-index:0;border-radius:inherit}',
-    '.projects-open:focus-visible::after{box-shadow:0 0 0 2px var(--focus)}',
-    '.projects-card h3{font-size:1rem;font-weight:600;line-height:1.3}',
+    '.projects{gap:16px}',
+    '.projects-sum{display:flex;flex-wrap:wrap;gap:8px 0}',
+    '.projects-sum > div{display:grid;gap:1px;padding:0 20px;border-left:1px solid var(--border)}',
+    '.projects-sum > div:first-child{padding-left:0;border-left:0}',
+    '.projects-sum b{font:600 var(--t-h2)/1.4 var(--f-display);font-variant-numeric:tabular-nums}',
+    '.projects-sum span{font-size:var(--t-caption);color:var(--text-2)}',
+    '.projects-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}',
+    '.projects-bar .input-ic{flex:1 1 220px;max-width:340px}',
+    '.projects-bar .input{height:32px;min-height:32px;font-size:var(--t-small)}',
+    '.projects-bar .input[type=search]::-webkit-search-cancel-button{opacity:.5}',
+    '.projects-filter{max-width:100%}',
+    '.projects-filter .projects-fc{font:500 var(--t-micro)/1 var(--f-mono);color:var(--text-3)}',
+    '.projects-filter button[aria-pressed="true"] .projects-fc{color:var(--text-2)}',
+    '.projects-list{container-type:inline-size;border:1px solid var(--border);border-radius:8px;background:var(--panel);overflow:hidden}',
+    '.projects-tr{position:relative;display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1.2fr) 76px minmax(104px,1fr) 136px 124px 84px;align-items:center;gap:16px;padding:10px 12px 10px 16px}',
+    '.projects-th{padding-block:8px;background:var(--sunken);border-bottom:1px solid var(--border);color:var(--text-2);font:500 var(--t-caption)/1.3333 var(--f-body)}',
+    '.projects-row{transition:background var(--t-fast),opacity 160ms ease}',
+    '.projects-row + .projects-row{border-top:1px solid var(--border)}',
+    '@media (hover:hover){.projects-row:hover{background:var(--hover)}}',
+    '.projects-row:focus-within{background:var(--hover)}',
+    '.projects-row.is-new{box-shadow:inset 2px 0 0 var(--accent)}',
+    '.projects-row.is-gone{opacity:0}',
+    '.projects-c-name{min-width:0;display:grid;gap:2px}',
+    '.projects-open{display:block;width:100%;min-width:0;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;outline:none}',
+    '.projects-open::after{content:"";position:absolute;inset:0;z-index:0}',
+    '.projects-open:focus-visible::after{box-shadow:inset 0 0 0 2px var(--focus)}',
+    '.projects-name{display:block;font:600 var(--t-body)/1.5 var(--f-body);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.projects-sub{display:flex;align-items:center;gap:6px;min-width:0;font-size:var(--t-caption);line-height:1.3333;color:var(--text-2)}',
+    '.projects-sub > .m{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.projects-xs{display:none}',
+    '.projects-c-client{min-width:0;font-size:var(--t-small);color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.projects-c-pair{font:500 var(--t-caption)/1 var(--f-mono);color:var(--text-2);white-space:nowrap}',
+    '.projects-th .projects-c-pair{font:inherit}',
+    '.projects-c-prog{display:flex;align-items:center;gap:10px;min-width:0}',
+    '.projects-c-prog .pj-track{flex:1;min-width:40px}',
+    '.projects-pct{min-width:4ch;text-align:right;font:500 var(--t-caption)/1 var(--f-mono);color:var(--text-2)}',
+    '.projects-st{display:inline-flex;align-items:center;gap:8px;font-size:var(--t-small);color:var(--text);white-space:nowrap}',
+    '.projects-c-due{display:grid;gap:1px;min-width:0;font-size:var(--t-small);line-height:1.35;font-variant-numeric:tabular-nums;white-space:nowrap}',
+    '.projects-c-due small{font-size:var(--t-caption);color:var(--text-2)}',
+    '.projects-c-due small.late{color:var(--danger)}',
+    '.projects-c-due small.soon{color:var(--warning)}',
+    '.projects-c-act{display:flex;align-items:center;justify-content:flex-end;gap:2px}',
     '.projects-raise{position:relative;z-index:1}',
-    '.projects-meta{display:flex;flex-wrap:wrap;gap:6px}',
-    '.projects-prog{display:grid;gap:8px}',
-    '.projects-prog-l{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:var(--fs-sm);color:var(--soft)}',
-    '.projects-prog-l b{font-family:var(--f-display);font-size:1rem;color:var(--ink);font-variant-numeric:tabular-nums}',
-    '.projects-prog-l b small,.editor-bar-prog b small{margin-left:1px;font-family:var(--f-body);font-size:.68em;font-weight:600;color:var(--soft)}',
-    '.projects-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding-top:12px;border-top:1px solid var(--line)}',
-    '.projects-due{display:inline-flex;align-items:center;gap:6px;min-height:24px;padding:0 8px;border-radius:var(--r-xs);background:var(--surface2);color:var(--soft);font:600 var(--fs-xs)/1.2 var(--f-body);font-variant-numeric:tabular-nums}',
-    '.projects-due svg{width:14px;height:14px}',
-    '.projects-due.late{background:var(--nar-t);color:var(--nar)}',
-    '.projects-due.late::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}',
-    '.projects-due.soon{background:var(--zaf-t);color:var(--zafaran-ink)}',
-    '.projects-due.ok{background:var(--ok-t);color:var(--ok)}',
-    'button.projects-qa{border:0;cursor:pointer;height:24px;padding:0 8px}',
-    'button.projects-qa:hover{box-shadow:inset 0 0 0 1px currentColor}',
-    '.projects-card.is-new{border-color:var(--firuze)}',
-    '.projects-card.is-gone{opacity:0;transition:opacity .2s}',
-    '.projects-table td .tx{display:grid;gap:2px;min-width:0}',
-    '.projects-table td .tx small{color:var(--soft)}',
-    '.projects-mini{display:flex;align-items:center;gap:8px;min-width:120px}',
-    '.projects-mini .progress{flex:1;min-width:60px}',
-    '.projects-table tr:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
-    /* projects — new sheet */
+    '.projects-qa{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:var(--text-3);font:500 var(--t-caption)/1 var(--f-mono);cursor:pointer;transition:background var(--t-fast),color var(--t-fast)}',
+    '.projects-qa:hover{background:var(--sunken);color:var(--text)}',
+    '.projects-qa.green{color:var(--success)}.projects-qa.gold{color:var(--warning)}.projects-qa.red{color:var(--danger)}',
+    '@media (hover:hover){.projects-row:not(:hover):not(:focus-within) .projects-more{opacity:0}}',
+    '.projects-more{transition:opacity var(--t-fast)}',
+    '@container (max-width:920px){.projects-tr{grid-template-columns:minmax(0,2.4fr) 76px minmax(96px,1fr) 128px 116px 76px}.projects-c-client{display:none}.projects-xs.c{display:inline}}',
+    '@container (max-width:640px){',
+    '  .projects-th{display:none}',
+    '  .projects-tr{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name act" "prog prog" "st due";gap:8px 12px;padding:12px 8px 12px 14px}',
+    '  .projects-c-name{grid-area:name}.projects-c-act{grid-area:act;align-self:start}.projects-c-prog{grid-area:prog;padding-right:6px}',
+    '  .projects-c-status{grid-area:st}.projects-c-due{grid-area:due;justify-self:end;text-align:right;padding-right:6px}',
+    '  .projects-c-pair,.projects-c-client{display:none}.projects-xs{display:inline}',
+    '  .projects-name{white-space:normal}',
+    '}',
+    /* projects — «Yeni layihə» sheet */
     '.projects-new{display:grid;gap:18px}',
     '.projects-new .grid-2{gap:14px}',
-    '.projects-sec{display:grid;gap:12px;padding-top:16px;border-top:1px solid var(--line)}',
-    '.projects-sec > h3{display:flex;align-items:center;gap:8px;font:600 var(--fs-xs)/1.3 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}',
+    '.projects-sec{display:grid;gap:12px;padding-top:16px;border-top:1px solid var(--border)}',
+    '.projects-sec > h3{font:600 var(--t-caption)/1.3333 var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--text-2)}',
     '.projects-dz:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.projects-dz .ic{width:40px;height:40px;border-radius:var(--r-md)}',
+    '.projects-dz .ic{width:32px;height:32px;border-radius:6px}',
     '.projects-files{display:grid;gap:8px}',
-    '.projects-file{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:10px 6px 10px 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}',
-    '.projects-file .ic{width:32px;height:32px;border-radius:var(--r-sm)}',
-    '.projects-file .ic svg{width:18px;height:18px}',
+    '.projects-file{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:8px 6px 8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--panel)}',
+    '.projects-file .ic{width:28px;height:28px;border-radius:6px}',
+    '.projects-file .ic svg{width:16px;height:16px}',
     '.projects-file-tx{min-width:0;display:grid;gap:5px}',
-    '.projects-file-tx b{font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.projects-file-tx small{font-size:var(--fs-xs);color:var(--soft)}',
-    '.projects-file-pct{min-width:40px;display:flex;justify-content:flex-end;font-size:var(--fs-xs);color:var(--soft);font-variant-numeric:tabular-nums}',
+    '.projects-file-tx b{font-size:var(--t-small);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.projects-file-tx small{font-size:var(--t-caption);color:var(--text-2)}',
+    '.projects-file-pct{min-width:40px;display:flex;justify-content:flex-end;font:500 var(--t-caption)/1 var(--f-mono);color:var(--text-2)}',
     '.projects-file-pct .spinner{width:14px;height:14px}',
-    '.projects-sample{justify-self:start}',
-    /* editor */
-    '.editor-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:-8px}',
-    '.editor-top .btn{margin-left:-10px}',
-    '.editor .page-h h1{font-size:clamp(1.5rem,1.2rem + 1.3vw,2rem)}',
-    '.editor-bar{position:sticky;top:calc(var(--hdr-h) + var(--band-h) + env(safe-area-inset-top,0px) + 8px);z-index:6;display:grid;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh-1)}',
-    '.editor-bar-top,.editor-bar-bot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;min-width:0}',
-    '.editor-sec{font:600 var(--fs-sm)/1.3 var(--f-body);color:var(--ink);min-width:0}',
-    '.editor-bar-prog{display:flex;align-items:center;gap:12px}',
-    '.editor-bar-prog .progress{flex:1}',
-    '.editor-bar-prog b{font-family:var(--f-display);font-size:1.125rem;min-width:3ch;text-align:right}',
-    '.editor-prog-tx{font-size:var(--fs-xs);color:var(--soft)}',
-    '.editor-save{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--soft)}',
-    '.editor-save i{width:7px;height:7px;border-radius:50%;background:var(--ok)}',
-    '.editor-save.busy i{background:var(--zafaran);animation:editor-blink 1s ease-in-out infinite}',
-    '.editor-filter .editor-fc{min-width:18px;height:18px;padding:0 5px;border-radius:5px;background:color-mix(in srgb,var(--ink) 8%,transparent);font-size:.6875rem;line-height:18px;text-align:center}',
-    '.editor-filter button[aria-pressed="true"] .editor-fc{background:var(--fir-t);color:var(--firuze)}',
-    '.editor-ctx{align-items:start}',
-    '.editor-sit-h{display:flex;align-items:center;gap:12px;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}',
-    '.editor-sit-h .tx{flex:1;min-width:0;display:grid;gap:2px}',
-    '.editor-sit-h .tx b{font-family:var(--f-display);font-size:1.125rem;font-weight:600}',
-    '.editor-sit-h .tx small{color:var(--soft);font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.editor-sit-h > svg:last-child{width:18px;height:18px;color:var(--faint);transition:transform var(--t-base) var(--ease-out)}',
-    '.editor-sit-h[aria-expanded="true"] > svg:last-child{transform:rotate(90deg)}',
-    '.editor-sit-h:focus-visible{outline:2px solid var(--focus);outline-offset:4px;border-radius:8px}',
-    '.editor-sit-b{display:grid;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);animation:fade-in .2s var(--ease-out) both}',
-    '.editor-sit-row{display:grid;gap:2px}',
-    '.editor-sit-row span{font-size:var(--fs-xs);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}',
-    '.editor-sit-row p{font-size:var(--fs-sm);line-height:1.5}',
-    '.editor-gl .chips{gap:6px}',
-    '.editor-gl .chip{min-height:30px;padding:0 10px;font-size:.78rem}',
-    '.editor-gl .chip .editor-arrow{color:var(--faint)}',
-    '.editor-gl .chip[aria-pressed="true"] .editor-arrow{color:inherit;opacity:.7}',
-    '.editor-gl-bad{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border-radius:var(--r-pill);background:var(--nar);color:var(--on-nar);font-size:.625rem;font-weight:700}',
-    '.editor-gl-add{border-style:dashed}',
-    'mark.editor-mark{background:var(--fir-t);color:inherit;border-radius:4px;padding:0 2px;box-shadow:inset 0 -2px 0 var(--firuze)}',
-    '.editor-they{font-weight:600}',
-    '.editor-start{display:grid;gap:14px}',
-    '.editor-start-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px}',
-    '.editor-list .seg-row{scroll-margin-top:calc(var(--hdr-h) + var(--band-h) + 170px);scroll-margin-bottom:120px}',
-    '.editor-list .seg-row[hidden]{display:none}',
-    '.editor-list textarea.seg-tgt{overflow:hidden;min-height:3.2em;line-height:1.65}',
-    '.editor-list textarea.seg-tgt.editor-t-mid:not(:focus){box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--conf-mid) 70%,transparent)}',
-    '.editor-list textarea.seg-tgt.editor-t-low:not(:focus){box-shadow:inset 0 -2px 0 var(--conf-low)}',
-    '.editor-list textarea.seg-tgt.editor-sk{color:transparent;pointer-events:none;background:linear-gradient(100deg,transparent 30%,var(--shimmer) 50%,transparent 70%) 0 0/250% 100% no-repeat,var(--surface2);animation:shimmer 1.3s linear infinite}',
-    '.editor-list .seg-row.is-ok .seg-src{color:var(--soft)}',
-    '.editor-list .seg-row.editor-flash{animation:editor-flash 1.6s var(--ease-out)}',
-    '.editor-list .seg-st.ok svg{animation:fade-in .2s var(--ease-out) both}',
-    '.editor-list .seg-meta{gap:6px 6px;padding-top:2px}',
-    '.editor-pill svg{width:12px;height:12px}',
-    '.editor-conf{display:inline-flex;align-items:center;gap:6px;height:20px;padding:0 7px 0 6px;border-radius:var(--r-xs);background:var(--surface2);color:var(--soft);font:600 .6875rem/1 var(--f-body);cursor:help}',
-    '.editor-bars{display:inline-flex;align-items:flex-end;gap:2px;height:11px}',
-    '.editor-bars i{display:block;width:3px;border-radius:2px;background:var(--line-2)}',
-    '.editor-bars i:nth-child(1){height:5px}.editor-bars i:nth-child(2){height:8px}.editor-bars i:nth-child(3){height:11px}',
-    '.editor-conf.high{color:var(--ok)}.editor-conf.high i{background:var(--conf-high)}',
-    '.editor-conf.mid{color:var(--zafaran-ink)}.editor-conf.mid i:nth-child(-n+2){background:var(--conf-mid)}',
-    '.editor-conf.low{color:var(--nar)}.editor-conf.low i:nth-child(1){background:var(--conf-low)}',
-    '.editor-tm{min-height:24px;height:24px;padding:0 9px;gap:5px;font-size:.6875rem;font-weight:600;background:var(--zaf-t);border-color:transparent;color:var(--zafaran-ink)}',
-    '.editor-tm svg{width:12px;height:12px}',
-    '.editor-actions{display:inline-flex;align-items:center;gap:4px;margin-left:auto}',
-    '.editor-ok{min-height:30px;padding:0 10px}',
-    '.editor-ok[aria-pressed="true"]{--btn-bg:var(--ok-t);--btn-bg-h:var(--ok-t);--btn-ink:var(--ok);--btn-bd:transparent;box-shadow:none}',
-    '.editor-nzb .logo{width:16px;height:16px}',
-    '.editor-hints{grid-column:3 / 4;display:grid;gap:6px;min-width:0}',
-    '.editor-hint{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:6px 6px 6px 10px;border-radius:var(--r-sm);background:var(--zaf-t);font-size:var(--fs-sm);line-height:1.4}',
-    '.editor-hint.high{background:var(--nar-t)}',
-    '.editor-hint.low{background:var(--lac-t)}',
+    /* editor — frame */
+    '.page.editor{display:flex;flex-direction:column;max-width:none;margin:0;padding:0;gap:0}',
+    '.editor[data-layout="wide"],.editor[data-layout="mid"]{height:calc(100dvh - var(--hdr-h) - 1px - env(safe-area-inset-top,0px));overflow:hidden}',
+    '.editor-head{flex:none;display:grid;gap:6px;padding:10px 20px 10px 12px;border-bottom:1px solid var(--border);background:var(--canvas)}',
+    '.editor-head-r1{display:flex;align-items:center;gap:8px 12px;min-width:0}',
+    '.editor-title{flex:1;min-width:0;display:flex;align-items:center;gap:8px}',
+    '.editor-title h1{min-width:0;margin:0;font:600 var(--t-h2)/1.4118 var(--f-display);letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.editor-crumb{flex:none;max-width:30%;font-size:var(--t-small);color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.editor-crumb-sep{flex:none;color:var(--text-3)}',
+    '.editor-head-acts{flex:none;display:flex;align-items:center;gap:6px}',
+    '.editor-head-r2{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;padding-left:38px;font-size:var(--t-caption);line-height:1.3333;color:var(--text-2)}',
+    '.editor-meta{display:flex;flex-wrap:wrap;align-items:center;gap:2px 0;min-width:0}',
+    '.editor-meta > span + span::before{content:"·";margin:0 8px;color:var(--text-3)}',
+    '.editor-meta .is-late{color:var(--danger)}',
+    '.editor-prog{display:flex;align-items:center;gap:10px;margin-left:auto}',
+    '.editor-prog .pj-track{width:140px}',
+    '.editor-prog-tx{font-variant-numeric:tabular-nums}',
+    '.editor-prog b{min-width:4ch;text-align:right;font:500 var(--t-caption)/1 var(--f-mono);color:var(--text)}',
+    '.editor-busy{display:inline-flex;align-items:center;gap:8px;color:var(--text-2)}',
+    '.editor-save{display:inline-flex;align-items:center;gap:6px;margin-right:4px;font-size:var(--t-caption);color:var(--text-2);white-space:nowrap}',
+    '.editor-save i{width:6px;height:6px;border-radius:50%;background:var(--success)}',
+    '.editor-save.busy i{background:var(--warning);animation:pj-pulse 1s ease-in-out infinite}',
+    '.editor-head .btn-sm{min-height:30px}',
+    '.editor-panel-btn[aria-pressed="true"]{background:var(--accent-t);color:var(--accent);border-color:transparent}',
+    '.editor-ws{flex:1;min-height:0;display:grid;grid-template-columns:268px minmax(0,1fr) 360px;background:var(--canvas)}',
+    '.editor.insp-off .editor-ws{grid-template-columns:268px minmax(0,1fr)}',
+    '.editor.insp-off[data-layout="wide"] .editor-insp{display:none}',
+    '.editor[data-layout="mid"] .editor-ws{grid-template-columns:232px minmax(0,1fr)}',
+    '.editor[data-layout="narrow"] .editor-ws{display:block}',
+    /* editor — navigator */
+    '.editor-nav{min-width:0;min-height:0;display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--canvas)}',
+    '.editor-nav-h{flex:none;display:grid;gap:10px;padding:12px 12px 10px;border-bottom:1px solid var(--border)}',
+    '.editor-nav-t{display:flex;align-items:center;gap:8px;min-height:24px}',
+    '.editor-nav-count{font:500 var(--t-caption)/1 var(--f-mono);color:var(--text-3)}',
+    '.editor-ov-x{margin-left:auto;display:none}',
+    '.editor-filter{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px}',
+    '.editor-filter button{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;height:26px;padding:0 8px;border:1px solid transparent;border-radius:6px;background:none;color:var(--text-2);font:500 var(--t-caption)/1 var(--f-body);cursor:pointer;transition:background var(--t-fast),color var(--t-fast),border-color var(--t-fast)}',
+    '.editor-filter button:hover{background:var(--hover);color:var(--text)}',
+    '.editor-filter button[aria-pressed="true"]{background:var(--panel);border-color:var(--border);color:var(--text)}',
+    '.editor-fc{font:500 var(--t-micro)/1 var(--f-mono);color:var(--text-3)}',
+    '.editor-nav-sec{font-size:var(--t-caption);color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.editor-nav-list{position:relative;flex:1;min-height:0;overflow-y:auto;padding:4px 0 12px}',
+    '.editor-nav-item{position:relative;display:grid;grid-template-columns:26px 8px minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;min-height:32px;padding:4px 12px;border:0;background:none;color:var(--text-2);font:400 var(--t-small)/1.35 var(--f-body);text-align:left;cursor:pointer;transition:background var(--t-fast),color var(--t-fast)}',
+    '.editor-nav-item:hover{background:var(--hover);color:var(--text)}',
+    '.editor-nav-item:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}',
+    '.editor-nav-item[aria-current="true"]{background:var(--selected);color:var(--text)}',
+    '.editor-nav-item[aria-current="true"]::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:2px;border-radius:0 2px 2px 0;background:var(--accent)}',
+    '.editor-nav-item .n{font:500 var(--t-micro)/1 var(--f-mono);color:var(--text-3)}',
+    '.editor-nav-item[aria-current="true"] .n{color:var(--accent)}',
+    '.editor-nav-item .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.editor-nav-item .f{font:500 var(--t-micro)/1 var(--f-mono);color:var(--text-3)}',
+    '.editor-nav-legend{flex:none;display:flex;flex-wrap:wrap;gap:6px 12px;padding:10px 12px;border-top:1px solid var(--border);font-size:var(--t-micro);color:var(--text-2)}',
+    '.editor-nav-legend span{display:inline-flex;align-items:center;gap:5px}',
+    '.editor-nav-legend .pj-dot{width:7px;height:7px}',
+    /* editor — center */
+    '.editor-center{min-width:0;min-height:0;overflow-y:auto;background:var(--panel)}',
+    '.editor-mbar{display:none}',
+    '.editor-center-h{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:8px 12px;min-height:40px;padding:8px 24px;border-bottom:1px solid var(--border);background:var(--panel)}',
+    '.editor-center-t{flex:1;min-width:0;font:600 var(--t-small)/1.4 var(--f-body);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.editor-finfo{display:inline-flex;align-items:center;gap:10px;font-size:var(--t-caption);color:var(--text-2);white-space:nowrap}',
+    '.editor-start{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;margin:16px 24px 4px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;background:var(--sunken)}',
+    '.editor-start > div{display:grid;gap:2px;max-width:56ch}',
+    '.editor-start b{font:600 var(--t-body)/1.5 var(--f-body)}',
+    '.editor-start span{font-size:var(--t-small);line-height:1.4;color:var(--text-2)}',
+    '.editor-seg{position:relative;padding:12px 20px 14px 22px;border-bottom:1px solid var(--border);scroll-margin:56px 0 24px;transition:background var(--t-fast)}',
+    '.editor-seg::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:transparent;transition:background 160ms ease}',
+    '.editor-seg.active{background:color-mix(in srgb,var(--accent) 3%,var(--panel))}',
+    '.editor-seg.active::before{background:var(--accent)}',
+    '.editor-seg.editor-flash{animation:editor-flash 1.2s ease-out}',
+    '.editor-seg-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-height:28px;margin-bottom:4px}',
+    '.editor-segno{font:500 var(--t-micro)/1 var(--f-mono);letter-spacing:.06em;color:var(--text-3)}',
+    '.editor-seg.active .editor-segno{color:var(--accent)}',
+    '.editor-pill{font-size:var(--t-caption);color:var(--text-2)}',
+    '.editor-pill.ok{color:var(--success)}',
+    '.editor-conf{display:inline-flex;align-items:center;gap:5px;font-size:var(--t-caption);color:var(--text-2);cursor:help}',
+    '.editor-bars{display:inline-flex;align-items:flex-end;gap:2px;height:10px}',
+    '.editor-bars i{display:block;width:3px;border-radius:1px;background:var(--border-2)}',
+    '.editor-bars i:nth-child(1){height:4px}.editor-bars i:nth-child(2){height:7px}.editor-bars i:nth-child(3){height:10px}',
+    '.editor-conf.high i{background:var(--success)}',
+    '.editor-conf.mid i:nth-child(-n+2){background:var(--warning)}',
+    '.editor-conf.low i:nth-child(1){background:var(--danger)}',
+    '.editor-conf.low{color:var(--danger)}',
+    '.editor-chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 7px;border:1px solid var(--border);border-radius:4px;background:var(--panel);color:var(--text-2);font:500 var(--t-micro)/1 var(--f-body);cursor:pointer;transition:border-color var(--t-fast),color var(--t-fast)}',
+    '.editor-chip svg{width:12px;height:12px}',
+    '.editor-chip:hover{border-color:var(--border-2);color:var(--text)}',
+    '.editor-chip.warn{color:var(--warning);border-color:color-mix(in srgb,var(--warning) 35%,var(--border))}',
+    '.editor-chip.err{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 35%,var(--border))}',
+    'span.editor-chip{cursor:default}',
+    '.editor-seg-acts{display:flex;align-items:center;gap:4px;margin-left:auto}',
+    '.editor-ok{min-height:28px;padding:0 10px;gap:6px;font-size:var(--t-small)}',
+    '.editor-ok svg{width:14px;height:14px}',
+    '.editor-okkbd{display:none;align-items:center;gap:2px;margin-left:2px}',
+    '.editor-okkbd .kbd{min-width:18px;height:18px;padding:0 4px;font-size:10px}',
+    '.editor-seg.active .editor-ok:not([aria-pressed="true"]){--btn-bg:var(--accent);--btn-bg-h:var(--accent-h);--btn-ink:var(--on-accent);--btn-bd:transparent}',
+    '.editor-seg.active .editor-ok:not([aria-pressed="true"]) svg{color:var(--on-accent)}',
+    '.editor-seg.active .editor-ok:not([aria-pressed="true"]) .editor-okkbd{display:inline-flex}',
+    '.editor-seg.active .editor-ok .kbd{background:transparent;border-color:color-mix(in srgb,var(--on-accent) 45%,transparent);color:var(--on-accent);box-shadow:none}',
+    '.editor-ok[aria-pressed="true"]{--btn-bg:transparent;--btn-bg-h:var(--success-t);--btn-ink:var(--success);--btn-bd:color-mix(in srgb,var(--success) 32%,transparent)}',
+    '.editor-ok[aria-pressed="true"] svg{color:var(--success)}',
+    '@media (hover:hover){.editor-seg:not(.active):not(:hover):not(:focus-within) .editor-ok:not([aria-pressed="true"]),.editor-seg:not(.active):not(:hover):not(:focus-within) .editor-nzb{opacity:0}}',
+    '.editor-ok,.editor-nzb{transition:opacity var(--t-fast),background-color var(--t-fast),border-color var(--t-fast)}',
+    '.editor-pair{display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px 8px;align-items:start}',
+    '.editor-lang{padding-top:4px;font:500 10px/1.4 var(--f-mono);letter-spacing:.04em;color:var(--text-3)}',
+    '.editor-src{min-width:0;font-size:var(--t-body);line-height:1.6;color:var(--text-2);overflow-wrap:anywhere}',
+    '.editor-seg.active .editor-src{color:var(--text)}',
+    'mark.editor-mark{background:var(--accent-t);color:inherit;border-radius:3px;padding:0 2px;box-shadow:inset 0 -1.5px 0 var(--accent-line)}',
+    '.editor-they{font-weight:600;text-decoration:underline wavy var(--danger);text-decoration-thickness:1.5px;text-underline-offset:3px}',
+    'textarea.editor-ta{display:block;width:calc(100% + 18px);min-height:2.25em;margin:-5px -9px;padding:4px 8px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--text);font:400 var(--t-body)/1.6 var(--f-body);resize:none;overflow:hidden;transition:border-color var(--t-fast),background var(--t-fast),box-shadow var(--t-fast)}',
+    'textarea.editor-ta::placeholder{color:var(--text-3)}',
+    '@media (hover:hover){textarea.editor-ta:hover{background:var(--sunken)}}',
+    'textarea.editor-ta:focus{outline:none;background:var(--panel);border-color:var(--accent-line);box-shadow:0 0 0 3px var(--accent-t)}',
+    'textarea.editor-ta.editor-t-mid:not(:focus){box-shadow:inset 0 -1.5px 0 color-mix(in srgb,var(--warning) 75%,transparent)}',
+    'textarea.editor-ta.editor-t-low:not(:focus){box-shadow:inset 0 -1.5px 0 var(--danger)}',
+    'textarea.editor-ta.editor-sk{color:transparent;pointer-events:none;background:var(--sunken);animation:pj-pulse 1.2s ease-in-out infinite}',
+    '.editor-hints{display:grid;gap:4px;margin:10px 0 0 30px}',
+    '.editor-seg:not(.active) .editor-hints{display:none}',
+    '.editor-hint{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;min-height:30px;padding:3px 4px 3px 10px;border-left:2px solid var(--warning);border-radius:0 6px 6px 0;background:var(--warning-t);font-size:var(--t-small);line-height:1.45}',
+    '.editor-hint.high{border-left-color:var(--danger);background:var(--danger-t)}',
+    '.editor-hint.low{border-left-color:var(--border-2);background:var(--sunken)}',
     '.editor-hint-tx{flex:1;min-width:0}',
-    '.editor-hint-tx b{font-weight:600;margin-right:4px}',
-    '.editor-hint s,.qa-diff s{color:var(--nar);text-decoration-thickness:1.5px}',
-    '.editor-hint ins,.qa-diff ins{color:var(--ok);font-weight:600;text-decoration:none;background:var(--ok-t);border-radius:4px;padding:0 3px}',
-    '.editor-hint .btn{min-height:28px;padding:0 10px}',
-    '@media (max-width:639px){.editor-hints{grid-column:2 / -1;grid-row:3}.editor-list .seg-meta{grid-row:4}}',
-    '.editor-ask{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;margin:0 14px 14px 60px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--firuze) 40%,var(--line));border-radius:var(--r-md);background:var(--surface2)}',
-    '.editor-ask::before{content:"";position:absolute;left:28px;top:-6px;width:10px;height:10px;transform:rotate(45deg);background:inherit;border-left:1px solid color-mix(in srgb,var(--firuze) 40%,var(--line));border-top:1px solid color-mix(in srgb,var(--firuze) 40%,var(--line))}',
-    '.editor-ask[hidden]{display:none}',
-    '.editor-ask-ic{width:32px;height:32px;display:grid;place-items:center;border-radius:var(--r-sm);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}',
-    '.editor-ask-ic .logo{width:18px;height:18px}',
-    '.editor-ask-b{display:grid;gap:8px;min-width:0}',
-    '.editor-ask-b h3{font-size:.9375rem;font-weight:600}',
-    '.editor-ask-b p{font-size:var(--fs-sm);color:var(--soft)}',
-    '.editor-ask-q{font-size:var(--fs-sm);padding:8px 10px;border-radius:var(--r-xs);background:var(--surface);border-left:2px solid var(--firuze)}',
-    '.editor-ask-opts{display:flex;flex-wrap:wrap;align-items:center;gap:8px}',
-    '.editor-ask.done{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;background:var(--surface2);border-color:color-mix(in srgb,var(--ok) 40%,var(--line))}',
-    '.editor-ask.done .editor-ask-ic{color:var(--ok)}',
-    '.editor-ask.mini{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:8px 12px}',
-    '.editor-ask.mini .editor-ask-ic{width:28px;height:28px}',
-    '.editor-ask.mini .editor-ask-ic .logo{width:16px;height:16px}',
-    '@media (max-width:639px){.editor-ask{margin:0 12px 12px 12px}.editor-ask::before{left:20px}}',
-    '.editor-empty{padding:16px}',
-    '.editor-empty .empty{border:0;background:transparent}',
-    '.editor-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px;padding:12px 14px;border-top:1px solid var(--line);background:var(--surface2)}',
-    '.editor-keys{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;color:var(--soft);font-size:var(--fs-xs)}',
+    '.editor-hint-tx > b{font-weight:600;margin-right:6px}',
+    '.editor-hint .btn{min-height:26px;padding:0 8px;font-size:var(--t-caption)}',
+    ':is(.editor,.qa,.editor-menu) s{color:var(--danger);text-decoration-thickness:1px}',
+    ':is(.editor,.qa) ins{color:var(--success);font-weight:600;text-decoration:none}',
+    '.editor-ask{display:grid;gap:8px;margin:10px 0 0 30px;padding:10px 12px;border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:0 6px 6px 0;background:var(--panel)}',
+    '.editor-seg:not(.active) .editor-ask{display:none}',
+    '.editor-ask h3{font:600 var(--t-small)/1.4 var(--f-body)}',
+    '.editor-ask p{font-size:var(--t-small);line-height:1.5;color:var(--text-2)}',
+    '.editor-ask-q{padding:6px 10px;border-radius:6px;background:var(--sunken);color:var(--text)!important}',
+    '.editor-ask-opts{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}',
+    '.editor-ask-opts .btn{min-height:28px}',
+    '.editor-ask.done,.editor-ask.mini{grid-template-columns:minmax(0,1fr) auto;align-items:center;border-left-color:var(--success)}',
+    '.editor-ask.mini{border-left-color:var(--warning)}',
+    '.editor-ask.done b{font-size:var(--t-small)}',
+    '.editor-empty{padding:16px 24px}',
+    '.editor-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px;padding:14px 24px 88px;color:var(--text-2);font-size:var(--t-caption)}',
+    '.editor-keys{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}',
     '.editor-keys > span{display:inline-flex;align-items:center;gap:4px}',
-    '.editor-quote{padding:10px 12px;border-left:3px solid var(--firuze);border-radius:0 var(--r-sm) var(--r-sm) 0;background:var(--surface2);font-size:var(--fs-sm);line-height:1.6}',
-    '.editor-quote.az{border-left-color:var(--lacquer)}',
-    '.editor-nz{display:grid;gap:14px}',
-    '.editor-nz .list-row.is-on::before{opacity:1}',
-    '.editor-nz-out{display:grid;gap:10px}',
-    '.editor-nz-out:empty{display:none}',
-    '.editor-alt{display:grid;gap:4px;width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:var(--r-md);background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:border-color var(--t-fast),background var(--t-fast)}',
-    '.editor-alt:hover{border-color:var(--firuze);background:linear-gradient(var(--fir-t),var(--fir-t)),var(--surface)}',
-    '.editor-alt small{color:var(--soft);font-size:var(--fs-xs);font-weight:600;letter-spacing:.04em}',
-    '.editor-alt span{font-size:var(--fs-sm);line-height:1.55}',
-    '.editor-check{display:flex;align-items:center;gap:16px}',
-    '.editor-tmdiff mark{background:var(--zaf-t);color:inherit;border-radius:3px;padding:0 2px}',
+    '.editor-legend{display:flex;flex-wrap:wrap;gap:6px 14px}',
+    /* editor — inspector */
+    '.editor-insp{min-width:0;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--border);background:var(--panel)}',
+    '.editor-grab{display:none}',
+    '.editor-insp-h{flex:none;display:flex;align-items:center;gap:4px;padding:0 8px 0 4px;border-bottom:1px solid var(--border)}',
+    '.editor-tabs{flex:1;min-width:0;display:flex;overflow-x:auto;scrollbar-width:none}',
+    '.editor-tabs::-webkit-scrollbar{display:none}',
+    '.editor-tabs button{position:relative;flex:none;display:inline-flex;align-items:center;gap:5px;height:40px;padding:0 9px;border:0;background:none;color:var(--text-2);font:500 var(--t-small)/1 var(--f-body);white-space:nowrap;cursor:pointer;transition:color var(--t-fast)}',
+    '.editor-tabs button:hover{color:var(--text)}',
+    '.editor-tabs button::after{content:"";position:absolute;left:9px;right:9px;bottom:-1px;height:2px;border-radius:2px 2px 0 0;background:var(--accent);opacity:0;transition:opacity var(--t-fast)}',
+    '.editor-tabs button[aria-selected="true"]{color:var(--text)}',
+    '.editor-tabs button[aria-selected="true"]::after{opacity:1}',
+    '.editor-tabs button:focus-visible{outline:2px solid var(--focus);outline-offset:-4px;border-radius:6px}',
+    '.editor-tabs .c{font:500 10px/1 var(--f-mono);color:var(--text-3)}',
+    '.editor-tabs .c.warn{color:var(--warning)}.editor-tabs .c.err{color:var(--danger)}',
+    '.editor-insp-sub{flex:none;display:flex;align-items:center;gap:8px;min-height:36px;padding:8px 16px 0}',
+    '.editor-insp-sub .st{font-size:var(--t-caption);color:var(--text-2)}',
+    '.editor-insp-b{flex:1;min-height:0;overflow-y:auto;padding:4px 16px 88px}',
+    '.editor-sec{display:grid;gap:8px;padding:14px 0;border-top:1px solid var(--border)}',
+    '.editor-sec:first-child{border-top:0}',
+    '.editor-sec-h{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:20px}',
+    '.editor-p{font-size:var(--t-small);line-height:1.5;color:var(--text-2)}',
+    '.editor-p b{color:var(--text);font-weight:600}',
+    '.editor-kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 12px;margin:0;font-size:var(--t-small);line-height:1.45}',
+    '.editor-kv dt{color:var(--text-2)}',
+    '.editor-kv dd{margin:0;min-width:0;color:var(--text);overflow-wrap:anywhere}',
+    '.editor-quote{margin:0;padding:6px 10px;border-left:2px solid var(--border-2);font-size:var(--t-small);line-height:1.5;color:var(--text)}',
+    '.editor-nb{display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;width:100%;padding:6px 8px;margin:0 -8px;border:0;border-radius:6px;background:none;color:var(--text-2);font:400 var(--t-small)/1.45 var(--f-body);text-align:left;cursor:pointer;width:calc(100% + 16px)}',
+    '.editor-nb:hover{background:var(--hover);color:var(--text)}',
+    '.editor-nb .n{padding-top:2px;font:500 var(--t-micro)/1.3 var(--f-mono);color:var(--text-3)}',
+    '.editor-nb .t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
+    '.editor-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}',
+    '.editor-insp .seg.block button{font-size:var(--t-caption)}',
+    '.editor-note-ta{min-height:72px;font-size:var(--t-small)}',
+    '.editor-gl{display:grid}',
+    '.editor-gl-r{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.2fr) minmax(56px,.7fr);gap:10px;align-items:start;width:100%;padding:7px 8px;margin:0 -8px;width:calc(100% + 16px);border:0;border-top:1px solid var(--border);border-radius:0;background:none;color:var(--text);font:400 var(--t-small)/1.4 var(--f-body);text-align:left;cursor:pointer;transition:background var(--t-fast)}',
+    '.editor-gl-r:hover{background:var(--hover)}',
+    '.editor-gl-r[aria-pressed="true"]{background:var(--accent-t)}',
+    '.editor-gl-r:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;border-radius:6px}',
+    '.editor-gl-th{padding-block:4px 6px;border-top:0;cursor:default;color:var(--text-3);font-size:var(--t-micro)}',
+    '.editor-gl-th:hover{background:none}',
+    '.editor-gl-r .a{font-weight:600;overflow-wrap:anywhere}',
+    '.editor-gl-r .b{overflow-wrap:anywhere}',
+    '.editor-gl-r small{display:block;margin-top:2px;font-size:var(--t-micro);line-height:1.35;color:var(--text-2);font-weight:400}',
+    '.editor-gl-r .f{font-size:var(--t-caption);color:var(--text-2)}',
+    '.editor-gl-r .bad{display:inline-block;margin-top:3px;font:500 var(--t-micro)/1.2 var(--f-body);color:var(--danger)}',
+    '.editor-tm{display:grid;grid-template-columns:44px minmax(0,1fr);gap:6px 10px;padding:4px 0}',
+    '.editor-tm-pct{padding-top:1px;font:600 var(--t-body)/1.5 var(--f-mono);color:var(--text)}',
+    '.editor-tm-pct.hi{color:var(--success)}.editor-tm-pct.mid{color:var(--warning)}',
+    '.editor-tm-src{font-size:var(--t-small);line-height:1.5;color:var(--text-2)}',
+    '.editor-tm-src mark{background:var(--warning-t);color:var(--text);border-radius:2px;padding:0 1px}',
+    '.editor-tm-tgt{font-size:var(--t-small);line-height:1.5;color:var(--text)}',
+    '.editor-sug{display:grid;gap:8px;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--panel)}',
+    '.editor-sug-h{display:flex;align-items:center;justify-content:space-between;gap:8px}',
+    '.editor-sug-h .pj-cap{color:var(--accent)}',
+    '.editor-sug-k{font-size:var(--t-caption);color:var(--text-2)}',
+    '.editor-sug-t{font-size:var(--t-body);line-height:1.6;color:var(--text);overflow-wrap:anywhere}',
+    '.editor-sug-why{font-size:var(--t-small);line-height:1.5;color:var(--text-2)}',
+    '.editor-sug-why b{font-weight:600;color:var(--text)}',
+    '.editor-alt{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:start;padding:10px 0;border-top:1px solid var(--border)}',
+    '.editor-alt:first-of-type{border-top:0}',
+    '.editor-alt small{grid-column:1 / -1;font-size:var(--t-caption);color:var(--text-2)}',
+    '.editor-alt span{font-size:var(--t-small);line-height:1.5;overflow-wrap:anywhere}',
+    '.editor-qa-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 0 4px}',
+    '.editor-qa-h b{font:600 var(--t-small)/1.4 var(--f-body)}',
+    '.editor-qa-h small{display:block;font-size:var(--t-caption);color:var(--text-2);font-weight:400}',
+    '.editor-grp{display:flex;align-items:center;gap:8px;margin-top:12px;padding-bottom:2px}',
+    '.editor-iss{display:grid;gap:4px;padding:10px 0;border-top:1px solid var(--border)}',
+    '.editor-grp + .editor-iss{border-top:0}',
+    '.editor-iss-h{display:flex;align-items:center;gap:8px;font:600 var(--t-small)/1.4 var(--f-body)}',
+    '.editor-iss-h .who{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-weight:400;font-size:var(--t-caption);color:var(--text-2);white-space:nowrap}',
+    '.editor-iss .d{font-size:var(--t-small);line-height:1.5;overflow-wrap:anywhere}',
+    '.editor-iss p{font-size:var(--t-small);line-height:1.5;color:var(--text-2)}',
+    '.editor-iss .editor-row{margin-top:4px}',
+    '.editor-clean{display:flex;align-items:flex-start;gap:8px;padding:10px 0;font-size:var(--t-small);line-height:1.5;color:var(--text-2)}',
+    '.editor-clean svg{width:16px;height:16px;margin-top:2px;color:var(--success)}',
+    '.editor-note{display:flex;gap:8px;padding:8px 10px;border-radius:6px;background:var(--warning-t);font-size:var(--t-small);line-height:1.5}',
+    '.editor-note svg{flex:none;width:16px;height:16px;margin-top:2px;color:var(--warning)}',
+    '.qa-sdot,.editor-sdot{flex:none;display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--text-3)}',
+    ':is(.qa-sdot,.editor-sdot).high{background:var(--danger)}:is(.qa-sdot,.editor-sdot).mid{background:var(--warning)}',
+    /* editor — popover menu */
+    '.editor-menu{position:fixed;z-index:58;display:grid;min-width:236px;max-width:calc(100vw - 16px);padding:4px;border:1px solid var(--border);border-radius:8px;background:var(--panel);box-shadow:var(--sh-2);animation:fade-in 120ms ease both}',
+    '.editor-menu-i{display:flex;align-items:center;gap:10px;min-height:32px;padding:0 10px;border:0;border-radius:6px;background:none;color:var(--text);font:400 var(--t-small)/1.3 var(--f-body);text-align:left;cursor:pointer}',
+    '.editor-menu-i svg{width:16px;height:16px;color:var(--text-2)}',
+    '.editor-menu-i:hover,.editor-menu-i:focus-visible{background:var(--hover);outline:none}',
+    '.editor-menu-i .k{margin-left:auto;font-size:var(--t-micro);color:var(--text-3)}',
+    /* editor — overlays (mid: side sheet · narrow: drawer + bottom sheet) */
+    '.editor-scrim{position:fixed;inset:0;z-index:56;background:var(--scrim);opacity:0;visibility:hidden;transition:opacity 160ms ease,visibility 0s linear 160ms}',
+    '.editor-scrim.on{opacity:1;visibility:visible;transition:opacity 160ms ease}',
+    '.editor[data-layout="mid"] .editor-insp,.editor[data-layout="narrow"] .editor-insp{position:fixed;z-index:57;visibility:hidden;transition:transform 180ms ease,visibility 0s linear 180ms}',
+    '.editor[data-layout="mid"] .editor-insp{top:calc(var(--hdr-h) + env(safe-area-inset-top,0px));right:0;bottom:0;width:min(380px,92vw);box-shadow:var(--sh-3);transform:translateX(104%)}',
+    '.editor[data-layout="mid"] .editor-insp.on,.editor[data-layout="narrow"] .editor-insp.on,.editor[data-layout="narrow"] .editor-nav.on{visibility:visible;transform:none;transition:transform 180ms ease}',
+    '.editor:is([data-layout="mid"],[data-layout="narrow"]) .editor-insp .editor-ov-x{display:inline-grid}',
+    '.editor[data-layout="narrow"] .editor-insp{left:0;right:0;bottom:0;height:min(78dvh,640px);border:1px solid var(--border);border-bottom:0;border-radius:12px 12px 0 0;box-shadow:var(--sh-3);transform:translateY(104%);padding-bottom:env(safe-area-inset-bottom,0px)}',
+    '.editor[data-layout="narrow"] .editor-grab{display:block;flex:none;width:36px;height:4px;margin:8px auto 0;border-radius:2px;background:var(--border-2)}',
+    '.editor[data-layout="narrow"] .editor-insp-b{padding-bottom:24px}',
+    '.editor[data-layout="narrow"] .editor-nav{position:fixed;z-index:57;top:0;left:0;bottom:0;width:min(320px,86vw);border-right:1px solid var(--border);box-shadow:var(--sh-3);visibility:hidden;transform:translateX(-104%);transition:transform 180ms ease,visibility 0s linear 180ms;padding-top:env(safe-area-inset-top,0px)}',
+    '.editor[data-layout="narrow"] .editor-nav .editor-ov-x{display:inline-grid}',
+    '.editor[data-layout="narrow"] .editor-mbar{position:sticky;top:calc(var(--hdr-h) + env(safe-area-inset-top,0px));z-index:5;display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--canvas)}',
+    '.editor-mbar .btn{min-height:32px}',
+    '.editor-mbar .sp{flex:1}',
+    '.editor-mcount{margin-left:2px;font:500 var(--t-micro)/1 var(--f-mono);color:var(--text-2)}',
+    '.editor[data-layout="narrow"] .editor-head{padding:10px 12px}',
+    '.editor[data-layout="narrow"] .editor-head-r2{padding-left:0}',
+    '.editor[data-layout="narrow"] .editor-prog{margin-left:0;width:100%}',
+    '.editor[data-layout="narrow"] .editor-prog .pj-track{flex:1;width:auto}',
+    '.editor[data-layout="narrow"] .editor-save .tx,.editor[data-layout="narrow"] .editor-hide-xs{display:none}',
+    '.editor[data-layout="narrow"] .editor-crumb,.editor[data-layout="narrow"] .editor-crumb-sep{display:none}',
+    '.editor[data-layout="narrow"] .editor-center-h{display:none}',
+    '.editor[data-layout="narrow"] .editor-seg{padding:12px 12px 14px 14px;scroll-margin:calc(var(--hdr-h) + 64px) 0 calc(var(--bnav-h) + 24px)}',
+    '.editor[data-layout="narrow"] textarea.editor-ta{font-size:1rem}',
+    '.editor[data-layout="narrow"] .editor-hints,.editor[data-layout="narrow"] .editor-ask{margin-left:0}',
+    '.editor[data-layout="narrow"] .editor-start{margin:12px}',
+    '.editor[data-layout="narrow"] .editor-foot{padding:14px 12px calc(var(--bnav-h) + 72px)}',
+    '.editor[data-layout="narrow"] .editor-keys{display:none}',
     /* qa */
-    '.qa-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:-8px}',
-    '.qa-top .btn{margin-left:-10px}',
-    '.qa-score{display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px;align-items:center}',
-    '@media (max-width:479px){.qa-score{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}.qa-score .qa-sev{justify-content:center}}',
-    '.qa-score-tx{display:grid;gap:10px;min-width:0}',
-    '.qa-score-tx h2 em{font-style:normal;color:inherit}',
-    '.qa-sev{display:flex;flex-wrap:wrap;gap:8px}',
-    '.qa-sevbox{flex:1 1 0;min-width:76px;display:grid;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface2);text-align:left}',
-    '.qa-sevbox b{font-family:var(--f-display);font-size:1.375rem;line-height:1.1;font-variant-numeric:tabular-nums}',
-    '.qa-sevbox span{font-size:var(--fs-xs);color:var(--soft)}',
-    '.qa-sevbox.high b{color:var(--nar)}.qa-sevbox.mid b{color:var(--zafaran-ink)}.qa-sevbox.low b{color:var(--lacquer)}',
-    '.qa-seal{display:inline-flex;align-items:center;gap:8px;justify-self:start;padding:4px 10px 4px 4px;border-radius:var(--r-sm);background:var(--fir-t);color:var(--firuze);font-size:var(--fs-sm);font-weight:600;animation:fade-in .3s var(--ease-out) both}',
-    '.qa-seal .medal{--size:24px}',
-    '.qa-cats{display:grid;gap:4px}',
-    '.qa-cat{display:grid;grid-template-columns:minmax(0,8.5rem) minmax(0,1fr) 3.6rem;align-items:center;gap:12px;min-height:34px;padding:2px 0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:8px}',
-    '.qa-cat:hover .qa-cat-l{color:var(--firuze)}',
-    '.qa-cat:focus-visible{outline:2px solid var(--focus);outline-offset:2px}',
-    '.qa-cat-l{font-size:var(--fs-sm);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color var(--t-fast)}',
-    '.qa-cat-n{justify-self:end;font-size:var(--fs-xs);font-weight:600;color:var(--soft);font-variant-numeric:tabular-nums}',
-    '.qa-cat-n.ok{display:inline-flex;align-items:center;gap:4px;color:var(--ok)}',
-    '.qa-cat-n svg{width:14px;height:14px}',
-    '.qa-issues-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}',
-    '.qa-issue{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 14px;align-items:start;padding:14px 0;border-top:1px solid var(--line);transition:opacity .22s var(--ease-out),transform .22s var(--ease-out)}',
-    '.qa-issue:first-child{border-top:0}',
-    '.qa-issue.is-done{opacity:0}',
-    '.qa-issue.is-ign{opacity:.5}',
-    '.qa-issue.is-ign .qa-diff{text-decoration:line-through}',
-    '@media (max-width:639px){.qa-issue{grid-template-columns:auto minmax(0,1fr)}.qa-issue-act{grid-column:2}}',
-    '.qa-segno{display:inline-grid;place-items:center;min-width:46px;height:32px;padding:0 8px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);color:var(--lacquer);font:600 .78rem/1 var(--f-mono);cursor:pointer;transition:background var(--t-fast),transform var(--t-fast),border-color var(--t-fast)}',
-    '.qa-segno:hover{background:var(--lac-t);border-color:var(--lacquer)}',
-    '.qa-segno:active{transform:scale(.94)}',
-    '.qa-issue-b{display:grid;gap:5px;min-width:0}',
-    '.qa-issue-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:var(--fs-sm);font-weight:600}',
-    '.qa-issue-h .avatar{width:22px;height:22px;font-size:.625rem;box-shadow:none}',
-    '.qa-issue-h small{color:var(--soft);font-weight:500}',
-    '.qa-diff{font-size:var(--fs-base);line-height:1.5;overflow-wrap:anywhere}',
-    '.qa-issue-b p{font-size:var(--fs-sm);color:var(--soft)}',
-    '.qa-issue-act{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}',
-    '.qa-turk{display:grid;gap:8px}',
-    '.qa-turk-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 8px 8px 12px;border-radius:var(--r-md);background:var(--surface2)}',
-    '.qa-turk-row .qa-diff{flex:1;min-width:0}',
-    '.qa-term{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 12px;padding:10px 0;border-top:1px solid var(--line)}',
-    '.qa-term:first-child{border-top:0}',
-    '.qa-term-t{font-size:var(--fs-sm);min-width:0}',
+    '.page.qa{max-width:1280px;gap:20px}',
+    '.qa-crumbs{display:flex;align-items:center;gap:8px;min-width:0;margin-bottom:-8px;font-size:var(--t-small);color:var(--text-2)}',
+    '.qa-crumbs .btn{margin-left:-10px}',
+    '.qa-crumb{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.qa-sum{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(0,1fr) minmax(0,1.3fr);gap:20px 32px;padding:16px 20px;border:1px solid var(--border);border-radius:8px;background:var(--panel)}',
+    '.qa-sum > div{display:grid;gap:8px;align-content:start;min-width:0}',
+    '.qa-sum > div + div{padding-left:32px;border-left:1px solid var(--border)}',
+    '.qa-score-line{display:flex;align-items:baseline;gap:6px}',
+    '.qa-score-n{font:600 var(--t-display)/1.2143 var(--f-display);font-variant-numeric:tabular-nums;letter-spacing:-.01em}',
+    '.qa-score-of{font-size:var(--t-caption);color:var(--text-3)}',
+    '.qa-grade{margin-left:6px;font-size:var(--t-small);color:var(--text-2)}',
+    '.qa-meter{width:100%;max-width:220px}',
+    '.qa-seal{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-small);color:var(--text)}',
+    '.qa-seal::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--text-3)}',
+    '.qa-seal.green::before{background:var(--success)}.qa-seal.gold::before{background:var(--warning)}.qa-seal.red::before{background:var(--danger)}',
+    '.qa-deep{display:flex;align-items:center;gap:6px;font-size:var(--t-caption);color:var(--text-2)}',
+    '.qa-deep svg{width:14px;height:14px;color:var(--accent)}',
+    '.qa-sevs{display:flex;flex-wrap:wrap;gap:4px 20px}',
+    '.qa-sevs-i{display:grid;grid-template-columns:auto auto;align-items:center;gap:2px 8px;padding:4px 6px;margin:-4px -6px;border:0;border-radius:6px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}',
+    '.qa-sevs-i:hover{background:var(--hover)}',
+    '.qa-sevs-i b{font:600 var(--t-h2)/1.3 var(--f-display);font-variant-numeric:tabular-nums}',
+    '.qa-sevs-i span{grid-column:2;font-size:var(--t-caption);color:var(--text-2)}',
+    '.qa-sevs-i .qa-sdot{grid-row:1}',
+    '.qa-sum-note{font-size:var(--t-small);line-height:1.5;color:var(--text-2)}',
+    '.qa-cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px}',
+    '.qa-cat{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px;padding:0 6px;margin:0 -6px;border:0;border-radius:6px;background:none;color:var(--text);font:400 var(--t-small)/1.3 var(--f-body);text-align:left;cursor:pointer}',
+    '.qa-cat:hover{background:var(--hover)}',
+    '.qa-cat[aria-pressed="true"]{background:var(--accent-t)}',
+    '.qa-cat .n{font:500 var(--t-caption)/1 var(--f-mono);color:var(--text-2)}',
+    '.qa-cat .n.high{color:var(--danger)}.qa-cat .n.mid{color:var(--warning)}',
+    '.qa-cat .ok{display:inline-flex;align-items:center;gap:3px;font-size:var(--t-caption);color:var(--success)}',
+    '.qa-cat .ok svg{width:13px;height:13px}',
+    '.qa-issues{display:grid;gap:12px}',
+    '.qa-sec-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}',
+    '.qa-sec-h h2{font:600 var(--t-h2)/1.4118 var(--f-display)}',
+    '.qa-sec-h small{font-size:var(--t-caption);color:var(--text-2)}',
+    '.qa-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}',
+    '.qa-bar .seg button .c{font:500 var(--t-micro)/1 var(--f-mono);color:var(--text-3)}',
+    '.qa-bar .select{width:auto;min-width:180px;height:32px;min-height:32px;font-size:var(--t-small)}',
+    '.qa-bar .sp{flex:1}',
+    '.qa-table{container-type:inline-size;border:1px solid var(--border);border-radius:8px;background:var(--panel);overflow:hidden}',
+    '.qa-tr{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.6fr) 152px 112px;gap:14px;align-items:start;padding:10px 12px 10px 16px}',
+    '.qa-th{padding-block:8px;background:var(--sunken);border-bottom:1px solid var(--border);color:var(--text-2);font:500 var(--t-caption)/1.3333 var(--f-body)}',
+    '.qa-grp{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--sunken);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}',
+    '.qa-th + .qa-grp{border-top:0}',
+    '.qa-grp .pj-mono{font-size:var(--t-caption);color:var(--text-3)}',
+    '.qa-row{font-size:var(--t-small);line-height:1.5;transition:background var(--t-fast),opacity 160ms ease}',
+    '.qa-row + .qa-row{border-top:1px solid var(--border)}',
+    '@media (hover:hover){.qa-row:hover{background:var(--hover)}}',
+    '.qa-row.is-done{opacity:0}',
+    '.qa-row.is-ign{opacity:.55}',
+    '.qa-row.is-ign .qa-was,.qa-row.is-ign .qa-now{text-decoration:line-through}',
+    '.qa-segno{justify-self:start;height:24px;padding:0 6px;margin-top:-1px;border:1px solid var(--border);border-radius:4px;background:var(--panel);color:var(--text-2);font:500 var(--t-caption)/1 var(--f-mono);cursor:pointer;transition:border-color var(--t-fast),color var(--t-fast)}',
+    '.qa-segno:hover{border-color:var(--accent-line);color:var(--accent)}',
+    '.qa-frag{color:var(--text);overflow-wrap:anywhere}',
+    '.qa-ctx{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--text-3)}',
+    '.qa-was{color:var(--text);text-decoration:underline;text-decoration-color:var(--danger);text-decoration-thickness:1.5px;text-underline-offset:3px;overflow-wrap:anywhere}',
+    '.qa-now{color:var(--success);font-weight:500;overflow-wrap:anywhere}',
+    '.qa-now.long{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}',
+    '.qa-none{color:var(--text-3)}',
+    '.qa-prob{display:grid;gap:2px;min-width:0}',
+    '.qa-prob b{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--text)}',
+    '.qa-prob span{color:var(--text-2)}',
+    '.qa-who{display:flex;align-items:center;gap:8px;min-width:0;font-size:var(--t-caption);color:var(--text-2)}',
+    '.qa-who-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.qa-act{display:flex;align-items:center;justify-content:flex-end;gap:2px}',
+    '.qa-act .btn{min-height:28px;padding:0 10px;font-size:var(--t-small)}',
+    '.qa-mlab{display:none}',
+    '.qa-frags{display:contents}',
+    '@container (max-width:1000px){.qa-tr{grid-template-columns:52px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.5fr) 28px 104px}.qa-who-n{display:none}}',
+    '@container (max-width:760px){',
+    '  .qa-th{display:none}',
+    '  .qa-tr{grid-template-columns:52px minmax(0,1fr) auto;grid-template-areas:"seg prob who" "seg frag frag" "seg act act";gap:8px 12px;padding:12px 12px 12px 14px}',
+    '  .qa-c-seg{grid-area:seg}.qa-c-prob{grid-area:prob}.qa-c-who{grid-area:who}.qa-c-act{grid-area:act}.qa-act{justify-content:flex-start}',
+    '  .qa-frags{grid-area:frag;display:grid;gap:4px}',
+    '  .qa-mlab{display:inline;margin-right:6px;color:var(--text-3);font-size:var(--t-caption)}',
+    '}',
+    '.qa-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 40px}',
+    '.qa-sec{display:grid;gap:4px;align-content:start;padding-top:16px;border-top:1px solid var(--border)}',
+    '.qa-sec .qa-sec-h{margin-bottom:6px}',
+    '.qa-sec-h .who{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-caption);color:var(--text-2)}',
+    '.qa-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;min-height:40px;padding:6px 0;border-top:1px solid var(--border);font-size:var(--t-small)}',
+    '.qa-line:first-of-type{border-top:0}',
+    '.qa-line .grow{flex:1;min-width:0}',
+    '.qa-line .btn{min-height:28px;padding:0 10px;font-size:var(--t-small)}',
+    '.qa-term{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:8px 0;border-top:1px solid var(--border);font-size:var(--t-small)}',
+    '.qa-term:first-of-type{border-top:0}',
     '.qa-term-t b{font-weight:600}',
-    '.qa-term-t span{color:var(--faint);margin:0 4px}',
-    '.qa-term-bar{grid-column:1 / -1;display:flex;height:6px;border-radius:var(--r-pill);overflow:hidden;background:var(--surface2)}',
-    '.qa-term-bar i{display:block;height:100%;background:var(--ok);transition:width .6s var(--ease-out)}',
-    '.qa-term-bar i.bad{background:var(--nar)}',
-    '.qa-term-end{display:flex;align-items:center;gap:6px}',
-    '.qa-req{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:8px 0;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}',
-    '.qa-req:first-child{border-top:0}',
-    '.qa-req:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:8px}',
-    '.qa-box{flex:none;width:22px;height:22px;display:grid;place-items:center;border:1.5px solid var(--line-2);border-radius:7px;background:var(--surface);transition:background var(--t-base),border-color var(--t-base)}',
-    '.qa-box svg{width:14px;height:14px}',
-    '.qa-req.ok .qa-box{background:var(--ok);border-color:var(--ok);color:var(--surface)}',
-    '.qa-req.ok .qa-box svg{animation:fade-in .2s var(--ease-out) both}',
-    '.qa-req.fail .qa-box{background:var(--zaf-t);border-color:var(--zafaran);color:var(--zafaran-ink)}',
-    '.qa-req-t{flex:1;min-width:0;font-size:var(--fs-sm);line-height:1.4}',
-    '.qa-req.ok .qa-req-t{color:var(--soft)}',
-    '.qa-deliv .tiles{grid-template-columns:repeat(auto-fill,minmax(168px,1fr))}',
-    '.qa-tile{position:relative}',
-    '.qa-tile[aria-busy="true"]{pointer-events:none}',
-    '.qa-tile[aria-busy="true"] .ic{color:transparent}',
-    '.qa-tile[aria-busy="true"] .ic::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;border:2px solid color-mix(in srgb,var(--firuze) 25%,transparent);border-top-color:var(--firuze);animation:spin .7s linear infinite}',
-    '.qa-tile .badge{position:absolute;top:12px;right:12px}',
-    '.qa-paper{display:grid;gap:12px;padding:26px 24px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);box-shadow:var(--sh-1);font-size:.875rem;line-height:1.7}',
-    '.qa-paper h3{text-align:center;font-size:1rem;letter-spacing:.04em}',
-    '.qa-paper .muted{font-size:var(--fs-xs)}',
-    '.qa-loading{display:grid;gap:16px}',
-    ':is(.projects,.projects-new,.editor,.editor-nz,.qa) .link.small{font-size:var(--fs-sm)}',
-    '@media (max-width:639px){.editor-bar{gap:8px;padding:10px 12px}.editor-prog-tx{display:none}.editor-bar-bot{display:block}.editor-filter{display:flex;width:100%;gap:1px;padding:2px}.editor-filter button{flex:1 1 auto;padding:4px 4px;gap:3px}.editor-filter .editor-fc{min-width:16px;padding:0 4px}}',
+    '.qa-term-t span{margin:0 6px;color:var(--text-3)}',
+    '.qa-term-bar{grid-column:1 / -1;display:flex;height:3px;border-radius:2px;overflow:hidden;background:var(--sunken)}',
+    '.qa-term-bar i{display:block;height:100%;background:var(--success);transition:width 180ms ease}',
+    '.qa-term-bar i.bad{background:var(--danger)}',
+    '.qa-term-end{display:flex;align-items:center;gap:8px}',
+    '.qa-term-end .btn{min-height:28px;padding:0 10px}',
+    '.qa-req{display:flex;align-items:center;gap:12px;width:100%;min-height:40px;padding:6px 0;border:0;border-top:1px solid var(--border);background:none;color:inherit;font:inherit;font-size:var(--t-small);text-align:left;cursor:pointer}',
+    '.qa-req:first-of-type{border-top:0}',
+    '.qa-req:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}',
+    '.qa-box{flex:none;width:18px;height:18px;display:grid;place-items:center;border:1.5px solid var(--border-2);border-radius:4px;background:var(--panel);transition:background var(--t-fast),border-color var(--t-fast)}',
+    '.qa-box svg{width:12px;height:12px}',
+    '.qa-req.ok .qa-box{background:var(--success);border-color:var(--success);color:var(--panel)}',
+    '.qa-req.fail .qa-box{border-color:var(--warning);color:var(--warning)}',
+    '.qa-req-t{flex:1;min-width:0;line-height:1.4}',
+    '.qa-req.ok .qa-req-t{color:var(--text-2)}',
+    '.qa-req .k{font-size:var(--t-caption);color:var(--text-3)}',
+    '.qa-dv{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:4px 12px;min-height:52px;padding:8px 0;border-top:1px solid var(--border)}',
+    '.qa-dv:first-of-type{border-top:0}',
+    '.qa-dv > svg{width:18px;height:18px;color:var(--text-2)}',
+    '.qa-dv-tx{min-width:0;display:grid;gap:1px}',
+    '.qa-dv-tx b{font:600 var(--t-small)/1.4 var(--f-body)}',
+    '.qa-dv-tx small{font-size:var(--t-caption);color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.qa-dv-tx .st{color:var(--success)}',
+    '.qa-dv-act{display:flex;gap:4px}',
+    '.qa-dv-act .btn{min-height:28px;padding:0 10px;font-size:var(--t-small)}',
+    '.qa-clean{display:flex;align-items:flex-start;gap:8px;padding:6px 0;font-size:var(--t-small);line-height:1.5;color:var(--text-2)}',
+    '.qa-clean svg{flex:none;width:16px;height:16px;margin-top:2px;color:var(--success)}',
+    '.qa-paper{display:grid;gap:12px;padding:24px;border:1px solid var(--border);border-radius:8px;background:var(--panel);font-size:var(--t-small);line-height:1.7}',
+    '.qa-paper h3{text-align:center;font:600 var(--t-body)/1.5 var(--f-body);letter-spacing:.04em}',
+    '.qa-paper .muted{font-size:var(--t-caption)}',
+    '.qa-loading{display:grid;gap:20px}',
+    '.qa-skrow{border-top:1px solid var(--border)}',
+    '@media (max-width:899px){.qa-sum{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.qa-sum > div:nth-child(3){grid-column:1 / -1;padding-left:0;border-left:0;padding-top:16px;border-top:1px solid var(--border)}}',
+    '@media (max-width:767px){.qa-grid{grid-template-columns:minmax(0,1fr)}}',
+    '@media (max-width:559px){.qa-sum{grid-template-columns:minmax(0,1fr);padding:14px 16px}.qa-sum > div + div{padding-left:0;border-left:0;padding-top:14px;border-top:1px solid var(--border)}.qa-cats{grid-template-columns:minmax(0,1fr)}.qa-bar .select{flex:1 1 100%}}',
     /* keyframes */
-    '@keyframes projects-glow{from{opacity:1}to{opacity:1}}',
-    '@keyframes projects-pulse{from{opacity:1}to{opacity:1}}',
-    '@keyframes editor-flash{0%,30%{background:var(--fir-t)}100%{background:transparent}}',
-    '@keyframes editor-blink{0%,100%{opacity:1}50%{opacity:.35}}',
-    '@keyframes editor-spin{to{transform:rotate(360deg)}}'
+    '@keyframes pj-pulse{0%,100%{opacity:1}50%{opacity:.55}}',
+    '@keyframes editor-flash{0%,35%{background:var(--accent-t)}100%{background:transparent}}'
   ].join('\n');
   function ensureCss() { App.css('projects', CSS); }
 
   /* ------------------------------------------------------------------
      6. SHARED UI BITS
      ------------------------------------------------------------------ */
+  function pad3(n) { n = Number(n) || 0; return (n < 10 ? '00' : n < 100 ? '0' : '') + n; }
+  function clip(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s; }
+  function put(el) { for (var i = 1; i < arguments.length; i++) { var c = arguments[i]; if (c == null || c === false) continue; if (Array.isArray(c)) c.forEach(function (x) { put(el, x); }); else el.appendChild(c.nodeType ? c : D.createTextNode(String(c))); } return el; }
   function dueTone(p) {
     if (p.status === 'delivered') return 'ok';
     if (!p.due) return '';
@@ -890,25 +1134,42 @@
     var tone = dueTone(p), ms = p.due.getTime() - Date.now();
     var txt = p.status === 'delivered' ? 'Təhvil verildi · ' + p.due.getDate() + ' ' + MONTHS[p.due.getMonth()]
       : dueLabel(p.due) + (ms < DAY ? ' · ' + leftLabel(ms) : '');
-    return h('span', { class: 'projects-due' + (tone ? ' ' + tone : '') + (cls ? ' ' + cls : ''), title: 'Təhvil: ' + dueLabel(p.due) }, p.status === 'delivered' ? ie('check') : ie('clock'), h('span', { text: txt }));
+    return h('span', { class: 'badge' + (tone === 'late' ? ' red' : tone === 'soon' ? ' gold' : tone === 'ok' ? ' green' : '') + (cls ? ' ' + cls : ''), title: 'Təhvil: ' + dueLabel(p.due) }, p.status === 'delivered' ? ie('check') : ie('clock'), h('span', { text: txt }));
   }
   function qaBadgeBtn(p, onClick) {
-    var b = h('button', { class: 'badge projects-qa projects-raise ' + qaCls(p.qa), type: 'button', title: 'QA yoxlamasını aç', 'aria-label': p.qa == null ? 'QA hələ aparılmayıb — yoxla' : 'QA balı ' + p.qa + ' — hesabatı aç' }, ie('shield'), p.qa == null ? 'QA yoxdur' : 'QA ' + p.qa);
+    var b = h('button', { class: 'projects-qa projects-raise ' + qaCls(p.qa), type: 'button', title: p.qa == null ? 'Keyfiyyət yoxlaması hələ aparılmayıb' : 'Keyfiyyət balı ' + p.qa + ' — hesabatı aç', 'aria-label': p.qa == null ? 'Keyfiyyət yoxlaması hələ aparılmayıb — yoxla' : 'Keyfiyyət balı ' + p.qa + ' — hesabatı aç' }, 'QA ', p.qa == null ? '—' : String(p.qa));
     b.addEventListener('click', function (e) { e.stopPropagation(); onClick(); });
     return b;
   }
   function kindTag(p) {
-    if (p.sample) return h('span', { class: 'badge gold', title: 'Nümunə layihə: redaktor və QA-nı sınamaq üçün. Statistikaya düşmür, silə bilərsiniz.' }, ie('sparkle'), 'Nümunə');
+    if (p.sample) return h('span', { class: 'pj-tag', title: 'Nümunə layihə: redaktor və yoxlamanı sınamaq üçün. Statistikaya düşmür, silə bilərsiniz.' }, 'Nümunə');
     return p.kind === 'sim'
-      ? h('span', { class: 'badge navy', title: 'Məşq layihəsi: real müştəri yoxdur, təsdiqlər Akademiyada XP qazandırır' }, ie('cap'), 'Simulyasiya')
+      ? h('span', { class: 'pj-tag', title: 'Məşq layihəsi: real müştəri yoxdur, təsdiqlər Akademiyada XP qazandırır' }, 'Simulyasiya')
       : null;
   }
-  function fieldIc(p) { return p.kind === 'sim' ? ['cap', ''] : p.status === 'delivered' ? ['stamp', 'green'] : p.field === 'Hüquq' || p.field === 'Bank-maliyyə' ? ['file', 'projects-fir'] : p.field === 'Neft-qaz' ? ['chart', 'gold'] : ['book', 'gold']; }
+  /* Contextual empty state: a quiet line, no illustration. */
   function emptyBox(S, o) {
-    var art = h('div', { class: 'empty-art' });
-    var box = h('div', { class: 'empty' }, art, h('h3', { text: o.title }), h('p', { text: o.text }), o.actions && o.actions.length ? h('div', { class: 'actions' }, o.actions) : null);
-    S.later(function () { if (art.isConnected) S.mini(art, o.state || 'idle', 88); }, 40);
-    return box;
+    return h('div', { class: 'pj-empty' + (o.block ? ' block' : '') },
+      h('span', { class: 'pj-empty-ic', html: App.icon(o.icon || 'folder'), 'aria-hidden': 'true' }),
+      h('div', { class: 'pj-empty-tx' }, h('b', { text: o.title }), o.text ? h('span', { text: o.text }) : null),
+      o.actions && o.actions.length ? h('div', { class: 'pj-empty-act' }, o.actions) : null);
+  }
+  /* Reviewer monogram — two letters, neutral, no portrait. */
+  var MONO = { 'Lüğətçi Mirzə': 'Lü', 'Mənaçı Mirzə': 'Mə', 'Üslubçu Mirzə': 'Üs', 'Dilçi Nənə': 'Di', 'Möhürdar Mirzə': 'Mö' };
+  function monoAv(name) {
+    var t = MONO[name] || cap(String(name || 'Yoxlama').trim().slice(0, 2));
+    return h('span', { class: 'pj-av', 'aria-hidden': 'true', text: t });
+  }
+  /* Minimal project status: [label, dot tone]. */
+  function statusOf(p) {
+    if (p.status === 'delivered') return ['Təhvil verilib', 'ok'];
+    if (p.sample) return ['Nümunə', 'draft'];
+    var ms = p.due ? p.due.getTime() - Date.now() : Infinity;
+    if (ms < 0) return ['Gecikir', 'err'];
+    if (ms < DAY) return ['Təcili', 'warn'];
+    if (p.done >= 100) return ['Yoxlamaya hazır', 'ok'];
+    if (!p.done) return ['Başlanmayıb', 'empty'];
+    return ['İcrada', 'edit'];
   }
 
   /* ------------------------------------------------------------------
@@ -936,45 +1197,36 @@
     params = params || {};
     var hl = params.highlight || null;
     if (params.created && typeof params.created === 'string') { var cp = ensureCreated(params.created); if (cp) hl = cp.id; }
-    var st = { q: '', tab: sget('projects:tab', 'all'), view: sget('projects:view', 'cards') };
+    var st = { q: '', tab: sget('projects:tab', 'all') };
     if (hl || !TABS.some(function (t) { return t.id === st.tab; })) st.tab = 'all';
 
     var page = h('div', { class: 'page projects' });
     el.appendChild(page);
 
-    var newBtn = h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { newProjectSheet(function (p) { hl = p.id; st.tab = 'all'; st.q = ''; search.value = ''; draw(); }); } }, ie('plus'), 'Yeni layihə');
+    var newBtn = h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { newProjectSheet(function (p) { hl = p.id; st.tab = 'all'; st.q = ''; search.value = ''; syncTabs(); draw(); }); } }, ie('plus'), 'Yeni layihə');
     var subP = h('p');
     page.appendChild(h('div', { class: 'page-h' },
-      h('div', null, h('h1', { html: 'Layihələr' }), subP),
+      h('div', null, h('h1', { text: 'Layihələr' }), subP),
       h('div', { class: 'actions' }, newBtn)));
 
-    var stats = h('div', { class: 'stats projects-stats' });
-    var statCard = h('section', { class: 'card projects-statcard', 'aria-label': 'Ümumi göstəricilər', hidden: true }, stats);
-    page.appendChild(statCard);
+    var sum = h('div', { class: 'projects-sum', role: 'group', 'aria-label': 'Ümumi göstəricilər', hidden: true });
+    page.appendChild(sum);
 
-    var search = h('input', { class: 'input', id: 'projects-q', type: 'search', placeholder: 'Layihə, müştəri və ya sahə axtar', autocomplete: 'off', 'aria-label': 'Layihə axtar' });
-    var viewBtns = {};
-    var viewSeg = h('div', { class: 'seg sm', role: 'group', 'aria-label': 'Görünüş' }, [['cards', 'grid', 'Kartlar'], ['table', 'list', 'Cədvəl']].map(function (v) {
-      var b = h('button', { type: 'button', 'aria-pressed': st.view === v[0] ? 'true' : 'false', onclick: function () { st.view = v[0]; sset('projects:view', v[0]); syncView(); draw(); } }, ie(v[1]), v[2]);
-      viewBtns[v[0]] = b; return b;
-    }));
+    var search = h('input', { class: 'input', id: 'projects-q', type: 'search', placeholder: 'Layihə, müştəri və ya sahə', autocomplete: 'off', 'aria-label': 'Layihə axtar' });
     var tabBtns = {};
-    var tabs = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Layihə filtri' }, TABS.map(function (t) {
-      var c = h('span', { class: 'badge' });
-      var b = h('button', { type: 'button', role: 'tab', 'aria-selected': st.tab === t.id ? 'true' : 'false', onclick: function () { st.tab = t.id; sset('projects:tab', t.id); syncTabs(); draw(); } }, t.label, c);
+    var tabs = h('div', { class: 'seg sm projects-filter', role: 'group', 'aria-label': 'Status filtri' }, TABS.map(function (t) {
+      var c = h('span', { class: 'projects-fc' });
+      var b = h('button', { type: 'button', 'aria-pressed': st.tab === t.id ? 'true' : 'false', onclick: function () { st.tab = t.id; sset('projects:tab', t.id); syncTabs(); draw(); } }, t.label, c);
       tabBtns[t.id] = { b: b, c: c }; return b;
     }));
-    var tools = h('div', { class: 'projects-tools', hidden: true },
-      h('div', { class: 'projects-tools-row' }, h('label', { class: 'input-ic', html: App.icon('search') }, search), viewSeg),
-      tabs);
+    var tools = h('div', { class: 'projects-bar', hidden: true }, h('label', { class: 'input-ic', html: App.icon('search') }, search), tabs);
     page.appendChild(tools);
     var host = h('div', { class: 'projects-host' });
     page.appendChild(host);
 
     var qT = 0;
     search.addEventListener('input', function () { clearTimeout(qT); qT = S.later(function () { st.q = search.value; draw(); }, 140); });
-    function syncTabs() { TABS.forEach(function (t) { tabBtns[t.id].b.setAttribute('aria-selected', st.tab === t.id ? 'true' : 'false'); }); }
-    function syncView() { Object.keys(viewBtns).forEach(function (k) { viewBtns[k].setAttribute('aria-pressed', st.view === k ? 'true' : 'false'); }); }
+    function syncTabs() { TABS.forEach(function (t) { tabBtns[t.id].b.setAttribute('aria-pressed', st.tab === t.id ? 'true' : 'false'); }); }
     function inTab(p, tab) {
       if (tab === 'active') return p.status !== 'delivered' && p.kind !== 'sim';
       if (tab === 'delivered') return p.status === 'delivered';
@@ -996,6 +1248,11 @@
         return da ? tb - ta : ta - tb;
       });
     }
+    function headRow() {
+      return h('div', { class: 'projects-tr projects-th', 'aria-hidden': 'true' },
+        h('span', { text: 'Layihə' }), h('span', { class: 'projects-c-client', text: 'Müştəri' }), h('span', { class: 'projects-c-pair', text: 'Dil cütü' }),
+        h('span', { text: 'Hazırlıq' }), h('span', { text: 'Status' }), h('span', { text: 'Təhvil' }), h('span'));
+    }
     function draw() {
       var P = allProjects();
       var R = P.filter(function (p) { return !p.sample; }); /* real projects — the only ones that count */
@@ -1008,13 +1265,13 @@
       subP.textContent = !R.length ? 'Sənədi yükləyin — terminlər və üslub avtomatik müəyyənləşir.'
         : R.length + ' layihə' + (active.length && active.length !== R.length ? ' · ' + active.length + ' aktiv' : '') + (late ? ' · ' + late + ' təhvil 24 saat ərzində' : '');
       newBtn.hidden = !P.length;
-      /* stats: only from real projects, only non-zero values */
-      stats.textContent = '';
+      /* summary: only from real projects, only non-zero values */
+      sum.textContent = '';
       var items = [[active.length, 'aktiv layihə'], [delivered, 'təhvil verilib'], [week, 'bu həftə təhvil'], [queue, 'söz növbədə'], [avg, 'orta QA balı']]
         .filter(function (x) { return x[0] > 0; }).slice(0, 4);
-      items.forEach(function (x) { stats.appendChild(h('div', { class: 'stat' }, h('b', { class: 'tnum', text: num(x[0]) }), h('span', { text: x[1] }))); });
-      statCard.hidden = !R.length || items.length < 2;
-      tools.hidden = P.length < 4;
+      items.forEach(function (x) { sum.appendChild(h('div', null, h('b', { text: num(x[0]) }), h('span', { text: x[1] }))); });
+      sum.hidden = !R.length || items.length < 2;
+      tools.hidden = !P.length;
       TABS.forEach(function (t) {
         var n = P.filter(function (p) { return inTab(p, t.id); }).length;
         tabBtns[t.id].c.textContent = String(n);
@@ -1023,70 +1280,74 @@
       if (tools.hidden || tabBtns[st.tab].b.hidden) { st.tab = 'all'; syncTabs(); }
       var list = sortList(P.filter(function (p) { return inTab(p, st.tab) && matchQ(p, st.q); }));
       host.textContent = '';
+      var frame = h('div', { class: 'projects-list' }, headRow());
+      host.appendChild(frame);
       if (!P.length) {
-        host.appendChild(emptyBox(S, { title: 'İlk layihənizi yaradın', text: 'Sənədi yükləyin — Mirzə Məclisi ilkin tərcüməni hazırlayacaq, siz isə hər seqmenti təsdiqləyəcəksiniz.', state: 'wave',
-          actions: [h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { newBtn.click(); } }, ie('plus'), 'Yeni layihə'),
-            h('button', { class: 'btn btn-ghost', type: 'button', onclick: openSample }, 'Nümunəyə bax')] }));
+        frame.appendChild(emptyBox(S, { title: 'Layihə yoxdur', text: 'İlk layihənizi yaradın və tərcüməyə başlayın.',
+          actions: [h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: function () { newBtn.click(); } }, ie('plus'), 'Yeni layihə'),
+            h('button', { class: 'link small', type: 'button', onclick: openSample }, 'Nümunə layihəyə baxın')] }));
         return;
       }
       if (!list.length) {
-        host.appendChild(emptyBox(S, st.q
-          ? { title: 'Heç nə tapılmadı', text: '«' + st.q + '» üzrə layihə yoxdur.', state: 'think', actions: [h('button', { class: 'btn', type: 'button', onclick: function () { search.value = ''; st.q = ''; draw(); search.focus(); } }, 'Axtarışı təmizlə')] }
-          : { title: 'Bu bölmədə layihə yoxdur', text: 'Başqa bölməyə keçin və ya yeni layihə yaradın.', state: 'wave', actions: [h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { newBtn.click(); } }, ie('plus'), 'Yeni layihə')] }));
+        frame.appendChild(emptyBox(S, st.q
+          ? { icon: 'search', title: 'Heç nə tapılmadı', text: '«' + st.q + '» üzrə layihə yoxdur.', actions: [h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { search.value = ''; st.q = ''; draw(); search.focus(); } }, 'Axtarışı təmizlə')] }
+          : { title: 'Bu bölmədə layihə yoxdur', text: 'Başqa filtr seçin və ya yeni layihə yaradın.', actions: [h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { st.tab = 'all'; syncTabs(); draw(); } }, 'Hamısını göstər')] }));
         return;
       }
-      if (st.view === 'table') host.appendChild(tableView(list)); else host.appendChild(h('div', { class: 'projects-grid' }, list.map(card)));
+      frame.appendChild(h('div', { role: 'list', 'aria-label': 'Layihələr' }, list.map(row)));
       if (hl) {
         var c = host.querySelector('[data-id="' + hl + '"]');
-        if (c) { S.later(function () { try { c.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); } catch (e) { /* ignore */ } burstAt(c, 'stars'); }, 260); }
+        if (c) { S.later(function () { try { c.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); } catch (e) { /* ignore */ } }, 200); }
         hl = null;
       }
     }
     function openEditor(p) { App.go('editor', { project: p.id }); }
-    function card(p) {
-      var pr = p.done;
-      var fi = fieldIc(p);
-      var more = h('button', { class: 'icon-btn ghost sm projects-raise', type: 'button', 'aria-label': 'Əməliyyatlar — ' + p.name, html: App.icon('more') });
-      more.addEventListener('click', function (e) { e.stopPropagation(); moreSheet(p); });
-      var open = h('button', { class: 'projects-open', type: 'button', 'aria-label': p.name + ' — redaktorda aç' }, h('h3', { text: p.name }));
-      open.addEventListener('click', function () { openEditor(p); });
-      var c = h('article', { class: 'card projects-card' + (hl === p.id ? ' is-new' : ''), 'data-id': p.id },
-        h('div', { class: 'projects-top' }, icTile(fi[0], fi[1]),
-          h('div', { class: 'projects-who' }, h('span', { text: p.client }), h('div', { class: 'projects-tags' }, kindTag(p), hl === p.id && !p.sample ? badge('Yeni', 'gold', 'sparkle') : null)),
-          more),
-        open,
-        h('div', { class: 'projects-meta' }, badge(pairLabel(p.pair), 'navy', 'globe'), badge(p.field), badge(REG[p.reg] || 'Neytral', '', 'sliders')),
-        h('div', { class: 'projects-prog' },
-          h('div', { class: 'projects-prog-l' }, h('span', { text: num(p.words) + ' söz · ' + num(p.segs) + ' seqment' }), h('b', null, String(pr), h('small', { text: '%' }))),
-          h('div', { class: 'progress' + (p.status === 'delivered' ? ' green' : pr >= 80 ? ' gold' : ''), role: 'progressbar', 'aria-label': 'Gediş', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(pr) }, h('i', { style: 'width:' + pr + '%' }))),
-        h('div', { class: 'projects-foot' }, dueChip(p), qaBadgeBtn(p, function () { App.go('qa', { project: p.id }); })));
-      return c;
+    function dueCell(p) {
+      var box = h('div', { class: 'projects-c-due' });
+      if (p.status === 'delivered') {
+        box.appendChild(h('span', { text: p.due ? p.due.getDate() + ' ' + MONTHS[p.due.getMonth()] : '—' }));
+        box.appendChild(h('small', { text: 'təhvil verildi' }));
+        return box;
+      }
+      if (!p.due) { box.appendChild(h('span', { class: 'muted', text: '—' })); return box; }
+      var ms = p.due.getTime() - Date.now(), tone = ms < 0 ? 'late' : ms < 3 * DAY ? 'soon' : '';
+      box.title = 'Təhvil: ' + dueLabel(p.due);
+      box.appendChild(h('span', { text: dueLabel(p.due) }));
+      box.appendChild(h('small', { class: tone, text: leftLabel(ms) }));
+      return box;
     }
-    function tableView(list) {
-      var rows = list.map(function (p) {
-        var tr = h('tr', { class: 'clickable', tabindex: '0', 'data-id': p.id, 'aria-label': p.name + ' — redaktorda aç' },
-          h('td', null, h('span', { class: 'tx' }, h('b', { text: p.name }), h('small', { text: p.client + (p.sample ? ' · Nümunə' : p.kind === 'sim' ? ' · Simulyasiya' : '') }))),
-          h('td', null, badge(pairLabel(p.pair), 'navy')),
-          h('td', { class: 'num', text: num(p.words) }),
-          h('td', null, h('div', { class: 'projects-mini' }, h('div', { class: 'progress thin' + (p.status === 'delivered' ? ' green' : '') }, h('i', { style: 'width:' + p.done + '%' })), h('span', { class: 'small tnum', text: p.done + '%' }))),
-          h('td', null, dueChip(p)),
-          h('td', null, qaBadgeBtn(p, function () { App.go('qa', { project: p.id }); })));
-        tr.addEventListener('click', function () { openEditor(p); });
-        tr.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); openEditor(p); } });
-        return tr;
-      });
-      return h('div', { class: 'table-wrap' }, h('table', { class: 'table projects-table' },
-        h('thead', null, h('tr', null, h('th', { text: 'Layihə' }), h('th', { text: 'Cüt' }), h('th', { class: 'num', text: 'Söz' }), h('th', { text: 'Gediş' }), h('th', { text: 'Təhvil' }), h('th', { text: 'QA' }))),
-        h('tbody', null, rows)));
+    function row(p) {
+      var stt = statusOf(p), isNew = hl === p.id && !p.sample;
+      var open = h('button', { class: 'projects-open', type: 'button', 'aria-label': p.name + ' — redaktorda aç' }, h('span', { class: 'projects-name', text: p.name }));
+      open.addEventListener('click', function () { openEditor(p); });
+      var more = h('button', { class: 'icon-btn ghost sm projects-raise projects-more', type: 'button', 'aria-label': 'Əməliyyatlar — ' + p.name, title: 'Əməliyyatlar', html: App.icon('more') });
+      more.addEventListener('click', function (e) { e.stopPropagation(); moreSheet(p); });
+      var sub = h('div', { class: 'projects-sub' },
+        h('span', { class: 'm' },
+          h('span', { class: 'projects-xs c', text: p.client + ' · ' }),
+          h('span', { class: 'projects-xs pj-mono', text: pairLabel(p.pair) + ' · ' }),
+          p.field + ' · ' + num(p.words) + ' söz'),
+        kindTag(p), isNew ? h('span', { class: 'pj-tag new', text: 'Yeni' }) : null);
+      var pr = clamp(Number(p.done) || 0, 0, 100);
+      return h('div', { class: 'projects-tr projects-row' + (isNew ? ' is-new' : ''), role: 'listitem', 'data-id': p.id },
+        h('div', { class: 'projects-c-name' }, open, sub),
+        h('div', { class: 'projects-c-client', text: p.client, title: p.client }),
+        h('div', { class: 'projects-c-pair', text: pairLabel(p.pair) }),
+        h('div', { class: 'projects-c-prog' },
+          h('span', { class: 'pj-track' + (p.status === 'delivered' ? ' ok' : ''), role: 'progressbar', 'aria-label': 'Hazırlıq', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(pr) }, h('i', { style: 'width:' + pr + '%' })),
+          h('span', { class: 'projects-pct', text: pr + '%' })),
+        h('div', { class: 'projects-c-status' }, h('span', { class: 'projects-st' }, h('i', { class: 'pj-dot is-' + stt[1], 'aria-hidden': 'true' }), stt[0])),
+        dueCell(p),
+        h('div', { class: 'projects-c-act' }, qaBadgeBtn(p, function () { App.go('qa', { project: p.id }); }), more));
     }
     function moreSheet(p) {
       var s;
       var rows = [
-        { ic: 'edit', cls: 'projects-fir', b: 'Redaktorda aç', s: num(p.segs) + ' seqment · ' + p.done + '% təsdiqlənib', run: function () { openEditor(p); } },
-        { ic: 'shield', b: 'QA yoxlaması', s: p.qa == null ? 'Hələ yoxlanmayıb' : 'Son bal: ' + p.qa, run: function () { App.go('qa', { project: p.id }); } },
+        { ic: 'edit', b: 'Redaktorda aç', s: num(p.segs) + ' seqment · ' + p.done + '% təsdiqlənib', run: function () { openEditor(p); } },
+        { ic: 'shield', b: 'Keyfiyyət yoxlaması', s: p.qa == null ? 'Hələ yoxlanmayıb' : 'Son bal: ' + p.qa, run: function () { App.go('qa', { project: p.id }); } },
         p.sample ? null : p.status === 'delivered'
           ? { ic: 'refresh', b: 'Yenidən aç', s: 'Müştəri düzəliş istəyibsə', run: function () { setMap('pj:status', p.id, 'active'); toast('Layihə yenidən açıldı', 'info', { sub: p.name }); draw(); } }
-          : { ic: 'stamp', cls: 'gold', b: 'Təhvil verildi kimi qeyd et', s: 'Layihə arxivə keçir', run: function () {
+          : { ic: 'stamp', b: 'Təhvil verildi kimi qeyd et', s: 'Layihə arxivə keçir', run: function () {
             setMap('pj:status', p.id, 'delivered'); setMap('pj:prog', p.id, 100);
             toast('Təhvil verildi', 'ok', { sub: p.client + ' — ' + p.name });
             nz('celebrate', 'Təbriklər! Daha bir layihə təhvil verildi.', 2600); draw();
@@ -1097,7 +1358,7 @@
           S.later(function () {
             removeSample(); draw();
             toast('Nümunə silindi', 'info', { action: { label: 'Geri qaytar', onClick: function () { sset('pj:sample', true); if (!S.dead) draw(); } } });
-          }, 200);
+          }, 180);
         } } : { ic: 'trash', b: 'Layihəni sil', s: 'Geri qaytarmaq mümkündür', danger: true, run: function () {
           App.confirm({ title: 'Layihə silinsin?', text: '«' + p.client + ' — ' + p.name + '» və onun ' + num(p.segs) + ' seqmenti siyahıdan silinəcək.', okLabel: 'Sil', danger: true }).then(function (yes) {
             if (!yes) return;
@@ -1106,18 +1367,18 @@
             S.later(function () {
               setMap('pj:removed', p.id, true); draw();
               toast('Layihə silindi', 'info', { sub: p.name, action: { label: 'Geri qaytar', onClick: function () { setMap('pj:removed', p.id); hl = p.id; if (!S.dead) draw(); } } });
-            }, 200);
+            }, 180);
           });
         } }
       ];
       rows = rows.filter(Boolean);
       var list = h('div', { class: 'list' }, rows.map(function (r) {
         return h('button', { class: 'list-row' + (r.danger ? ' danger' : ''), type: 'button', onclick: function () { if (s) s.close(); S.later(r.run, 80); } },
-          icTile(r.ic, r.cls), h('span', { class: 'tx' }, h('b', { text: r.b }), h('small', { text: r.s })), h('span', { class: 'end', html: App.icon('chevron') }));
+          icTile(r.ic), h('span', { class: 'tx' }, h('b', { text: r.b }), h('small', { text: r.s })), h('span', { class: 'end', html: App.icon('chevron') }));
       }));
-      s = App.sheet({ title: p.name, body: h('div', { class: 'stack' }, h('div', { class: 'row' }, kindTag(p), badge(pairLabel(p.pair), 'navy', 'globe'), dueChip(p)), list) });
+      s = App.sheet({ title: p.name, body: h('div', { class: 'stack' }, h('div', { class: 'row' }, kindTag(p), h('span', { class: 'pj-tag pj-mono', text: pairLabel(p.pair) }), dueChip(p)), list) });
     }
-    syncTabs(); syncView(); draw();
+    syncTabs(); draw();
     if (hl) S.later(function () { nz('celebrate', 'Yeni layihə siyahıdadır! Açın, ilkin tərcüməni başladaq.', 2800); }, 700);
     S.every(function () { if (host.isConnected) { var ae = D.activeElement; if (!host.contains(ae) && !overlayOpen()) draw(); } }, 60000);
   }
@@ -1263,18 +1524,20 @@
   }
 
   /* ------------------------------------------------------------------
-     8. SCREEN: EDITOR
+     8. SCREEN: EDITOR — three panes: segment navigator · source/target · inspector
      ------------------------------------------------------------------ */
   var FILTERS = [{ id: 'all', label: 'Hamısı' }, { id: 'empty', label: 'Boş' }, { id: 'unrev', label: 'Yoxlanmamış' }, { id: 'risk', label: 'Riskli' }];
+  var INSP_TABS = [['ctx', 'Kontekst'], ['gl', 'Lüğət'], ['tm', 'TM'], ['sug', 'Təklif'], ['qa', 'Yoxlama']];
+  var UI = { tab: 'sug', insp: true }; /* session-only view state (inspector tab, inspector shown on wide screens) */
   var greeted = {};
   function noProject(S) {
     var none = !realProjects().length;
     return h('div', { class: 'page' }, emptyBox(S, none
-      ? { title: 'Hələ layihə yoxdur', text: 'Redaktor və QA layihə daxilində işləyir. İlk layihənizi yaradın və ya nümunəyə baxın.', state: 'wave',
-        actions: [h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { newProjectSheet(null); } }, ie('plus'), 'Yeni layihə'),
-          h('button', { class: 'btn btn-ghost', type: 'button', onclick: openSample }, 'Nümunəyə bax')] }
-      : { title: 'Layihə tapılmadı', text: 'Bu layihə silinib və ya hələ yaradılmayıb.', state: 'sad',
-        actions: [h('button', { class: 'btn btn-primary', type: 'button', onclick: function () { App.go('projects'); } }, 'Layihələrə qayıt')] }));
+      ? { block: true, title: 'Layihə yoxdur', text: 'Redaktor və yoxlama layihə daxilində işləyir. İlk layihənizi yaradın və ya nümunəyə baxın.',
+        actions: [h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: function () { newProjectSheet(null); } }, ie('plus'), 'Yeni layihə'),
+          h('button', { class: 'link small', type: 'button', onclick: openSample }, 'Nümunə layihəyə baxın')] }
+      : { block: true, icon: 'search', title: 'Layihə tapılmadı', text: 'Bu layihə silinib və ya hələ yaradılmayıb.',
+        actions: [h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { App.go('projects'); } }, 'Layihələrə qayıt')] }));
   }
 
   function renderEditor(el, params) {
@@ -1288,60 +1551,112 @@
     var segs = loadSegs(p);
     var rows = [], filter = 'all', terms = {}, cur = null, allOkBefore = null, approvals = 0;
     var regNow = sget('pj:reg:' + p.id, p.reg);
-    var page = h('div', { class: 'page editor' });
+    var layout = '', insOpen = false, navOpen = false, menuEl = null;
+    var page = h('div', { class: 'page editor', 'data-layout': 'wide' });
     el.appendChild(page);
 
-    /* header */
-    var aiBtn = h('button', { class: 'btn btn-secondary', type: 'button' }, ie('sparkle'), 'İlkin tərcümə');
+    /* --- head: project, save state, main actions, progress --- */
+    var aiBtn = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', title: 'Boş seqmentlərin ilkin tərcüməsi (Mirzə Məclisi)' }, ie('translate'), h('span', { class: 'editor-hide-xs', text: 'İlkin tərcümə' }));
     aiBtn.addEventListener('click', runAI);
-    var qaBtn = h('button', { class: 'btn', type: 'button', onclick: function () { flushSave(); App.go('qa', { project: p.id }); } }, ie('shield'), 'QA');
-    var dueTxt = p.status === 'delivered' ? 'təhvil verilib' : p.due ? 'təhvil ' + lcFirst(dueLabel(p.due)) : 'nümunə layihə';
-    page.appendChild(h('div', { class: 'editor-top' },
-      h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: function () { App.go('projects'); } }, ie('back'), 'Layihələr'),
-      h('div', { class: 'row' }, kindTag(p), dueChip(p))));
-    page.appendChild(h('div', { class: 'page-h' },
-      h('div', null, h('span', { class: 'eyebrow', text: p.client + ' · ' + pairLabel(p.pair) }), h('h1', { text: p.name }),
-        h('p', { text: (REG[regNow] || 'Neytral') + ' · ' + num(p.words) + ' söz · ' + num(p.segs) + ' seqment · ' + dueTxt })),
-      h('div', { class: 'actions' }, qaBtn, aiBtn)));
-
-    /* sticky bar */
+    var qaBtn = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', title: 'Layihənin keyfiyyət yoxlaması', onclick: function () { flushSave(); App.go('qa', { project: p.id }); } }, ie('shield'), h('span', { class: 'editor-hide-xs', text: 'Yoxlama' }));
+    var panelBtn = h('button', { class: 'icon-btn sm editor-panel-btn', type: 'button', 'aria-label': 'Məlumat paneli', title: 'Məlumat paneli', 'aria-pressed': 'false', html: App.icon('sliders') });
+    panelBtn.addEventListener('click', toggleInsp);
+    var saveTx = h('span', { class: 'tx', text: 'Yadda saxlanıldı' }), saveEl = h('span', { class: 'editor-save', role: 'status' }, h('i', { 'aria-hidden': 'true' }), saveTx);
+    var dueTxt = p.status === 'delivered' ? 'Təhvil verilib' : p.due ? 'Təhvil: ' + lcFirst(dueLabel(p.due)) : 'Nümunə layihə';
+    var regMeta = h('span', { text: REG[regNow] || 'Neytral' });
     var progI = h('i', { style: 'width:0%' });
-    var progBar = h('div', { class: 'progress', role: 'progressbar', 'aria-label': 'Layihənin gedişi', 'aria-valuemin': '0', 'aria-valuemax': '100' }, progI);
-    var pctTx = h('b', { class: 'tnum' }), progTx = h('span', { class: 'editor-prog-tx tnum' });
-    var saveTx = h('span', { text: 'Yadda saxlanıldı' }), saveEl = h('span', { class: 'editor-save', role: 'status' }, h('i', { 'aria-hidden': 'true' }), saveTx);
+    var progBar = h('span', { class: 'pj-track', role: 'progressbar', 'aria-label': 'Layihənin gedişi', 'aria-valuemin': '0', 'aria-valuemax': '100' }, progI);
+    var pctTx = h('b'), progTx = h('span', { class: 'editor-prog-tx' });
+    var busyTx = h('span'), busyEl = h('span', { class: 'editor-busy', role: 'status', hidden: true }, h('span', { class: 'pj-spin', 'aria-hidden': 'true' }), busyTx);
+    page.appendChild(h('header', { class: 'editor-head' },
+      h('div', { class: 'editor-head-r1' },
+        h('button', { class: 'icon-btn ghost sm', type: 'button', 'aria-label': 'Layihələrə qayıt', title: 'Layihələr', html: App.icon('back'), onclick: function () { App.go('projects'); } }),
+        h('div', { class: 'editor-title' }, h('span', { class: 'editor-crumb', text: p.client, title: p.client }), h('span', { class: 'editor-crumb-sep', 'aria-hidden': 'true', text: '/' }), h('h1', { text: p.name, title: p.name }), kindTag(p)),
+        h('div', { class: 'editor-head-acts' }, saveEl, qaBtn, aiBtn, panelBtn)),
+      h('div', { class: 'editor-head-r2' },
+        h('div', { class: 'editor-meta' }, h('span', { class: 'pj-mono', text: pairLabel(p.pair) }), regMeta, h('span', { text: num(p.words) + ' söz' }), h('span', { text: num(p.segs) + ' seqment' }),
+          h('span', { class: dueTone(p) === 'late' && p.status !== 'delivered' ? 'is-late' : null, text: dueTxt })),
+        busyEl,
+        h('div', { class: 'editor-prog' }, progTx, progBar, pctTx))));
+
+    var ws = h('div', { class: 'editor-ws' });
+    page.appendChild(ws);
+    var scrim = h('div', { class: 'editor-scrim', 'aria-hidden': 'true' });
+    scrim.addEventListener('click', function () { closeNav(); closeInsp(); });
+    page.appendChild(scrim);
+
+    /* --- left: segment navigator --- */
     var fBtns = {};
-    var fSeg = h('div', { class: 'seg sm editor-filter', role: 'group', 'aria-label': 'Seqment filtri' }, FILTERS.map(function (f) {
+    var fSeg = h('div', { class: 'editor-filter', role: 'group', 'aria-label': 'Seqment filtri' }, FILTERS.map(function (f) {
       var c = h('span', { class: 'editor-fc' });
       var b = h('button', { type: 'button', 'aria-pressed': f.id === filter ? 'true' : 'false', onclick: function () { setFilter(f.id); } }, f.label, c);
       fBtns[f.id] = { b: b, c: c }; return b;
     }));
-    var bar = h('div', { class: 'editor-bar' },
-      h('div', { class: 'editor-bar-top' }, h('span', { class: 'editor-sec', text: set.title }), saveEl),
-      h('div', { class: 'editor-bar-prog' }, progBar, pctTx),
-      h('div', { class: 'editor-bar-bot' }, progTx, fSeg));
-    page.appendChild(bar);
-
-    /* fresh project: start card */
-    var startCard = h('section', { class: 'card lacquer editor-start', hidden: true },
-      h('span', { class: 'eyebrow', text: 'Başlayaq' }),
-      h('div', { class: 'editor-start-row' },
-        h('div', { class: 'stack-sm', style: 'max-width:46ch' }, h('h2', { html: 'Sənəd hazırdır — <em>' + set.segs.length + ' seqment</em> gözləyir' }),
-          h('p', { class: 'muted', text: 'Mirzə Məclisi ilkin tərcüməni hazırlasın: lüğət, tərcümə yaddaşı və üslub nəzərə alınacaq. Sonra hər seqmenti siz təsdiqləyirsiniz.' })),
-        h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: runAI }, ie('sparkle'), 'İlkin tərcümə')));
-    page.appendChild(startCard);
-
-    /* context: situation + glossary */
-    var sit = sitOf(p);
-    var sitOpen = sget('editor:sit-open', null);
-    if (sitOpen === null) sitOpen = !!(App.isDesktop && App.isDesktop());
-    sitOpen = !!sitOpen;
-    var sitSum = h('small');
-    var sitBody = h('div', { class: 'editor-sit-b', id: 'editor-sit-b', hidden: !sitOpen });
-    var sitBtn = h('button', { class: 'editor-sit-h', type: 'button', 'aria-expanded': sitOpen ? 'true' : 'false', 'aria-controls': 'editor-sit-b' },
-      icTile('target', 'gold'), h('span', { class: 'tx' }, h('span', { class: 'eyebrow plain', text: 'Situasiya' }), h('b', { text: 'Kimə, nə üçün?' }), sitSum), ie('chevron'));
-    sitBtn.addEventListener('click', function () {
-      sitOpen = !sitOpen; sitBody.hidden = !sitOpen; sitBtn.setAttribute('aria-expanded', sitOpen ? 'true' : 'false'); sset('editor:sit-open', sitOpen);
+    var navCount = h('span', { class: 'editor-nav-count' });
+    var navList = h('div', { class: 'editor-nav-list', role: 'list', 'aria-label': 'Seqment siyahısı' });
+    var legend = [['empty', 'Boş'], ['draft', 'Qaralama'], ['edit', 'Redaktə'], ['ok', 'Təsdiq'], ['warn', 'Qeyd']];
+    var nav = h('aside', { class: 'editor-nav', 'aria-label': 'Seqmentlər' },
+      h('div', { class: 'editor-nav-h' },
+        h('div', { class: 'editor-nav-t' }, h('span', { class: 'pj-cap', text: 'Seqmentlər' }), navCount,
+          h('button', { class: 'icon-btn ghost sm editor-ov-x', type: 'button', 'aria-label': 'Seqment siyahısını bağla', html: App.icon('x'), onclick: function () { closeNav(); } })),
+        fSeg, h('span', { class: 'editor-nav-sec', text: set.title, title: set.title })),
+      navList,
+      h('div', { class: 'editor-nav-legend', 'aria-hidden': 'true' }, legend.map(function (l) { return h('span', null, h('i', { class: 'pj-dot is-' + l[0] }), l[1]); })));
+    ws.appendChild(nav);
+    navList.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      var items = rows.filter(function (r) { return !r.navLi.hidden; }).map(function (r) { return r.nav; });
+      var i = items.indexOf(D.activeElement); if (i < 0) return;
+      e.preventDefault();
+      var nx = items[clamp(i + (e.key === 'ArrowDown' ? 1 : -1), 0, items.length - 1)];
+      if (nx) nx.focus();
     });
+
+    /* --- center: source + target --- */
+    var mCount = h('span', { class: 'editor-mcount' });
+    var mbar = h('div', { class: 'editor-mbar' },
+      h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { openNav(); } }, ie('list'), 'Seqmentlər', mCount),
+      h('span', { class: 'sp' }),
+      h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { openInsp(); } }, ie('sliders'), 'Panel'));
+    var fInfo = h('span', { class: 'editor-finfo' });
+    var startCard = h('div', { class: 'editor-start', hidden: true },
+      h('div', null, h('b', { text: 'Sənəd hazırdır — ' + set.segs.length + ' seqment tərcümə gözləyir' }),
+        h('span', { text: 'İlkin tərcümə layihə lüğətini, tərcümə yaddaşını və üslubu nəzərə alır. Sonra hər seqmenti siz təsdiqləyirsiniz.' })),
+      h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: runAI }, ie('translate'), 'İlkin tərcümə'));
+    var listEl = h('div', { class: 'editor-list', role: 'list', 'aria-label': 'Seqmentlər' });
+    var emptyHost = h('div', { class: 'editor-empty', hidden: true });
+    function kb(keys, label) { return h('span', null, keys.map(function (k) { return h('kbd', { class: 'kbd', text: k }); }), ' ' + label); }
+    var foot = h('div', { class: 'editor-foot' },
+      h('div', { class: 'editor-keys', 'aria-label': 'Klaviatura qısayolları' }, kb([MOD, 'Enter'], 'təsdiqlə'), kb(['Alt', '↓'], 'növbəti'), kb(['Alt', '↑'], 'əvvəlki'), kb([MOD, 'K'], 'axtar')),
+      h('div', { class: 'editor-legend' }, ['high', 'mid', 'low'].map(function (c) { return h('span', { class: 'editor-conf ' + c }, h('span', { class: 'editor-bars', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), CONF_L[c]); })));
+    var center = h('div', { class: 'editor-center', role: 'region', 'aria-label': 'Tərcümə sahəsi' },
+      mbar, h('div', { class: 'editor-center-h' }, h('span', { class: 'editor-center-t', text: set.title }), fInfo), startCard, listEl, emptyHost, foot);
+    ws.appendChild(center);
+
+    /* --- right: inspector --- */
+    var tabBtns = {};
+    var tabsEl = h('div', { class: 'editor-tabs', role: 'tablist', 'aria-label': 'Məlumat paneli' }, INSP_TABS.map(function (t) {
+      var c = h('span', { class: 'c' });
+      var b = h('button', { type: 'button', role: 'tab', id: 'editor-tab-' + t[0], 'aria-controls': 'editor-insp-b', 'aria-selected': UI.tab === t[0] ? 'true' : 'false', tabindex: UI.tab === t[0] ? '0' : '-1', onclick: function () { setTab(t[0]); } }, t[1], c);
+      tabBtns[t[0]] = { b: b, c: c }; return b;
+    }));
+    tabsEl.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      var ids = INSP_TABS.map(function (t) { return t[0]; }), i = ids.indexOf(UI.tab);
+      var nx = ids[(i + (e.key === 'ArrowRight' ? 1 : ids.length - 1)) % ids.length];
+      setTab(nx); try { tabBtns[nx].b.focus(); } catch (x) { /* ignore */ }
+    });
+    var inspSub = h('div', { class: 'editor-insp-sub' });
+    var inspB = h('div', { class: 'editor-insp-b', id: 'editor-insp-b', role: 'tabpanel', tabindex: '-1' });
+    var insp = h('aside', { class: 'editor-insp', 'aria-label': 'Məlumat paneli' },
+      h('div', { class: 'editor-grab', 'aria-hidden': 'true' }),
+      h('div', { class: 'editor-insp-h' }, tabsEl, h('button', { class: 'icon-btn ghost sm editor-ov-x', type: 'button', 'aria-label': 'Paneli bağla', html: App.icon('x'), onclick: function () { closeInsp(); } })),
+      inspSub, inspB);
+    ws.appendChild(insp);
+
+    /* --- situation + register (shown in the «Kontekst» tab) --- */
+    var sit = sitOf(p);
     var regBtns = {};
     var regSeg = h('div', { class: 'seg sm block', role: 'group', 'aria-label': 'Üslub' }, REG_IDS.map(function (r) {
       var b = h('button', { type: 'button', 'aria-pressed': r === regNow ? 'true' : 'false', class: r === p.reg ? 'detected' : null, title: r === p.reg ? 'Avtomatik tanındı' : null, onclick: function () { setReg(r); } }, REG[r]);
@@ -1351,20 +1666,9 @@
       if (r === regNow) return;
       regNow = r; sset('pj:reg:' + p.id, r);
       Object.keys(regBtns).forEach(function (k) { regBtns[k].setAttribute('aria-pressed', k === r ? 'true' : 'false'); });
-      drawSit();
+      regMeta.textContent = REG[r];
       toast('Üslub: ' + REG[r], 'info', { sub: r === p.reg ? 'Avtomatik tanınan üsluba qayıtdınız' : 'Növbəti qaralamalar bu üsluba uyğunlaşacaq', icon: 'sliders' });
       nz('write', r === 'danisiq' && p.reg === 'huquqi' ? 'Müqavilədə danışıq üslubu? Əminsiniz?' : 'Üslubu ' + REG[r] + ' etdim.', 2400);
-    }
-    function drawSit() {
-      sit = sitOf(p);
-      sitSum.textContent = REG[regNow] + ' · ' + (sit.audience && sit.audience !== 'Göstərilməyib' ? sit.audience : sit.purpose);
-      sitBody.textContent = '';
-      sitBody.appendChild(h('div', { class: 'editor-sit-row' }, h('span', { text: 'Məqsəd' }), h('p', { text: sit.purpose || '—' })));
-      if (sit.audience) sitBody.appendChild(h('div', { class: 'editor-sit-row' }, h('span', { text: 'Oxucu' }), h('p', { text: sit.audience })));
-      if (sit.note) sitBody.appendChild(h('div', { class: 'callout' }, ie('message'), h('div', { text: sit.note })));
-      sitBody.appendChild(h('div', { class: 'field' }, h('span', { class: 'label' }, 'Üslub', h('span', { class: 'opt', text: 'nöqtə — avtomatik tanınan' })), regSeg,
-        h('span', { class: 'hint', text: p.reg === 'huquqi' ? 'Hüquqi tanındı: «shall» öhdəlikləri, müəyyən edilmiş terminlər, tərəflərin adları.' : 'Avtomatik tanındı: ' + REG[p.reg] + '.' })));
-      sitBody.appendChild(h('button', { class: 'link small', type: 'button', style: 'justify-self:start', onclick: editSit }, 'Situasiyanı dəyiş'));
     }
     function editSit() {
       var pu = h('textarea', { class: 'textarea', id: 'editor-sit-pu', rows: '3', value: sit.purpose || '' });
@@ -1374,74 +1678,43 @@
         h('div', { class: 'field' }, h('label', { for: 'editor-sit-au' }, 'Kim oxuyacaq?'), au, h('span', { class: 'hint', text: 'Termin və üslub bu məlumata görə seçilir.' }))),
         actions: [{ label: 'Ləğv et', kind: 'ghost' }, { label: 'Saxla', kind: 'primary', onClick: function () {
           var v = { purpose: pu.value.trim() || 'Göstərilməyib', audience: au.value.trim(), note: sit.note || '' };
-          sset('pj:sit:' + p.id, v); p.sit = null; drawSit();
+          sset('pj:sit:' + p.id, v); p.sit = null; sit = sitOf(p); renderInsp(true);
           toast('Situasiya yeniləndi', 'ok', { sub: 'Növbəti qaralamalar buna uyğunlaşacaq' }); nz('read', 'Aydındır, oxucunu nəzərə alıram.', 2200);
         } }] });
     }
-    drawSit();
-    var sitCard = h('section', { class: 'card framed editor-sit' }, sitBtn, sitBody);
-
-    var glChips = h('div', { class: 'chips' });
-    var glCount = h('span', { class: 'badge navy' });
-    function drawGl() {
-      glChips.textContent = '';
-      glCount.textContent = gl.length + ' termin';
-      gl.forEach(function (g) {
-        var bad = h('span', { class: 'editor-gl-bad', hidden: true });
-        var c = h('button', { class: 'chip', type: 'button', 'aria-pressed': terms[g.a] ? 'true' : 'false', title: g.note || ('«' + g.a + '» → «' + g.b + '»') },
-          h('b', { text: g.a }), h('span', { class: 'editor-arrow', text: '→' }), h('span', { text: g.b }), bad);
-        c._bad = bad; c._g = g;
-        c.addEventListener('click', function () {
-          terms[g.a] = !terms[g.a]; c.setAttribute('aria-pressed', terms[g.a] ? 'true' : 'false');
-          rows.forEach(function (r) { r.src.innerHTML = srcHTML(r); });
-          if (terms[g.a]) {
-            var hits = rows.filter(function (r) { return srcHas(r.d.s, g); }).length;
-            toast('«' + g.a + '» işarələndi', 'info', { sub: hits ? hits + ' seqmentdə · təsdiqlənmiş tərcümə: «' + g.b + '»' : 'Bu bölmədə rast gəlinmir', icon: 'book', ms: 2400 });
-          }
-        });
-        glChips.appendChild(c);
-      });
-      glChips.appendChild(h('button', { class: 'chip editor-gl-add', type: 'button', onclick: addTerm }, ie('plus'), 'Termin'));
+    /* --- glossary actions --- */
+    function toggleTerm(g) {
+      terms[g.a] = !terms[g.a];
+      rows.forEach(function (r) { r.src.innerHTML = srcHTML(r); });
+      if (terms[g.a]) {
+        var hits = rows.filter(function (r) { return srcHas(r.d.s, g); }).length;
+        toast('«' + g.a + '» işarələndi', 'info', { sub: hits ? hits + ' seqmentdə · təsdiqlənmiş tərcümə: «' + g.b + '»' : 'Bu bölmədə rast gəlinmir', icon: 'book', ms: 2400 });
+      }
+      renderInsp(true);
     }
     function addTerm() {
       var a = h('input', { class: 'input', id: 'editor-gl-a', placeholder: set.src === 'ru' ? 'Məs.: поручитель' : 'Məs.: Subcontractor', autocomplete: 'off' });
       var b = h('input', { class: 'input', id: 'editor-gl-b', placeholder: 'Məs.: Subpodratçı', autocomplete: 'off' });
       App.sheet({ title: 'Lüğətə termin', body: h('div', { class: 'stack' },
         h('div', { class: 'grid-2' }, h('div', { class: 'field' }, h('label', { for: 'editor-gl-a' }, 'Mənbə · ' + upper(set.src)), a), h('div', { class: 'field' }, h('label', { for: 'editor-gl-b' }, 'Tərcümə · AZ'), b)),
-        h('p', { class: 'small muted', text: 'Lüğətçi Mirzə bu termini bütün layihədə qoruyacaq və uyğunsuzluqları QA-da göstərəcək.' })),
+        h('p', { class: 'small muted', text: 'Lüğətçi Mirzə bu termini bütün layihədə qoruyacaq və uyğunsuzluqları yoxlamada göstərəcək.' })),
         actions: [{ label: 'Ləğv et', kind: 'ghost' }, { label: 'Əlavə et', kind: 'primary', icon: 'plus', onClick: function () {
           var av = a.value.trim(), bv = b.value.trim();
           if (!av || !bv) { (av ? b : a).setAttribute('aria-invalid', 'true'); (av ? b : a).focus(); return false; }
           var ex = sget('pj:gl:' + p.id, []); if (!Array.isArray(ex)) ex = [];
           ex.push({ a: av, b: bv }); sset('pj:gl:' + p.id, ex);
-          gl = glossOf(p); ctx.gl = gl; drawGl(); refreshAll();
+          gl = glossOf(p); ctx.gl = gl; refreshAll(); renderInsp(true);
           toast('Termin lüğətə əlavə edildi', 'ok', { sub: '«' + av + '» → «' + bv + '»', icon: 'book' });
           nz('success', 'Yadda saxladım: «' + av + '» həmişə «' + bv + '» olacaq.', 2600);
         } }] });
     }
-    drawGl();
-    var glCard = h('section', { class: 'card editor-gl' },
-      h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow', text: 'Lüğət' }), h('h2', { text: 'Layihə terminləri' })), glCount),
-      glChips, h('p', { class: 'small muted', style: 'margin-top:10px', text: 'Termini seçin — mənbədə işarələnəcək. Qırmızı rəqəm lüğətə uyğun olmayan istifadəni göstərir.' }));
-    page.appendChild(h('div', { class: 'grid-2 editor-ctx' }, sitCard, glCard));
-
-    /* segment list */
-    var listEl = h('div', { class: 'seg-editor editor-list', role: 'list', 'aria-label': 'Seqmentlər' });
-    listEl.appendChild(h('div', { class: 'seg-head', 'aria-hidden': 'true' }, h('span', { text: '#' }), h('span', { text: 'Mənbə · ' + upper(set.src) }), h('span', { text: 'Tərcümə · AZ' }), h('span')));
-    set.segs.forEach(function (d, i) {
-      var r = buildRow(d, i); rows.push(r); listEl.appendChild(r.row);
-      if (d.q) { r.ask = buildAsk(r); listEl.appendChild(r.ask); }
-    });
-    var emptyHost = h('div', { class: 'editor-empty', hidden: true });
-    listEl.appendChild(emptyHost);
-    var keys = h('div', { class: 'editor-keys', 'aria-label': 'Klaviatura qısayolları' },
-      h('span', null, h('kbd', { class: 'kbd', text: MOD }), '+', h('kbd', { class: 'kbd', text: 'Enter' }), ' təsdiqlə'),
-      h('span', null, h('kbd', { class: 'kbd', text: 'Alt' }), '+', h('kbd', { class: 'kbd', text: '↓' }), ' növbəti'),
-      h('span', null, h('kbd', { class: 'kbd', text: 'Alt' }), '+', h('kbd', { class: 'kbd', text: '↑' }), ' əvvəlki'),
-      h('span', null, h('kbd', { class: 'kbd', text: MOD }), '+', h('kbd', { class: 'kbd', text: 'K' }), ' axtar'));
-    listEl.appendChild(h('div', { class: 'editor-foot' }, keys,
-      h('div', { class: 'conf-legend' }, h('span', { class: 'conf-high', text: 'Əmin' }), h('span', { class: 'conf-mid', text: 'Yoxlayın' }), h('span', { class: 'conf-low', text: 'Şübhəli' }))));
-    page.appendChild(listEl);
+    function applyGloss(r) {
+      var t = r.st.t, n = 0;
+      analyze(r.d, r.st, ctx).forEach(function (x) { if (x.type === 'Termin') { var nt = replaceWord(t, x.was, x.now, false); if (nt !== t) { t = nt; n++; } } });
+      if (!n) { toast('Terminlər artıq lüğətə uyğundur', 'ok', { sub: 'Seqment ' + pad3(r.n), icon: 'book', ms: 2000 }); return; }
+      setText(r, t, { ed: true });
+      toast(n + ' termin düzəldildi', 'ok', { sub: 'Seqment ' + pad3(r.n) + ' · Lüğətçi Mirzə', ms: 2600 });
+    }
 
     /* --- rows --- */
     function srcHas(s, g) { return new RegExp('(^|[^\\p{L}])' + reEsc(g.hl || g.a), 'iu').test(srcFor(s, g)); }
@@ -1453,7 +1726,7 @@
       if (!list.length) return s;
       var re = new RegExp('(^|[^\\p{L}])(' + list.map(reEsc).join('|') + ')(\\p{L}*)', 'giu');
       return s.replace(re, function (m, pre, w, suf) {
-        if (qw && !suf && lower(w) === lower(qw)) return pre + '<span class="conf-low editor-they" title="Kimə aiddir? Dəqiqləşdirin">' + w + '</span>';
+        if (qw && !suf && lower(w) === lower(qw)) return pre + '<span class="editor-they" title="Kimə aiddir? Dəqiqləşdirin">' + w + '</span>';
         return pre + '<mark class="editor-mark">' + w + suf + '</mark>';
       });
     }
@@ -1461,22 +1734,39 @@
     function buildRow(d, i) {
       var n = i + 1, st = segs[i];
       var r = { d: d, st: st, n: n, i: i, issues: [] };
-      r.src = h('div', { class: 'seg-src', lang: set.src });
-      r.ta = h('textarea', { class: 'seg-tgt', rows: '2', lang: 'az', spellcheck: 'true', placeholder: 'Tərcümə…', 'aria-label': 'Seqment ' + n + ' — tərcümə', value: st.t });
-      r.stEl = h('span', { class: 'seg-st', 'aria-hidden': 'true' });
+      r.src = h('div', { class: 'editor-src', lang: set.src });
+      r.ta = h('textarea', { class: 'editor-ta', rows: '1', lang: 'az', spellcheck: 'true', placeholder: 'Tərcümə…', 'aria-label': 'Seqment ' + n + ' — tərcümə', value: st.t });
+      r.stEl = h('span', { class: 'pj-dot', 'aria-hidden': 'true' });
       r.hints = h('div', { class: 'editor-hints', hidden: true });
-      r.pill = h('span', { class: 'badge editor-pill' });
+      r.pill = h('span', { class: 'editor-pill' });
       r.confTx = h('span');
       r.conf = h('span', { class: 'editor-conf' }, h('span', { class: 'editor-bars', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), r.confTx);
-      r.tm = d.tm ? h('button', { class: 'chip editor-tm', type: 'button', title: 'Tərcümə yaddaşı: ' + d.tm.from, onclick: function () { tmSheet(r); } }, ie('database'), 'TM ' + d.tm.pct + '%') : null;
-      r.note = h('span', { class: 'badge gold', hidden: !st.note, title: st.note || '' }, ie('message'), 'Qeyd');
+      r.tm = d.tm ? h('button', { class: 'editor-chip', type: 'button', title: 'Tərcümə yaddaşı: ' + d.tm.from, onclick: function () { setActive(r); openInsp('tm'); } }, h('span', { class: 'pj-mono', text: 'TM ' + d.tm.pct + '%' })) : null;
+      r.note = h('button', { class: 'editor-chip', type: 'button', hidden: !st.note, title: st.note || '', onclick: function () { setActive(r); openInsp('ctx'); } }, ie('message'), 'Qeyd');
+      r.issBtn = h('button', { class: 'editor-chip', type: 'button', hidden: true, onclick: function () { setActive(r); openInsp('qa'); } });
+      r.qTag = d.q ? h('span', { class: 'editor-chip warn', hidden: true, title: d.q.title }, ie('help'), 'Sual') : null;
       r.okTx = h('span', { text: 'Təsdiqlə' });
-      r.okBtn = h('button', { class: 'btn btn-sm editor-ok', type: 'button', 'aria-pressed': 'false' }, ie('check'), r.okTx);
-      r.nzBtn = h('button', { class: 'icon-btn sm ghost editor-nzb', type: 'button', title: 'Seqment menyusu', 'aria-label': 'Seqment menyusu — #' + n, html: App.icon('more') });
-      r.meta = h('div', { class: 'seg-meta' }, r.pill, r.conf, r.tm, r.note, h('span', { class: 'editor-actions' }, r.okBtn, r.nzBtn));
-      r.row = h('div', { class: 'seg-row', role: 'listitem', 'data-n': String(n) }, h('span', { class: 'seg-n', text: String(n) }), r.src, r.ta, r.stEl, r.hints, r.meta);
+      r.okBtn = h('button', { class: 'btn btn-sm editor-ok', type: 'button', 'aria-pressed': 'false' }, ie('check'), r.okTx,
+        h('span', { class: 'editor-okkbd', 'aria-hidden': 'true' }, h('kbd', { class: 'kbd', text: MOD }), h('kbd', { class: 'kbd', text: '↵' })));
+      r.nzBtn = h('button', { class: 'icon-btn sm ghost editor-nzb', type: 'button', title: 'Seqment menyusu', 'aria-label': 'Seqment menyusu — ' + pad3(n), 'aria-haspopup': 'menu', html: App.icon('more') });
+      r.meta = h('div', { class: 'editor-seg-h' }, r.stEl, h('span', { class: 'editor-segno', text: 'SEQMENT ' + pad3(n) }), r.pill, r.conf, r.tm, r.note, r.issBtn, r.qTag,
+        h('span', { class: 'editor-seg-acts' }, r.okBtn, r.nzBtn));
+      r.row = h('div', { class: 'editor-seg', role: 'listitem', 'data-n': String(n) }, r.meta,
+        h('div', { class: 'editor-pair' }, h('span', { class: 'editor-lang', text: upper(set.src), title: 'Mənbə' }), r.src, h('span', { class: 'editor-lang', text: 'AZ', title: 'Tərcümə' }), r.ta),
+        r.hints);
+      r.navDot = h('span', { class: 'pj-dot', 'aria-hidden': 'true' });
+      r.navFlag = h('span', { class: 'f' });
+      r.nav = h('button', { class: 'editor-nav-item', type: 'button', title: d.s }, h('span', { class: 'n', text: pad3(n) }), r.navDot, h('span', { class: 's', lang: set.src, text: d.s }), r.navFlag);
+      r.navLi = h('div', { role: 'listitem' }, r.nav);
+      r.nav.addEventListener('click', function () { focusRow(r); if (layout === 'narrow') closeNav(); });
       r.okBtn.addEventListener('click', function () { if (r.st.ok) unapprove(r); else approve(r); });
       r.nzBtn.addEventListener('click', function () { nzMenu(r); });
+      r.row.addEventListener('click', function (e) {
+        if (e.target.closest && e.target.closest('button, a, textarea, input, select')) return;
+        var sel = ''; try { sel = String(W.getSelection ? W.getSelection() : ''); } catch (x) { sel = ''; }
+        if (sel) return; /* the user is selecting source text */
+        setActive(r); try { r.ta.focus({ preventScroll: true }); } catch (x) { /* ignore */ }
+      });
       var tmr = 0;
       r.ta.addEventListener('input', function () {
         fit(r.ta);
@@ -1490,23 +1780,45 @@
       updateRow(r);
       return r;
     }
-    function setActive(r) {
-      if (cur && cur !== r) cur.row.classList.remove('active');
-      cur = r; r.row.classList.add('active');
+    function scrollNavTo(r) {
+      var L = navList, it = r.navLi;
+      if (!it || it.hidden || !L.clientHeight) return;
+      var top = it.offsetTop, bot = top + it.offsetHeight;
+      if (top < L.scrollTop + 4) L.scrollTop = Math.max(0, top - 8);
+      else if (bot > L.scrollTop + L.clientHeight - 4) L.scrollTop = bot - L.clientHeight + 8;
+    }
+    function setActive(r, quiet) {
+      if (!r) return;
+      if (cur !== r) {
+        if (cur) { cur.row.classList.remove('active'); cur.nav.removeAttribute('aria-current'); }
+        cur = r; r.row.classList.add('active'); r.nav.setAttribute('aria-current', 'true');
+        scrollNavTo(r);
+      }
+      if (!quiet) renderInsp(true);
     }
     function pillOf(st) {
-      if (!String(st.t || '').trim()) return ['Boş', 'badge', 'dot'];
-      if (st.ok) return ['Təsdiq', 'badge green', 'check'];
-      if (st.ed) return ['Redaktə', 'badge', 'edit'];
-      if (st.o === 'tm') return ['Yaddaşdan', 'badge gold', 'copy'];
-      return ['MT', 'badge', 'sparkle'];
+      if (!String(st.t || '').trim()) return ['Boş', 'blank'];
+      if (st.ok) return ['Təsdiqləndi', 'ok'];
+      if (st.ed) return ['Redaktə', 'edit'];
+      if (st.o === 'tm') return ['Yaddaşdan', 'draft'];
+      return ['MT', 'draft'];
     }
+    function dotOf(r) {
+      var st = r.st;
+      if (!String(st.t || '').trim()) return 'empty';
+      if (st.ok) return 'ok';
+      if (r.issues.some(function (x) { return x.sev === 'high'; })) return 'err';
+      if (r.issues.length) return 'warn';
+      return st.ed ? 'edit' : 'draft';
+    }
+    var DOT_T = { empty: 'Boş', ok: 'Təsdiqlənib', err: 'Kritik qeyd var', warn: 'Qeyd var', edit: 'Redaktə edilib', draft: 'Qaralama' };
     function updateRow(r) {
-      var st = r.st, t = String(st.t || '').trim();
+      var st = r.st;
       r.issues = analyze(r.d, st, ctx);
+      if (r.extra && r.extraFor !== st.t) { r.extra = null; r.checkNote = ''; r.checkScore = null; }
       var conf = confOf(r.d, st, r.issues);
       var pl = pillOf(st);
-      r.pill.className = pl[1] + ' editor-pill'; r.pill.innerHTML = App.icon(pl[2]) + esc(pl[0]);
+      r.pill.textContent = pl[0]; r.pill.className = 'editor-pill ' + pl[1];
       r.conf.hidden = !conf;
       r.conf.className = 'editor-conf' + (conf ? ' ' + conf : '');
       r.confTx.textContent = conf ? CONF_L[conf] : '';
@@ -1514,37 +1826,51 @@
       r.conf.title = conf === 'high' ? 'Mühərrik əmindir' : conf === 'mid' ? 'Yoxlamağa dəyər: ' + (r.issues[0] ? r.issues[0].text : (cnote || r.d.why || '')) : conf === 'low' ? 'Şübhəli: ' + (r.issues[0] ? r.issues[0].text : cnote) : '';
       r.ta.classList.toggle('editor-t-mid', conf === 'mid' && !st.ok);
       r.ta.classList.toggle('editor-t-low', conf === 'low' && !st.ok);
-      var high = r.issues.some(function (x) { return x.sev === 'high'; });
-      r.stEl.className = 'seg-st' + (st.ok ? ' ok' : !t ? '' : high ? ' err' : r.issues.length ? ' warn' : '');
-      r.stEl.innerHTML = st.ok ? App.icon('check') : t && r.issues.length ? App.icon('alert') : '';
+      var dc = dotOf(r);
+      r.stEl.className = 'pj-dot is-' + dc; r.navDot.className = 'pj-dot is-' + dc; r.stEl.title = DOT_T[dc];
+      var list = r.issues.filter(function (x) { return x.type !== 'Boş seqment'; });
+      var high = list.some(function (x) { return x.sev === 'high'; });
+      r.issBtn.hidden = !list.length;
+      r.issBtn.className = 'editor-chip ' + (high ? 'err' : 'warn');
+      r.issBtn.textContent = list.length + ' qeyd';
+      r.issBtn.title = list.length ? list[0].text : '';
+      if (r.qTag) r.qTag.hidden = !!st.ans;
       r.okBtn.setAttribute('aria-pressed', st.ok ? 'true' : 'false');
       r.okTx.textContent = st.ok ? 'Təsdiqləndi' : 'Təsdiqlə';
       r.okBtn.title = st.ok ? 'Təsdiqi geri al' : 'Təsdiqlə (' + MOD + ' + Enter)';
       r.row.classList.toggle('is-ok', !!st.ok);
       r.note.hidden = !st.note; r.note.title = st.note || '';
+      r.navFlag.textContent = r.d.q && !st.ans ? '?' : r.d.tm ? r.d.tm.pct + '%' : '';
       drawHints(r);
       r.src.innerHTML = srcHTML(r);
       if (r.ask && r.ask._draw) r.ask._draw();
+      if (r === cur) renderInsp();
     }
     function drawHints(r) {
       var list = r.issues.filter(function (x) { return x.type !== 'Boş seqment'; });
       r.hints.textContent = '';
       r.hints.hidden = !list.length;
       list.slice(0, 3).forEach(function (iss) {
-        var tx = h('span', { class: 'editor-hint-tx', title: iss.text }, h('b', { text: iss.type + ':' }));
+        var tx = h('span', { class: 'editor-hint-tx', title: iss.text }, h('b', { text: iss.type }));
         if (iss.was && iss.now) { tx.appendChild(h('s', { text: iss.was })); tx.appendChild(D.createTextNode(' → ')); tx.appendChild(h('ins', { text: iss.now })); }
         else tx.appendChild(D.createTextNode(iss.text));
         var act = null;
         if (iss.fix === 'word' || iss.fix === 'raw') {
-          act = h('button', { class: 'btn btn-sm btn-ghost', type: 'button', 'aria-label': 'Düzəlt: ' + iss.was + ' → ' + iss.now }, ie('wand'), 'Düzəlt');
+          act = h('button', { class: 'btn btn-sm btn-ghost', type: 'button', 'aria-label': 'Düzəlt: ' + iss.was + ' → ' + iss.now }, 'Düzəlt');
           act.addEventListener('click', function () { fixRow(r, iss, act); });
         } else if (iss.fix === 'ask' && r.ask) {
-          act = h('button', { class: 'btn btn-sm btn-ghost', type: 'button' }, ie('help'), 'Cavabla');
-          act.addEventListener('click', function () { r.ask._hide = false; r.ask.hidden = false; r.ask._mini = false; r.ask._draw(); var b = r.ask.querySelector('.editor-ask-opts .btn'); if (b) b.focus(); });
+          act = h('button', { class: 'btn btn-sm btn-ghost', type: 'button' }, 'Cavabla');
+          act.addEventListener('click', function () { openAsk(r); });
         }
         r.hints.appendChild(h('div', { class: 'editor-hint ' + iss.sev }, tx, act));
       });
-      if (list.length > 3) r.hints.appendChild(h('span', { class: 'small muted', text: '+' + (list.length - 3) + ' qeyd daha — QA-da' }));
+      if (list.length > 3) r.hints.appendChild(h('button', { class: 'link small', type: 'button', style: 'justify-self:start', onclick: function () { setActive(r); openInsp('qa'); } }, '+' + (list.length - 3) + ' qeyd daha'));
+    }
+    function openAsk(r) {
+      if (!r.ask) return;
+      setActive(r);
+      r.ask._hide = false; r.ask.hidden = false; r.ask._mini = false; r.ask._draw();
+      var b = r.ask.querySelector('.editor-ask-opts .btn'); if (b) try { b.focus(); } catch (e) { /* ignore */ }
     }
     function setText(r, text, o) {
       if (text !== r.st.t) { r.st.c = null; r.st.cn = ''; } /* the engine's confidence described the old text */
@@ -1556,9 +1882,9 @@
       var nt = applyFix(r.d, r.st, iss);
       if (nt == null) { toast('Düzəliş tətbiq olunmadı', 'warn', { sub: 'Mətn artıq dəyişib' }); return; }
       burstAt(btn, iss.type === 'Türk forması' ? 'ink' : 'stars');
-      setText(r, nt, { ed: true });
-      var elder = ELDER[iss.type] || 'Yoxlama';
-      toast('Düzəldildi', 'ok', { sub: '#' + r.n + ' · ' + iss.was + ' → ' + iss.now + ' · ' + elder, ms: 2600 });
+      setText(r, nt, iss.fix === 'fill' ? { ed: false, o: 'ai' } : { ed: true });
+      var elder = ELDER[iss.type] || iss.elder || 'Yoxlama';
+      toast('Düzəldildi', 'ok', { sub: 'Seqment ' + pad3(r.n) + ' · ' + (iss.was ? iss.was + ' → ' : '') + (iss.fix === 'fill' ? 'qaralama' : iss.now) + ' · ' + elder, ms: 2600 });
       if (!r.issues.length) nz('success', iss.type === 'Türk forması' ? 'Dilçi Nənə razıdır!' : 'Bu seqment artıq təmizdir.', 1800);
     }
     function approve(r, viaKey) {
@@ -1570,7 +1896,7 @@
       }
       if (st.ok) return Promise.resolve(true);
       var high = r.issues.filter(function (x) { return x.sev === 'high'; });
-      var gate = high.length ? App.confirm({ title: 'Seqment #' + r.n + ' riskli görünür', text: high[0].text + ' Yenə də təsdiqlənsin?', okLabel: 'Yenə də təsdiqlə', icon: 'alert' }) : Promise.resolve(true);
+      var gate = high.length ? App.confirm({ title: 'Seqment ' + pad3(r.n) + ' riskli görünür', text: high[0].text + ' Yenə də təsdiqlənsin?', okLabel: 'Yenə də təsdiqlə', icon: 'alert' }) : Promise.resolve(true);
       return gate.then(function (yes) {
         if (!yes || S.dead) return false;
         st.ok = true; approvals++;
@@ -1578,46 +1904,44 @@
         burstAt(r.okBtn, 'stars');
         if (p.kind === 'sim') xpAt(r.okBtn, '+5 XP');
         if (approvals === 1 && !viaKey) nz('success', 'Təsdiqləndi! ' + MOD + ' + Enter ilə daha sürətli olar.', 2600);
-        else if (high.length) nz('worried', 'Təsdiqlədim, amma QA bu seqmentə yenə baxacaq.', 2200);
+        else if (high.length) nz('worried', 'Təsdiqlədim, amma yoxlama bu seqmentə yenə baxacaq.', 2200);
         return true;
       });
     }
     function unapprove(r) {
       r.st.ok = false; updateRow(r); updateAll(); scheduleSave();
-      toast('Təsdiq geri alındı', 'info', { sub: 'Seqment #' + r.n + ' yenidən redaktədədir', ms: 2200 });
+      toast('Təsdiq geri alındı', 'info', { sub: 'Seqment ' + pad3(r.n) + ' yenidən redaktədədir', ms: 2200 });
     }
 
-    /* --- clarifying question card --- */
+    /* --- clarifying question (inside the active segment) --- */
     function buildAsk(r) {
       var q = r.d.q;
-      var box = h('div', { class: 'editor-ask', role: 'group', 'aria-label': 'Dəqiqləşdirmə sualı — seqment ' + r.n });
+      var box = h('div', { class: 'editor-ask', role: 'group', 'aria-label': 'Dəqiqləşdirmə sualı — seqment ' + pad3(r.n) });
       box._hide = false; box._mini = false;
       box._draw = function () {
         box.textContent = '';
-        var ic = h('span', { class: 'editor-ask-ic', html: App.logo ? App.logo('logo') : App.icon('sparkle'), 'aria-hidden': 'true' });
         if (r.st.ans) {
           box.className = 'editor-ask done';
-          ic.innerHTML = App.icon('check');
-          box.appendChild(ic);
-          box.appendChild(h('div', { class: 'editor-ask-b' }, h('b', { text: '«' + q.word + '» — ' + r.st.ans }), h('p', { text: 'Seqment #' + r.n + ' yeniləndi. Bu sənəddə oxşar yerlərdə də «' + r.st.ans + '» götürüləcək.' })));
+          box.appendChild(h('div', { class: 'stack-sm' }, h('b', { text: '«' + q.word + '» — ' + r.st.ans }), h('p', { text: 'Seqment yeniləndi. Bu sənəddə oxşar yerlərdə də «' + r.st.ans + '» götürüləcək.' })));
           box.appendChild(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: function () { r.st.ans = null; setText(r, r.d.ai || r.d.t, { ed: false }); } }, 'Dəyiş'));
           return;
         }
         if (box._mini) {
           box.className = 'editor-ask mini';
-          box.appendChild(ic);
-          box.appendChild(h('span', { class: 'small', html: '<b>Sual açıqdır:</b> «' + esc(q.word) + '» kimə aiddir? · #' + r.n }));
+          box.appendChild(h('span', { class: 'editor-p', html: '<b>Sual açıqdır:</b> «' + esc(q.word) + '» kimə aiddir?' }));
           box.appendChild(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: function () { box._mini = false; box._draw(); } }, 'Aç'));
           return;
         }
         box.className = 'editor-ask';
-        box.appendChild(ic);
-        var srcQ = h('p', { class: 'editor-ask-q', lang: set.src, html: esc(r.d.s).replace(new RegExp('(^|[^\\p{L}])(' + reEsc(q.word) + ')(?![\\p{L}])', 'iu'), '$1<span class="conf-low editor-they">$2</span>') });
+        var srcQ = h('p', { class: 'editor-ask-q', lang: set.src, html: esc(r.d.s).replace(new RegExp('(^|[^\\p{L}])(' + reEsc(q.word) + ')(?![\\p{L}])', 'iu'), '$1<span class="editor-they">$2</span>') });
         var opts = h('div', { class: 'editor-ask-opts' }, q.opts.map(function (o) {
-          return h('button', { class: 'btn btn-sm' + (o[0] === q.likely ? ' btn-secondary' : ''), type: 'button', onclick: function (e) { answer(r, o, e.currentTarget); } }, o[0]);
+          return h('button', { class: 'btn btn-sm' + (o[0] === q.likely ? ' btn-secondary' : ' btn-ghost'), type: 'button', onclick: function (e) { answer(r, o, e.currentTarget); } }, o[0]);
         }), h('button', { class: 'link small', type: 'button', onclick: function () { box._mini = true; box._draw(); nz('idle', 'Yaxşı, sonra soruşaram.', 1600); } }, 'Sonra'));
-        box.appendChild(h('div', { class: 'editor-ask-b' },
-          h('span', { class: 'eyebrow', text: 'Sual · seqment #' + r.n }), h('h3', { text: q.title }), srcQ, h('p', { text: q.text }), opts));
+        box.appendChild(h('span', { class: 'pj-cap', text: 'Dəqiqləşdirmə' }));
+        box.appendChild(h('h3', { text: q.title }));
+        box.appendChild(srcQ);
+        box.appendChild(h('p', { text: q.text }));
+        box.appendChild(opts);
       };
       box._draw();
       return box;
@@ -1627,7 +1951,7 @@
       burstAt(btn, 'stars');
       setText(r, o[1], { o: 'ai', ed: false });
       if (o[0] === r.d.q.likely) {
-        toast('Cavab yadda saxlandı', 'ok', { sub: '«' + r.d.q.word + '» — ' + o[0] + ' · seqment #' + r.n + ' yeniləndi' });
+        toast('Cavab yadda saxlandı', 'ok', { sub: '«' + r.d.q.word + '» — ' + o[0] + ' · seqment ' + pad3(r.n) + ' yeniləndi' });
         nz('success', 'Aydındır! «' + o[0] + '» — məntiqlidir.', 2400);
       } else {
         toast('Cavab yadda saxlandı', 'warn', { sub: 'Diqqət: adətən ödəniş gecikəndə Xidmətləri ' + r.d.q.likely + ' dayandırır' });
@@ -1649,7 +1973,6 @@
       FILTERS.forEach(function (x) { fBtns[x.id].b.setAttribute('aria-pressed', x.id === f ? 'true' : 'false'); });
       updateAll(true);
     }
-    var emptyMini = null;
     function updateAll(refilter) {
       var c = { all: rows.length, empty: 0, unrev: 0, risk: 0 };
       rows.forEach(function (r) { if (matchF(r, 'empty')) c.empty++; if (matchF(r, 'unrev')) c.unrev++; if (isRisk(r)) c.risk++; });
@@ -1659,39 +1982,34 @@
         var show = matchF(r, filter);
         if (!show && !refilter && !r.row.hidden && r.row.contains(ae)) show = true;
         if (!show && !refilter && !r.row.hidden && filter !== 'all') show = r === cur;
-        r.row.hidden = !show;
+        r.row.hidden = !show; r.navLi.hidden = !show;
         if (r.ask) r.ask.hidden = !show || r.ask._hide;
         if (show) vis++;
       });
+      navCount.textContent = filter === 'all' ? String(rows.length) : vis + ' / ' + rows.length;
+      fInfo.textContent = '';
+      if (filter !== 'all') {
+        var fl = FILTERS.filter(function (f) { return f.id === filter; })[0];
+        fInfo.appendChild(h('span', { text: 'Filtr: ' + fl.label + ' · ' + vis }));
+        fInfo.appendChild(h('button', { class: 'link small', type: 'button', onclick: function () { setFilter('all'); } }, 'Hamısını göstər'));
+      } else fInfo.appendChild(h('span', { text: rows.length + ' seqment' }));
       emptyHost.hidden = vis > 0;
       if (!vis) {
         var msg = filter === 'empty' ? ['Boş seqment qalmayıb', 'Bölmədəki bütün seqmentlər tərcümə olunub.'] : filter === 'risk' ? ['Riskli seqment yoxdur', 'Mirzələr bu bölmədə şübhəli yer tapmadı.'] : ['Hamısı yoxlanılıb', 'Bölmədəki bütün seqmentlər təsdiqlənib.'];
-        if (!emptyHost._box) {
-          emptyHost._h = h('h3'); emptyHost._p = h('p');
-          var art = h('div', { class: 'empty-art' });
-          emptyHost._box = h('div', { class: 'empty' }, art, emptyHost._h, emptyHost._p, h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', onclick: function () { setFilter('all'); } }, 'Hamısını göstər')));
-          emptyHost.appendChild(emptyHost._box);
-          emptyMini = S.mini(art, 'celebrate', 88);
-        } else if (emptyMini && emptyMini.set) { try { emptyMini.set('celebrate', {}); } catch (e) { /* ignore */ } }
-        emptyHost._h.textContent = msg[0]; emptyHost._p.textContent = msg[1];
+        emptyHost.textContent = '';
+        emptyHost.appendChild(emptyBox(S, { block: true, icon: 'check', title: msg[0], text: msg[1], actions: [h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { setFilter('all'); } }, 'Hamısını göstər')] }));
       }
       var pr = progressOf(p, segs);
       progI.style.width = pr.pct + '%'; progBar.setAttribute('aria-valuenow', String(pr.pct));
-      pctTx.innerHTML = pr.pct + '<small>%</small>';
-      progTx.textContent = num(pr.ok) + ' / ' + num(pr.total) + ' seqment təsdiqlənib';
-      pctTx.title = progTx.textContent;
+      pctTx.textContent = pr.pct + '%';
+      progTx.textContent = num(pr.ok) + ' / ' + num(pr.total) + ' təsdiqlənib';
+      mCount.textContent = pr.ok + '/' + pr.total;
       if (!(p.status === 'delivered' && pr.pct === 100)) setMap('pj:prog', p.id, pr.pct);
       startCard.hidden = c.empty !== rows.length;
-      gl.forEach(function (g, gi) {
-        var chip = glChips.children[gi]; if (!chip || !chip._bad) return;
-        var n = 0; rows.forEach(function (r) { r.issues.forEach(function (x) { if (x.type === 'Termin' && x.term === g.a) n++; }); });
-        chip._bad.hidden = !n; chip._bad.textContent = String(n);
-      });
       var allOk = rows.every(function (r) { return r.st.ok; });
       if (allOkBefore === false && allOk) {
-        burstAt(bar, 'confetti');
-        nz('celebrate', 'Bölmə tam təsdiqləndi! QA-ya baxaq?', 3200);
-        toast('Bölmə təsdiqləndi', 'ok', { sub: rows.length + ' seqment · indi QA vaxtıdır', icon: 'stamp', action: { label: 'QA', onClick: function () { flushSave(); App.go('qa', { project: p.id }); } } });
+        nz('celebrate', 'Bölmə tam təsdiqləndi! Yoxlamaya baxaq?', 3200);
+        toast('Bölmə təsdiqləndi', 'ok', { sub: rows.length + ' seqment · indi yoxlama vaxtıdır', icon: 'stamp', action: { label: 'Yoxlama', onClick: function () { flushSave(); App.go('qa', { project: p.id }); } } });
       }
       allOkBefore = allOk;
     }
@@ -1714,8 +2032,9 @@
     function focusRow(r, flash) {
       if (!r) return;
       if (r.row.hidden) setFilter('all');
+      setActive(r);
       try { r.row.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); } catch (e) { /* ignore */ }
-      S.later(function () { try { r.ta.focus({ preventScroll: true }); var L = r.ta.value.length; r.ta.setSelectionRange(L, L); } catch (e) { /* ignore */ } }, reduced() ? 0 : 260);
+      S.later(function () { try { r.ta.focus({ preventScroll: true }); var L = r.ta.value.length; r.ta.setSelectionRange(L, L); } catch (e) { /* ignore */ } }, reduced() ? 0 : 200);
       if (flash) { r.row.classList.remove('editor-flash'); void r.row.offsetWidth; r.row.classList.add('editor-flash'); }
     }
     function step(r, dir, unOkOnly) {
@@ -1733,7 +2052,9 @@
       else if (e.altKey && e.key === 'ArrowUp') { e.preventDefault(); step(r, -1, false); }
     });
     S.on(D, 'keydown', function (e) {
-      if (!page.isConnected || overlayOpen() || !e.altKey || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return;
+      if (!page.isConnected) return;
+      if (e.key === 'Escape' && !overlayOpen() && !menuEl && (navOpen || insOpen)) { e.preventDefault(); if (navOpen) closeNav(); else closeInsp(); return; }
+      if (overlayOpen() || navOpen || !e.altKey || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return;
       if (listEl.contains(e.target)) return;
       var t = e.target && e.target.tagName;
       if (t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
@@ -1741,13 +2062,355 @@
       var v = visibleRows(); if (!v.length) return;
       focusRow(e.key === 'ArrowDown' ? (cur && v.indexOf(cur) >= 0 ? v[Math.min(v.length - 1, v.indexOf(cur) + 1)] : v[0]) : (cur && v.indexOf(cur) > 0 ? v[v.indexOf(cur) - 1] : v[0]));
     });
-    var rz = 0;
-    S.on(W, 'resize', function () { clearTimeout(rz); rz = S.later(function () { rows.forEach(function (r) { fit(r.ta); }); }, 120); });
+
+    /* --- layout: wide (3 panes) · mid (inspector = side sheet) · narrow (single column, drawer + bottom sheet) --- */
+    function syncPanelBtn() { panelBtn.setAttribute('aria-pressed', (layout === 'wide' ? UI.insp : insOpen) ? 'true' : 'false'); }
+    function applyLayout() {
+      var w = page.getBoundingClientRect().width || W.innerWidth;
+      var L = w >= 1120 ? 'wide' : w >= 700 ? 'mid' : 'narrow';
+      if (L !== layout) {
+        layout = L; page.setAttribute('data-layout', L);
+        closeNav(true); closeInsp(true);
+        insp.setAttribute('role', L === 'wide' ? 'complementary' : 'dialog');
+        nav.setAttribute('role', L === 'narrow' ? 'dialog' : 'complementary');
+        S.later(function () { rows.forEach(function (r) { fit(r.ta); }); }, 30);
+      }
+      page.classList.toggle('insp-off', layout === 'wide' && !UI.insp);
+      syncPanelBtn();
+    }
+    function toggleInsp() {
+      if (layout === 'wide') { UI.insp = !UI.insp; applyLayout(); if (UI.insp) renderInsp(true); return; }
+      if (insOpen) closeInsp(); else openInsp();
+    }
+    function openInsp(tab) {
+      if (tab) setTab(tab, true);
+      if (layout === 'wide') { if (!UI.insp) { UI.insp = true; applyLayout(); } }
+      else {
+        if (layout === 'narrow') { closeNav(true); scrim.classList.add('on'); }
+        insOpen = true; insp.classList.add('on');
+        S.later(function () { try { tabBtns[UI.tab].b.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 40);
+      }
+      syncPanelBtn(); renderInsp(true);
+    }
+    function closeInsp(silent) {
+      if (!insOpen) return;
+      insOpen = false; insp.classList.remove('on');
+      if (!navOpen) scrim.classList.remove('on');
+      syncPanelBtn();
+      if (!silent && cur && insp.contains(D.activeElement)) { try { cur.ta.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+    }
+    function openNav() {
+      if (layout !== 'narrow') return;
+      closeInsp(true);
+      navOpen = true; nav.classList.add('on'); scrim.classList.add('on');
+      if (cur) scrollNavTo(cur);
+      S.later(function () { try { (cur ? cur.nav : fBtns.all.b).focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 40);
+    }
+    function closeNav(silent) {
+      if (!navOpen) return;
+      navOpen = false; nav.classList.remove('on');
+      if (!insOpen || layout !== 'narrow') scrim.classList.remove('on');
+      if (!silent && nav.contains(D.activeElement) && cur) { try { cur.ta.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+    }
+
+    /* --- inspector --- */
+    function altsOf(r) {
+      var d = r.d;
+      return (d.q ? d.q.opts.map(function (o) { return [o[1], '«' + d.q.word + '» = ' + o[0], o[0]]; }) : []).concat(d.alts || []);
+    }
+    function issuesOf(r) {
+      var extra = r.extra && r.extraFor === r.st.t ? r.extra : [];
+      return r.issues.concat(extra);
+    }
+    function setTab(t, noRender) {
+      UI.tab = t;
+      INSP_TABS.forEach(function (x) { var on = x[0] === t; tabBtns[x[0]].b.setAttribute('aria-selected', on ? 'true' : 'false'); tabBtns[x[0]].b.setAttribute('tabindex', on ? '0' : '-1'); });
+      inspB.setAttribute('aria-labelledby', 'editor-tab-' + t);
+      if (!noRender) renderInsp(true);
+    }
+    function tabCounts(r) {
+      var c = {}, cls = {};
+      if (r) {
+        var hits = gl.filter(function (g) { return srcHas(r.d.s, g); }).length;
+        c.gl = hits ? String(hits) : '';
+        c.tm = r.d.tm ? r.d.tm.pct + '%' : '';
+        var al = altsOf(r).length; c.sug = al ? String(al) : '';
+        var iss = issuesOf(r); c.qa = iss.length ? String(iss.length) : '';
+        cls.qa = iss.some(function (x) { return x.sev === 'high'; }) ? 'err' : iss.length ? 'warn' : '';
+        c.ctx = r.st.note ? '1' : '';
+      }
+      INSP_TABS.forEach(function (t) { var o = tabBtns[t[0]]; o.c.textContent = c[t[0]] || ''; o.c.className = 'c pj-mono' + (cls[t[0]] ? ' ' + cls[t[0]] : ''); });
+    }
+    function sec(title, kids, right) { return put(h('section', { class: 'editor-sec' }, h('div', { class: 'editor-sec-h' }, h('h4', { class: 'pj-cap', text: title }), right || null)), kids); }
+    function confEl(conf) { return conf ? h('span', { class: 'editor-conf ' + conf }, h('span', { class: 'editor-bars', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), CONF_L[conf]) : h('span', { class: 'editor-p', text: '—' }); }
+    function renderInsp(force) {
+      var r = cur;
+      tabCounts(r);
+      if (layout === 'wide' && !UI.insp) return;
+      if (layout !== 'wide' && !insOpen && !force) return;
+      var ae = D.activeElement;
+      if (!force && insp.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+      var hadFocus = inspB.contains(ae);
+      inspSub.textContent = ''; inspB.textContent = '';
+      if (!r) { inspB.appendChild(h('p', { class: 'editor-p', style: 'padding-top:12px', text: 'Seqment seçin — kontekst, lüğət, tərcümə yaddaşı və təkliflər burada görünəcək.' })); return; }
+      put(inspSub, h('span', { class: 'pj-dot is-' + dotOf(r), 'aria-hidden': 'true' }), h('span', { class: 'editor-segno', text: 'SEQMENT ' + pad3(r.n) }), h('span', { class: 'st', text: pillOf(r.st)[0] }));
+      ({ ctx: inspCtx, gl: inspGl, tm: inspTm, sug: inspSug, qa: inspQa }[UI.tab] || inspSug)(r, inspB);
+      if (hadFocus) { try { tabBtns[UI.tab].b.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+    }
+    function originOf(st) {
+      var o = st.o === 'tm' ? 'Tərcümə yaddaşı' : st.o === 'ai' ? 'Maşın tərcüməsi' : st.o === 'human' ? 'Tərcüməçi' : '—';
+      return o + (st.ed && st.o !== 'human' ? ' · redaktə edilib' : '');
+    }
+    function inspCtx(r, box) {
+      var d = r.d, st = r.st, conf = confOf(d, st, r.issues);
+      box.appendChild(sec('Seqment', h('dl', { class: 'editor-kv' },
+        h('dt', { text: 'Mənşə' }), h('dd', { text: originOf(st) }),
+        h('dt', { text: 'Etibarlılıq' }), h('dd', null, confEl(conf)),
+        h('dt', { text: 'Söz sayı' }), h('dd', { class: 'pj-mono', text: String(wordsIn(d.s)) }),
+        h('dt', { text: 'Bölmə' }), h('dd', { text: set.title }))));
+      var prev = rows[r.i - 1], next = rows[r.i + 1];
+      function nb(x) { return h('button', { class: 'editor-nb', type: 'button', onclick: function () { focusRow(x); } }, h('span', { class: 'n', text: pad3(x.n) }), h('span', { class: 't', lang: set.src, text: x.d.s })); }
+      if (prev || next) box.appendChild(sec('Sənəddə', [prev ? nb(prev) : null, next ? nb(next) : null]));
+      sit = sitOf(p);
+      box.appendChild(sec('Situasiya', [
+        h('dl', { class: 'editor-kv' }, h('dt', { text: 'Məqsəd' }), h('dd', { text: sit.purpose || '—' }), sit.audience ? [h('dt', { text: 'Oxucu' }), h('dd', { text: sit.audience })] : null),
+        sit.note ? h('p', { class: 'editor-quote', text: sit.note }) : null,
+        h('button', { class: 'link small', type: 'button', style: 'justify-self:start', onclick: editSit }, 'Situasiyanı dəyiş')]));
+      box.appendChild(sec('Üslub', [regSeg, h('p', { class: 'editor-p', text: p.reg === 'huquqi' ? 'Avtomatik tanındı: hüquqi — «shall» öhdəlikləri, müəyyən edilmiş terminlər, tərəflərin adları.' : 'Avtomatik tanındı: ' + REG[p.reg] + '. Nöqtə tanınan üslubu göstərir.' })]));
+      var ta = h('textarea', { class: 'textarea editor-note-ta', id: 'editor-note', rows: '3', placeholder: 'Məs.: Müştəri ilə «Delta» yazılışını dəqiqləşdirmək', value: st.note || '' });
+      var saveN = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, 'Qeydi saxla');
+      saveN.addEventListener('click', function () {
+        r.st.note = ta.value.trim(); updateRow(r); scheduleSave(); renderInsp(true);
+        toast(r.st.note ? 'Qeyd saxlanıldı' : 'Qeyd silindi', 'ok', { sub: 'Seqment ' + pad3(r.n), ms: 2200 });
+      });
+      var delN = st.note ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: function () { r.st.note = ''; updateRow(r); scheduleSave(); renderInsp(true); toast('Qeyd silindi', 'ok', { sub: 'Seqment ' + pad3(r.n), ms: 2200 }); } }, 'Sil') : null;
+      box.appendChild(sec('Redaktor qeydi', [h('label', { class: 'sr-only', for: 'editor-note' }, 'Redaktor qeydi'), ta, h('div', { class: 'editor-row' }, saveN, delN)]));
+    }
+    function inspGl(r, box) {
+      var hit = gl.filter(function (g) { return srcHas(r.d.s, g); }), rest = gl.filter(function (g) { return !srcHas(r.d.s, g); });
+      var bad = {}, badHere = {};
+      rows.forEach(function (x) { x.issues.forEach(function (i) { if (i.type === 'Termin') { bad[i.term] = (bad[i.term] || 0) + 1; if (x === r) badHere[i.term] = true; } }); });
+      function table(list) {
+        return h('div', { class: 'editor-gl' },
+          h('div', { class: 'editor-gl-r editor-gl-th', 'aria-hidden': 'true' }, h('span', { text: 'Termin' }), h('span', { text: 'Tərcümə' }), h('span', { text: 'Sahə' })),
+          list.map(function (g) {
+            var b = h('button', { class: 'editor-gl-r', type: 'button', 'aria-pressed': terms[g.a] ? 'true' : 'false', title: terms[g.a] ? 'Mənbədə işarələnib — söndür' : 'Mənbədə işarələ' },
+              h('span', { class: 'a', lang: set.src }, g.a),
+              h('span', { class: 'b' }, g.b, g.note ? h('small', { text: g.note }) : null, bad[g.a] ? h('span', { class: 'bad', text: (badHere[g.a] ? 'bu seqmentdə uyğunsuz' : bad[g.a] + ' uyğunsuz istifadə') }) : null),
+              h('span', { class: 'f', text: g.custom ? 'Əlavə edilib' : p.field }));
+            b.addEventListener('click', function () { toggleTerm(g); });
+            return b;
+          }));
+      }
+      var hasBad = r.issues.some(function (x) { return x.type === 'Termin'; });
+      box.appendChild(sec('Bu seqmentdə', hit.length ? table(hit) : h('p', { class: 'editor-p', text: 'Seqmentdə lüğət termini yoxdur.' }), h('span', { class: 'editor-nav-count', text: String(hit.length) })));
+      box.appendChild(sec('Layihə lüğəti', [rest.length ? table(rest) : null, h('div', { class: 'editor-row' },
+        h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: addTerm }, ie('plus'), 'Termin əlavə et'),
+        h('button', { class: 'btn btn-ghost btn-sm', type: 'button', disabled: !hasBad, title: hasBad ? 'Lüğətə uyğun olmayan terminləri düzəlt' : 'Uyğunsuzluq yoxdur', onclick: function () { applyGloss(r); } }, 'Seqmentə tətbiq et'))],
+        h('span', { class: 'editor-nav-count', text: String(gl.length) })));
+      box.appendChild(h('p', { class: 'editor-p', text: 'Termini seçin — bütün seqmentlərdə mənbədə işarələnəcək.' }));
+    }
+    function inspTm(r, box) {
+      var tm = r.d.tm;
+      if (!tm) {
+        box.appendChild(sec('Tərcümə yaddaşı', [h('p', { class: 'editor-p', text: 'Bu seqment üçün tərcümə yaddaşında uyğunluq tapılmadı.' }),
+          h('p', { class: 'editor-p', text: 'Uyğunluq olduqda faiz, yaddaşdakı mənbə və tərcümə burada göstərilir.' })]));
+        return;
+      }
+      var srcW = {}; String(r.d.s).split(/\s+/).forEach(function (w) { srcW[lower(w.replace(/[^\p{L}\p{N}]/gu, ''))] = 1; });
+      var diffHTML = String(tm.src).split(/(\s+)/).map(function (w) {
+        var k = lower(w.replace(/[^\p{L}\p{N}]/gu, ''));
+        return k && !srcW[k] ? '<mark>' + esc(w) + '</mark>' : esc(w);
+      }).join('');
+      var use = r.d.t || tm.tgt;
+      var applied = String(r.st.t || '') === use;
+      var apply = h('button', { class: 'btn btn-primary btn-sm', type: 'button', disabled: applied }, ie('check'), applied ? 'Tətbiq edilib' : 'Tətbiq et');
+      apply.addEventListener('click', function () {
+        setText(r, use, { o: 'tm', ed: false });
+        toast('TM uyğunluğu tətbiq edildi', 'ok', { sub: 'Seqment ' + pad3(r.n) + ' · ' + tm.pct + '% · ' + tm.from, icon: 'database' });
+        if (layout === 'narrow') closeInsp();
+        S.later(function () { focusRow(r, true); }, 120);
+      });
+      box.appendChild(sec('Uyğunluq', [h('div', { class: 'editor-tm' },
+        h('span', { class: 'editor-tm-pct' + (tm.pct >= 95 ? ' hi' : tm.pct < 85 ? ' mid' : ''), text: tm.pct + '%' }),
+        h('div', { class: 'stack-sm' }, h('p', { class: 'editor-tm-src', lang: set.src, html: diffHTML }), h('p', { class: 'editor-tm-tgt', lang: 'az', text: tm.tgt }))),
+        h('dl', { class: 'editor-kv' }, h('dt', { text: 'Mənbə' }), h('dd', { text: tm.from }), tm.date ? [h('dt', { text: 'Tarix' }), h('dd', { text: App.fmt ? App.fmt.date(tm.date) : tm.date })] : null,
+          tm.diff ? [h('dt', { text: 'Fərq' }), h('dd', { text: tm.diff })] : null)]));
+      if (use !== tm.tgt) box.appendChild(sec('Uyğunlaşdırılmış variant', h('p', { class: 'editor-tm-tgt', lang: 'az', text: use })));
+      box.appendChild(h('div', { class: 'editor-row', style: 'padding-top:4px' }, apply));
+    }
+    function applyAlt(r, a, edit) {
+      if (a[2]) r.st.ans = a[2];
+      setText(r, a[0], { ed: !a[2] });
+      toast('Variant tətbiq edildi', 'ok', { sub: 'Seqment ' + pad3(r.n) + ' · ' + a[1], ms: 2400 });
+      if (layout === 'narrow') closeInsp(true);
+      if (edit || layout === 'narrow') S.later(function () { focusRow(r, !edit); }, 120);
+    }
+    function sugConf(r, a) {
+      var st = { t: a[0], o: 'ai', ed: false, ans: a[2] || r.st.ans || null };
+      return confOf(r.d, st, analyze(r.d, st, ctx));
+    }
+    function inspSug(r, box) {
+      var d = r.d, alts = altsOf(r);
+      if (!alts.length && !String(r.st.t || '').trim() && (d.ai || d.t)) alts = [[d.ai || d.t, 'İlkin qaralama', null]];
+      if (!alts.length) {
+        box.appendChild(sec('Mirzə təklifi', h('p', { class: 'editor-p', text: 'Bu seqment üçün əlavə variant yoxdur — cari tərcümə tərcümə yaddaşı və lüğətlə uyğundur.' })));
+        if (d.why) box.appendChild(sec('İzah', h('p', { class: 'editor-p', text: d.why })));
+        return;
+      }
+      var top = alts[0], same = String(r.st.t || '') === top[0];
+      var apply = h('button', { class: 'btn btn-primary btn-sm', type: 'button', disabled: same }, same ? 'Tətbiq edilib' : 'Tətbiq et');
+      apply.addEventListener('click', function () { applyAlt(r, top, false); });
+      var edit = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, 'Redaktə et');
+      edit.addEventListener('click', function () { applyAlt(r, top, true); });
+      box.appendChild(h('div', { class: 'editor-sec' }, h('div', { class: 'editor-sug' },
+        h('div', { class: 'editor-sug-h' }, h('span', { class: 'pj-cap', text: 'Mirzə təklifi' }), confEl(sugConf(r, top))),
+        h('span', { class: 'editor-sug-k', text: top[1] }),
+        h('p', { class: 'editor-sug-t', lang: 'az', text: top[0] }),
+        d.why ? h('p', { class: 'editor-sug-why' }, h('b', { text: 'Səbəb: ' }), d.why) : null,
+        h('div', { class: 'editor-row' }, apply, edit))));
+      if (alts.length > 1) box.appendChild(sec('Digər variantlar', alts.slice(1).map(function (a) {
+        var b = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', disabled: String(r.st.t || '') === a[0] }, 'Tətbiq et');
+        b.addEventListener('click', function () { applyAlt(r, a, false); });
+        return h('div', { class: 'editor-alt' }, h('small', { text: a[1] }), h('span', { lang: 'az', text: a[0] }), b);
+      })));
+    }
+    function issueItem(r, x) {
+      var who = ELDER[x.type] || x.elder || 'Yoxlama';
+      var d = x.was && x.now ? h('div', { class: 'd' }, h('s', { text: x.was }), ' → ', h('ins', { text: x.now }))
+        : x.fix === 'fill' ? h('div', { class: 'd' }, h('ins', { text: clip(x.now, 140) })) : null;
+      var act = null;
+      if (x.fix === 'word' || x.fix === 'raw' || x.fix === 'fill') {
+        act = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, x.fix === 'fill' ? 'Qaralama ilə doldur' : 'Düzəlt');
+        act.addEventListener('click', function () { fixRow(r, x, act); });
+      } else if (x.fix === 'ask' && r.ask) {
+        act = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, 'Cavabla');
+        act.addEventListener('click', function () { if (layout === 'narrow') closeInsp(true); openAsk(r); });
+      }
+      return h('div', { class: 'editor-iss' },
+        h('div', { class: 'editor-iss-h' }, h('span', { text: x.type }), h('span', { class: 'who' }, monoAv(who), who)),
+        d, h('p', { text: x.text }), act ? h('div', { class: 'editor-row' }, act) : null);
+    }
+    function inspQa(r, box) {
+      var list = issuesOf(r);
+      var chk = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', disabled: !!r.checking }, ie('shield'), r.checked ? 'Yenidən soruş' : 'Mirzələrdən soruş');
+      chk.addEventListener('click', function () { runCheck(r); });
+      box.appendChild(h('div', { class: 'editor-qa-h' },
+        h('div', null, h('b', { text: list.length ? list.length + ' qeyd' : 'Qeyd yoxdur' }),
+          h('small', { text: r.checkScore != null ? 'Mirzələr yoxladı · bal ' + r.checkScore : 'Yerli yoxlama: rəqəm, termin, türk forması, durğu' })),
+        chk));
+      if (r.checking) {
+        box.appendChild(h('div', { class: 'pj-sk-stack', 'aria-busy': 'true', 'aria-label': 'Yoxlanılır', style: 'padding:12px 0' }, h('span', { class: 'pj-sk', style: 'width:45%' }), h('span', { class: 'pj-sk', style: 'width:90%' }), h('span', { class: 'pj-sk', style: 'width:70%' })));
+      }
+      if (r.checkNote) box.appendChild(h('div', { class: 'editor-note', role: 'note' }, ie('alert'), h('div', { text: r.checkNote })));
+      if (!list.length && !r.checking) {
+        box.appendChild(h('div', { class: 'editor-clean' }, ie('check'), h('span', { text: String(r.st.t || '').trim() ? 'Rəqəmlər, terminlər, türk formaları və durğu qaydasındadır.' : 'Seqment boşdur.' })));
+      }
+      [['high', 'Kritik'], ['mid', 'Əsas'], ['low', 'Kiçik']].forEach(function (g) {
+        var l = list.filter(function (x) { return x.sev === g[0]; });
+        if (!l.length) return;
+        box.appendChild(h('div', { class: 'editor-grp' }, h('i', { class: 'editor-sdot ' + g[0], 'aria-hidden': 'true' }), h('span', { class: 'pj-cap', text: g[1] }), h('span', { class: 'editor-nav-count', text: String(l.length) })));
+        l.forEach(function (x) { box.appendChild(issueItem(r, x)); });
+      });
+      box.appendChild(h('div', { class: 'editor-sec' }, h('button', { class: 'link small', type: 'button', style: 'justify-self:start', onclick: function () { flushSave(); App.go('qa', { project: p.id }); } }, 'Bütün layihə üzrə yoxlama →')));
+    }
+    function runCheck(r) {
+      if (r.checking) return;
+      r.checking = true; r.checkNote = '';
+      if (cur === r) renderInsp(true);
+      nz('think', 'Mirzələr seqmenti oxuyur…', 1800);
+      App.fakeAI('check', { src: r.d.s, tgt: r.st.t, pair: p.pair, register: regNow, domain: p.field, terms: gl }).then(function (c) {
+        if (S.dead) return;
+        r.checking = false;
+        var tx = String(r.st.t || ''), iss = analyze(r.d, r.st, ctx), extra = [];
+        var sc = !tx.trim() ? 0 : clamp(98 - iss.reduce(function (s, x) { return s + (x.sev === 'high' ? 24 : x.sev === 'mid' ? 10 : 4); }, 0), 40, 98);
+        if (tx.trim() && c && c.live && Array.isArray(c.errors)) { /* live engine: add what the reviser found to the local checks */
+          c.errors.forEach(function (e) {
+            if (!e || e.auto || iss.some(function (x) { return x.was && lower(x.was) === lower(e.was); })) return;
+            var real = !!e.was && e.was !== '—' && tx.indexOf(e.was) >= 0;
+            extra.push({ type: e.type, sev: e.severity || 'mid', was: real ? e.was : '', now: e.now || '', fix: real && e.now ? 'raw' : null,
+              text: (real ? '«' + e.was + '» → «' + (e.now || '—') + '». ' : e.now ? '→ «' + e.now + '». ' : '') + (e.why || '') });
+          });
+          if (c.score != null) sc = Math.min(sc, c.score);
+        }
+        /* live engine failed (fakeAI already showed why): say that only the local checks ran */
+        var liveFail = !!(c && c.ok === false);
+        r.extra = extra; r.extraFor = r.st.t; r.checked = Date.now(); r.checkScore = tx.trim() ? sc : null;
+        r.checkNote = liveFail ? 'Dərin yoxlama alınmadı — burada yalnız yerli yoxlamalar göstərilir. Bağlantını yoxlayın və bir az sonra yenidən cəhd edin.' : '';
+        if (cur === r) renderInsp(true); else tabCounts(cur);
+        var n = iss.length + extra.length;
+        if (liveFail) nz('sad', null, 1600);
+        else nz(n ? 'point' : 'success', n ? 'Bax, bunları tapdıq.' : 'Qeyd yoxdur.', 1800);
+      }, function () {
+        if (S.dead) return;
+        r.checking = false; r.checkNote = 'Yoxlama tamamlanmadı — bağlantını yoxlayın və yenidən cəhd edin.';
+        if (cur === r) renderInsp(true);
+      });
+    }
+
+    /* --- segment menu (popover) --- */
+    function closeMenu(focusBack) {
+      if (!menuEl) return;
+      var m = menuEl; menuEl = null;
+      if (m.parentNode) m.parentNode.removeChild(m);
+      D.removeEventListener('mousedown', m._out, true); D.removeEventListener('keydown', m._key, true);
+      if (focusBack && m._anchor) { try { m._anchor.focus(); } catch (e) { /* ignore */ } }
+    }
+    S.finals.push(function () { closeMenu(false); });
+    function popMenu(anchor, items) {
+      closeMenu(false);
+      var m = h('div', { class: 'editor-menu', role: 'menu', 'aria-label': 'Seqment menyusu' }, items.filter(Boolean).map(function (it) {
+        var b = h('button', { class: 'editor-menu-i', type: 'button', role: 'menuitem' }, ie(it.ic), h('span', { text: it.b }), it.k ? h('span', { class: 'k', text: it.k }) : null);
+        b.addEventListener('click', function () { closeMenu(false); it.run(); });
+        return b;
+      }));
+      m._anchor = anchor; menuEl = m;
+      page.appendChild(m);
+      var rc = anchor.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
+      var left = Math.max(8, Math.min(W.innerWidth - mw - 8, rc.right - mw));
+      var top = rc.bottom + 4; if (top + mh > W.innerHeight - 8) top = Math.max(8, rc.top - mh - 4);
+      m.style.left = left + 'px'; m.style.top = top + 'px';
+      m._out = function (e) { if (!m.contains(e.target) && !anchor.contains(e.target)) closeMenu(false); };
+      m._key = function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMenu(true); return; }
+        if (e.key === 'Tab') { closeMenu(false); return; }
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          var bs = Array.prototype.slice.call(m.querySelectorAll('button')), i = bs.indexOf(D.activeElement);
+          i = e.key === 'ArrowDown' ? (i + 1) % bs.length : (i <= 0 ? bs.length - 1 : i - 1);
+          bs[i].focus();
+        }
+      };
+      D.addEventListener('mousedown', m._out, true); D.addEventListener('keydown', m._key, true);
+      var first = m.querySelector('button'); if (first) first.focus();
+    }
+    S.on(center, 'scroll', function () { closeMenu(false); }, { passive: true });
+    S.on(W, 'scroll', function () { closeMenu(false); }, { passive: true });
+    function nzMenu(r) {
+      if (menuEl && menuEl._anchor === r.nzBtn) { closeMenu(true); return; }
+      setActive(r);
+      var alts = altsOf(r);
+      popMenu(r.nzBtn, [
+        { ic: 'layers', b: 'Alternativ variantlar', k: alts.length ? String(alts.length) : '', run: function () { openInsp('sug'); } },
+        { ic: 'help', b: 'Niyə belə tərcümə edildi?', run: function () { openInsp('sug'); } },
+        r.d.tm ? { ic: 'database', b: 'Tərcümə yaddaşı', k: r.d.tm.pct + '%', run: function () { openInsp('tm'); } } : null,
+        { ic: 'shield', b: 'Mirzələrdən soruş', run: function () { openInsp('qa'); runCheck(r); } },
+        { ic: 'book', b: 'Lüğəti tətbiq et', run: function () { applyGloss(r); } },
+        { ic: 'message', b: r.st.note ? 'Qeydi dəyiş' : 'Redaktora qeyd', run: function () { openInsp('ctx'); S.later(function () { var n = D.getElementById('editor-note'); if (n) { try { n.focus(); } catch (e) { /* ignore */ } } }, 80); } },
+        r.st.ok ? { ic: 'refresh', b: 'Təsdiqi geri al', run: function () { unapprove(r); } } : null
+      ]);
+      nz('point', 'Bu seqment haqqında nə bilmək istəyirsiniz?', 2000);
+    }
 
     /* --- AI pre-translation (big job → Mirzə Məclisi) --- */
+    function aiBusy(on, n) {
+      if (on) aiBtn.setAttribute('aria-busy', 'true'); else aiBtn.removeAttribute('aria-busy');
+      if (on) { busyTx.textContent = 'İlkin tərcümə · ' + n + ' seqment hazırlanır…'; busyEl.hidden = false; }
+    }
+    function aiDone() { busyEl.hidden = true; }
     function setBusy(r, on) {
       r.ta.classList.toggle('editor-sk', on); r.ta.readOnly = on;
-      if (on) { r.ta.value = ''; r.stEl.className = 'seg-st busy'; r.stEl.innerHTML = ''; r.row.setAttribute('aria-busy', 'true'); }
+      if (on) { r.ta.value = ''; r.stEl.className = 'pj-dot is-busy'; r.navDot.className = 'pj-dot is-busy'; r.row.setAttribute('aria-busy', 'true'); }
       else r.row.removeAttribute('aria-busy');
     }
     function typeInto(r, text, done) {
@@ -1759,7 +2422,7 @@
       }, 24);
     }
     function runAI() {
-      if (aiBtn.getAttribute('aria-busy') === 'true') return;
+      if (aiBtn.getAttribute('aria-busy') === 'true' || !busyEl.hidden) return;
       var todo = rows.filter(function (r) { return !String(r.st.t || '').trim(); });
       if (!todo.length) {
         toast('Boş seqment yoxdur', 'info', { sub: 'İlkin tərcümə yalnız boş seqmentləri doldurur' });
@@ -1768,7 +2431,7 @@
         return;
       }
       if (App.isLive && App.isLive()) { runLiveAI(todo); return; }
-      aiBtn.setAttribute('aria-busy', 'true');
+      aiBusy(true, todo.length);
       todo.forEach(function (r) { setBusy(r, true); });
       var sim = todo.map(function (r) { return analyze(r.d, { t: r.d.ai || r.d.t, o: 'ai' }, ctx); });
       var flagged = sim.filter(function (x) { return x.length; }).length, turk = 0, tmN = 0;
@@ -1783,7 +2446,8 @@
       try { job = App.bigJob('İlkin tərcümə — ' + p.name, { score: score, text: txt, seal: 'Qaralama hazırdır' }); } catch (e) { job = null; }
       Promise.resolve(job).then(function () {
         if (S.dead) return;
-        aiBtn.removeAttribute('aria-busy');
+        aiBusy(false);
+        busyTx.textContent = 'Seqmentlər doldurulur…';
         var k = 0;
         todo.forEach(function (r, idx) {
           S.later(function () {
@@ -1799,7 +2463,7 @@
         });
       });
       function finish() {
-        updateAll(); flushSave();
+        updateAll(); flushSave(); aiDone();
         toast('Qaralama hazırdır', 'ok', { sub: todo.length + ' seqment dolduruldu' + (flagged ? ' · ' + flagged + ' seqmentə baxın' : ' · riskli yer yoxdur'),
           action: flagged ? { label: 'Riskliləri göstər', onClick: function () { if (!S.dead) setFilter('risk'); } } : null });
         var first = rows.filter(function (r) { return !r.st.ok; })[0];
@@ -1812,17 +2476,17 @@
        (segment[].para). Nothing from the sample data is typed in: a segment the engine did not
        translate stays empty, and a failed call leaves every segment as it was. */
     function runLiveAI(todo) {
-      aiBtn.setAttribute('aria-busy', 'true');
+      aiBusy(true, todo.length);
       todo.forEach(function (r) { setBusy(r, true); });
       nz('write', 'Boş seqmentləri tərcümə edirəm…', 2400);
-      var chunks = [], cur = [], size = 0;
+      var chunks = [], curC = [], size = 0;
       todo.forEach(function (r) {
         var len = String(r.d.s).length;
-        if (cur.length && (cur.length >= 20 || size + len > 6000)) { chunks.push(cur); cur = []; size = 0; }
-        cur.push(r); size += len;
+        if (curC.length && (curC.length >= 20 || size + len > 6000)) { chunks.push(curC); curC = []; size = 0; }
+        curC.push(r); size += len;
       });
-      if (cur.length) chunks.push(cur);
-      var terms = gl.map(function (g) { return { a: g.a, b: g.b }; });
+      if (curC.length) chunks.push(curC);
+      var tterms = gl.map(function (g) { return { a: g.a, b: g.b }; });
       var to = String(p.pair || '').split('-')[1] || 'az';
       var got = [], failed = false, seq = Promise.resolve();
       function same(a, b) { return lower(a).replace(/\s+/g, ' ').trim() === lower(b).replace(/\s+/g, ' ').trim(); }
@@ -1830,7 +2494,7 @@
         seq = seq.then(function () {
           if (failed || S.dead) return null;
           var text = ch.map(function (r) { return String(r.d.s).replace(/\s*\n+\s*/g, ' ').trim(); }).join('\n');
-          return App.fakeAI('translate', { text: text, register: regNow, from: set.src, to: to, pair: set.src + '-' + to, terms: terms }).then(function (res) {
+          return App.fakeAI('translate', { text: text, register: regNow, from: set.src, to: to, pair: set.src + '-' + to, terms: tterms }).then(function (res) {
             if (!res || res.ok === false || !Array.isArray(res.segments)) { failed = true; return; }
             var by = {};
             res.segments.forEach(function (g) { if (g) (by[g.para] = by[g.para] || []).push(g); });
@@ -1854,7 +2518,7 @@
         var done = got.map(function (x) { return x.r; });
         release(todo.filter(function (r) { return done.indexOf(r) < 0; }));
         if (!got.length) {
-          aiBtn.removeAttribute('aria-busy'); updateAll();
+          aiBusy(false); aiDone(); updateAll();
           if (!failed) toast('Mühərrik tərcümə qaytarmadı', 'warn', { sub: 'Bir az sonra yenidən cəhd edin' });
           nz('sad', null, 1600);
           return;
@@ -1865,14 +2529,15 @@
         rows.forEach(function (r) { var j = done.indexOf(r); all = all.concat(j >= 0 ? sim[j] : r.issues); });
         var left = todo.length - got.length, score = scoreOf(all);
         var txt = got.length + ' seqment tərcümə edildi: ' + (got.length - flagged) + ' əmin, ' + flagged + ' yoxlanmalı.' +
-          (terms.length ? ' Layihə lüğəti (' + terms.length + ' termin) mühərrikə verildi.' : '') + ' Üslub: ' + REG[regNow] + '.' +
+          (tterms.length ? ' Layihə lüğəti (' + tterms.length + ' termin) mühərrikə verildi.' : '') + ' Üslub: ' + REG[regNow] + '.' +
           (turk ? ' Dilçi Nənə ' + turk + ' türk formasını qeyd etdi — redaktorda göstərilir.' : '') +
           (left ? ' ' + left + ' seqment boş qaldı — «İlkin tərcümə»ni yenidən işə salın.' : '');
         var job;
         try { job = App.bigJob('İlkin tərcümə — ' + p.name, { score: score, text: txt, seal: left ? 'Qismən hazırdır' : 'Qaralama hazırdır' }); } catch (e) { job = null; }
         Promise.resolve(job).then(null, function () { return null; }).then(function () {
           if (S.dead) return;
-          aiBtn.removeAttribute('aria-busy');
+          aiBusy(false);
+          busyTx.textContent = 'Seqmentlər doldurulur…';
           var k = 0;
           got.forEach(function (x, idx) {
             S.later(function () {
@@ -1887,7 +2552,7 @@
           });
         });
         function finish() {
-          updateAll(); flushSave();
+          updateAll(); flushSave(); aiDone();
           toast('Qaralama hazırdır', left ? 'warn' : 'ok', { sub: got.length + ' seqment dolduruldu' + (left ? ' · ' + left + ' seqment boş qaldı' : '') + (flagged ? ' · ' + flagged + ' seqmentə baxın' : ''),
             action: flagged ? { label: 'Riskliləri göstər', onClick: function () { if (!S.dead) setFilter('risk'); } } : null });
           var first = rows.filter(function (r) { return !r.st.ok; })[0];
@@ -1896,146 +2561,48 @@
       }, function (e) {
         if (S.dead) return;
         try { console.error('[Nuanza] AI ilkin tərcümə', e); } catch (x) { /* ignore */ }
-        release(todo); aiBtn.removeAttribute('aria-busy'); updateAll();
+        release(todo); aiBusy(false); aiDone(); updateAll();
+        toast('İlkin tərcümə tamamlanmadı', 'warn', { sub: 'Bağlantını yoxlayın və yenidən cəhd edin' });
       });
     }
 
-    /* --- TM match sheet --- */
-    function tmSheet(r) {
-      var tm = r.d.tm;
-      var srcW = {}; String(r.d.s).split(/\s+/).forEach(function (w) { srcW[lower(w.replace(/[^\p{L}\p{N}]/gu, ''))] = 1; });
-      var diffHTML = String(tm.src).split(/(\s+)/).map(function (w) {
-        var k = lower(w.replace(/[^\p{L}\p{N}]/gu, ''));
-        return k && !srcW[k] ? '<mark>' + esc(w) + '</mark>' : esc(w);
-      }).join('');
-      var use = r.d.t || tm.tgt;
-      var body = h('div', { class: 'stack' },
-        h('div', { class: 'row' }, badge('Uyğunluq ' + tm.pct + '%', tm.pct >= 95 ? 'green' : 'gold', 'database'), badge(tm.from, '', 'folder'), tm.date ? badge(App.fmt ? App.fmt.date(tm.date) : tm.date, '', 'calendar') : null),
-        h('div', { class: 'stack-sm' }, h('span', { class: 'eyebrow plain', text: 'Yaddaşdakı mənbə' }), h('p', { class: 'editor-quote editor-tmdiff', lang: set.src, html: diffHTML })),
-        h('div', { class: 'stack-sm' }, h('span', { class: 'eyebrow plain', text: 'Yaddaşdakı tərcümə' }), h('p', { class: 'editor-quote az', text: tm.tgt })),
-        tm.diff ? h('div', { class: 'callout' }, ie('info'), h('div', null, h('b', { text: 'Fərq: ' }), tm.diff)) : null,
-        use !== tm.tgt ? h('div', { class: 'stack-sm' }, h('span', { class: 'eyebrow plain', text: 'Uyğunlaşdırılmış variant' }), h('p', { class: 'editor-quote az', text: use })) : null);
-      App.sheet({ title: 'Tərcümə yaddaşı · #' + r.n, body: body, actions: [{ label: 'Bağla', kind: 'ghost' }, { label: 'Tətbiq et', kind: 'primary', icon: 'check', onClick: function () {
-        setText(r, use, { o: 'tm', ed: false });
-        toast('TM uyğunluğu tətbiq edildi', 'ok', { sub: '#' + r.n + ' · ' + tm.pct + '% · ' + tm.from, icon: 'database' });
-        S.later(function () { focusRow(r, true); }, 200);
-      } }] });
-    }
-
-    /* --- Nuanza per-segment menu --- */
-    function nzMenu(r) {
-      var d = r.d, st = r.st, sh = null;
-      var out = h('div', { class: 'editor-nz-out', 'aria-live': 'polite' });
-      var tgtQ = h('p', { class: 'editor-quote az', text: st.t || '—' });
-      function done(msg, sub) { if (sh) sh.close(); toast(msg, 'ok', { sub: sub, ms: 2600 }); S.later(function () { focusRow(r, true); }, 260); }
-      var alts = (d.q ? d.q.opts.map(function (o) { return [o[1], '«' + d.q.word + '» = ' + o[0], o[0]]; }) : []).concat(d.alts || []);
-      var acts = [
-        { ic: 'layers', cls: 'projects-fir', b: 'Alternativ variantlar', s: alts.length ? alts.length + ' variant · üslub və söz sırası' : 'Mühərrik başqa variant təklif etmir', run: function () {
-          out.textContent = '';
-          if (!alts.length) { out.appendChild(h('div', { class: 'callout green' }, ie('check'), h('div', { text: 'Bu seqment tərcümə yaddaşı ilə tam uyğundur — mühərrik başqa variant görmür.' }))); return; }
-          alts.forEach(function (a) {
-            out.appendChild(h('button', { class: 'editor-alt', type: 'button', onclick: function () {
-              if (a[2]) r.st.ans = a[2];
-              setText(r, a[0], { ed: !a[2] });
-              done('Variant tətbiq edildi', '#' + r.n + ' · ' + a[1]);
-            } }, h('small', { text: a[1] }), h('span', { text: a[0] })));
-          });
-        } },
-        { ic: 'help', b: 'Niyə belə tərcümə edildi?', s: 'Mühərrikin izahı', run: function () {
-          out.textContent = '';
-          out.appendChild(h('div', { class: 'callout navy' }, ie('bulb'), h('div', null, d.why || ('Üslub: ' + REG[regNow] + '. Lüğətdən ' + gl.length + ' termin qorundu.'))));
-          var tl = gl.filter(function (g) { return srcHas(d.s, g); });
-          if (tl.length) out.appendChild(h('div', { class: 'chips' }, tl.map(function (g) { return h('span', { class: 'chip' }, h('b', { text: g.a }), ' → ', g.b); })));
-        } },
-        { ic: 'shield', cls: 'gold', b: 'Mirzələrdən soruş', s: 'Bu seqmentin sürətli yoxlanışı', run: function () {
-          out.textContent = '';
-          out.appendChild(h('div', { class: 'sk-stack' }, h('span', { class: 'skeleton title' }), h('span', { class: 'skeleton text' }), h('span', { class: 'skeleton text', style: 'width:72%' })));
-          nz('think', 'Mirzələr seqmenti oxuyur…', 1800);
-          App.fakeAI('check', { src: d.s, tgt: st.t, pair: p.pair, register: regNow, domain: p.field, terms: gl }).then(function (c) {
-            if (S.dead || !out.isConnected) return;
-            var iss = analyze(d, r.st, ctx);
-            var sc = !String(r.st.t || '').trim() ? 0 : clamp(98 - iss.reduce(function (s, x) { return s + (x.sev === 'high' ? 24 : x.sev === 'mid' ? 10 : 4); }, 0), 40, 98);
-            var tx = String(r.st.t || '');
-            if (tx.trim() && c && c.live && Array.isArray(c.errors)) { /* live engine: add what the reviser found to the local checks */
-              c.errors.forEach(function (e) {
-                if (!e || e.auto || iss.some(function (x) { return x.was && lower(x.was) === lower(e.was); })) return;
-                var real = !!e.was && e.was !== '—' && tx.indexOf(e.was) >= 0;
-                iss.push({ type: e.type, sev: e.severity || 'mid', was: real ? e.was : '', now: e.now || '', fix: real && e.now ? 'raw' : null,
-                  text: (real ? '«' + e.was + '» → «' + (e.now || '—') + '». ' : e.now ? '→ «' + e.now + '». ' : '') + (e.why || '') });
-              });
-              if (c.score != null) sc = Math.min(sc, c.score);
-            }
-            /* live engine failed (fakeAI already showed why): say that only the local checks ran */
-            var liveFail = !!(c && c.ok === false);
-            out.textContent = '';
-            out.appendChild(h('div', { class: 'editor-check' }, App.ring(sc, 'bal', null, { size: 'sm' }),
-              h('div', { class: 'stack-sm' }, h('b', { text: iss.length ? iss.length + ' qeyd tapıldı' : liveFail ? 'Yerli yoxlamada qeyd yoxdur' : 'Mirzələr razıdır' }),
-                h('p', { class: 'small muted', text: iss.length ? 'Düzəlişləri birbaşa buradan tətbiq edin.' : liveFail ? 'Rəqəmlər, terminlər və türk formaları yoxlandı.' : 'Məna, terminlər, rəqəmlər və orfoqrafiya qaydasındadır.' }))));
-            if (liveFail) out.appendChild(h('div', { class: 'callout', role: 'note' }, ie('alert'),
-              h('div', { text: 'Mirzələrin dərin yoxlaması alınmadı — burada yalnız yerli yoxlamalar var. Bir az sonra yenidən soruşun.' })));
-            iss.forEach(function (x) {
-              var b = (x.fix === 'word' || x.fix === 'raw' || x.fix === 'fill') ? h('button', { class: 'btn btn-sm', type: 'button', onclick: function () {
-                var nt = applyFix(d, r.st, x); if (nt == null) return;
-                setText(r, nt, { ed: x.fix !== 'fill', o: x.fix === 'fill' ? 'ai' : null });
-                done('Düzəldildi', '#' + r.n + ' · ' + (ELDER[x.type] || 'Yoxlama'));
-              } }, ie('wand'), 'Düzəlt') : null;
-              out.appendChild(h('div', { class: 'editor-hint ' + x.sev }, h('span', { class: 'editor-hint-tx' }, h('b', { text: (ELDER[x.type] || 'Yoxlama') + ':' }), x.text), b));
-            });
-            if (liveFail) nz('sad', null, 1600);
-            else nz(iss.length ? 'point' : 'success', iss.length ? 'Bax, bunları tapdıq.' : 'Qeyd yoxdur.', 1800);
-          });
-        } },
-        { ic: 'book', b: 'Lüğəti tətbiq et', s: 'Layihə terminlərini qoru', run: function () {
-          var t = r.st.t, n = 0;
-          analyze(d, r.st, ctx).forEach(function (x) { if (x.type === 'Termin') { var nt = replaceWord(t, x.was, x.now, false); if (nt !== t) { t = nt; n++; } } });
-          if (!n) { out.textContent = ''; out.appendChild(h('div', { class: 'callout green' }, ie('check'), h('div', { text: 'Terminlər artıq lüğətə uyğundur.' }))); return; }
-          setText(r, t, { ed: true });
-          done(n + ' termin düzəldildi', '#' + r.n + ' · Lüğətçi Mirzə');
-        } },
-        { ic: 'message', b: st.note ? 'Qeydi dəyiş' : 'Redaktora qeyd', s: 'Komanda və ya müştəri üçün şərh', run: function () {
-          out.textContent = '';
-          var ta = h('textarea', { class: 'textarea', id: 'editor-note-' + r.n, rows: '3', placeholder: 'Məs.: Müştəri ilə «Delta» yazılışını dəqiqləşdirmək', value: r.st.note || '' });
-          out.appendChild(h('div', { class: 'field' }, h('label', { for: 'editor-note-' + r.n }, 'Qeyd'), ta));
-          out.appendChild(h('div', { class: 'row' },
-            h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: function () { r.st.note = ta.value.trim(); updateRow(r); scheduleSave(); done(r.st.note ? 'Qeyd saxlanıldı' : 'Qeyd silindi', '#' + r.n); } }, 'Saxla'),
-            r.st.note ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: function () { r.st.note = ''; updateRow(r); scheduleSave(); done('Qeyd silindi', '#' + r.n); } }, 'Sil') : null));
-          S.later(function () { try { ta.focus(); } catch (e) { /* ignore */ } }, 60);
-        } }
-      ];
-      var list = h('div', { class: 'list' }, acts.map(function (a) {
-        var b = h('button', { class: 'list-row', type: 'button' }, icTile(a.ic, a.cls), h('span', { class: 'tx' }, h('b', { text: a.b }), h('small', { text: a.s })), h('span', { class: 'end', html: App.icon('chevron') }));
-        b.addEventListener('click', function () { Array.prototype.forEach.call(list.children, function (x) { x.classList.toggle('is-on', x === b); }); a.run(); });
-        return b;
-      }));
-      sh = App.sheet({ title: 'Seqment #' + r.n, body: h('div', { class: 'editor-nz' },
-        h('div', { class: 'stack-sm' }, h('span', { class: 'eyebrow plain', text: 'Mənbə · ' + upper(set.src) }), h('p', { class: 'editor-quote', lang: set.src, text: d.s }),
-          h('span', { class: 'eyebrow plain', text: 'Tərcümə · AZ' }), tgtQ),
-        list, out) });
-      nz('point', 'Bu seqment haqqında nə bilmək istəyirsiniz?', 2000);
-    }
-
-    /* --- initial paint --- */
+    /* --- build rows + initial paint --- */
+    set.segs.forEach(function (d, i) {
+      var r = buildRow(d, i); rows.push(r); listEl.appendChild(r.row); navList.appendChild(r.navLi);
+      if (d.q) { r.ask = buildAsk(r); r.row.appendChild(r.ask); }
+    });
+    applyLayout();
+    setTab(UI.tab, true);
     refreshAll();
     allOkBefore = rows.every(function (r) { return r.st.ok; });
     function fitAll() { rows.forEach(function (r) { fit(r.ta); }); }
     if (W.requestAnimationFrame) W.requestAnimationFrame(fitAll); else fitAll();
     S.later(fitAll, 450);
     try { if (D.fonts && D.fonts.ready) D.fonts.ready.then(function () { if (!S.dead) fitAll(); }); } catch (e) { /* ignore */ }
+    var rz = 0;
+    S.on(W, 'resize', function () { clearTimeout(rz); rz = S.later(function () { applyLayout(); fitAll(); }, 120); });
+    if (W.ResizeObserver) {
+      var lastW = 0, ro = new W.ResizeObserver(function () { var w = Math.round(page.getBoundingClientRect().width); if (w && w !== lastW) { lastW = w; applyLayout(); } });
+      ro.observe(page); S.finals.push(function () { try { ro.disconnect(); } catch (e) { /* ignore */ } });
+    }
     var target = parseInt(params.seg, 10);
-    if (target && rows[target - 1]) S.later(function () { focusRow(rows[target - 1], true); }, 420);
-    else if (!greeted[p.id]) {
-      greeted[p.id] = 1;
-      S.later(function () {
-        var c = { empty: 0, risk: 0 }; rows.forEach(function (r) { if (!String(r.st.t).trim()) c.empty++; if (isRisk(r)) c.risk++; });
-        if (c.empty === rows.length) nz('point', 'Sənəd hazırdır. «İlkin tərcümə» ilə başlaya bilərsiniz.', 3200);
-        else if (c.risk || c.empty) nz('read', set.title.split(' · ')[0] + ': ' + (c.empty ? c.empty + ' boş, ' : '') + c.risk + ' riskli seqment. Qeydlərdən başlayaq?', 3400);
-        else nz('success', 'Bu bölmə qaydasındadır. QA-ya baxa bilərsiniz.', 2600);
-      }, 900);
+    if (target && rows[target - 1]) S.later(function () { focusRow(rows[target - 1], true); }, 360);
+    else {
+      setActive(rows.filter(function (r) { return !r.st.ok; })[0] || rows[0]);
+      if (!greeted[p.id]) {
+        greeted[p.id] = 1;
+        S.later(function () {
+          var c = { empty: 0, risk: 0 }; rows.forEach(function (r) { if (!String(r.st.t).trim()) c.empty++; if (isRisk(r)) c.risk++; });
+          if (c.empty === rows.length) nz('point', 'Sənəd hazırdır. «İlkin tərcümə» ilə başlaya bilərsiniz.', 3200);
+          else if (c.risk || c.empty) nz('read', set.title.split(' · ')[0] + ': ' + (c.empty ? c.empty + ' boş, ' : '') + c.risk + ' riskli seqment. Qeydlərdən başlayaq?', 3400);
+          else nz('success', 'Bu bölmə qaydasındadır. Yoxlamaya baxa bilərsiniz.', 2600);
+        }, 900);
+      }
     }
   }
 
   /* ------------------------------------------------------------------
-     9. SCREEN: QA
+     9. SCREEN: QA — reviewer interface
      ------------------------------------------------------------------ */
   function renderQA(el, params) {
     ensureCss();
@@ -2046,30 +2613,33 @@
     sset('pj:last', p.id);
     var set = setOf(p), segs = loadSegs(p), gl = glossOf(p), ctx = { set: set, gl: gl };
     var ignored = getMap('pj:qaign:' + p.id), reqManual = getMap('pj:req:' + p.id);
-    var M = null, sevF = 'all', ring = null, built = false;
+    var M = null, sevF = 'all', typeF = null, built = false;
     var aiIss = []; /* live engine issues (ai/qa.js); kept while their fragment is still in the segment */
     var page = h('div', { class: 'page qa' });
     el.appendChild(page);
 
-    var deepBtn = h('button', { class: 'btn btn-secondary', type: 'button' }, ie('stamp'), 'Dərin QA (Mirzə Məclisi)');
-    var againBtn = h('button', { class: 'btn', type: 'button' }, ie('refresh'), 'Yenidən yoxla');
+    var deepBtn = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', title: 'Mirzə Məclisinin dərin yoxlaması və möhürü' }, ie('stamp'), 'Dərin yoxlama');
+    var againBtn = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, ie('refresh'), 'Yenidən yoxla');
     var subP = h('p', { text: p.name + ' — ' + num(p.segs) + ' seqment yoxlanılır…' });
-    page.appendChild(h('div', { class: 'qa-top' },
+    page.appendChild(h('div', { class: 'qa-crumbs' },
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: function () { App.go('editor', { project: p.id }); } }, ie('back'), 'Redaktor'),
-      h('div', { class: 'row' }, kindTag(p), dueChip(p))));
+      h('span', { class: 'qa-crumb', text: p.client + ' · ' + pairLabel(p.pair) }), kindTag(p)));
     page.appendChild(h('div', { class: 'page-h' },
-      h('div', null, h('span', { class: 'eyebrow', text: 'QA · ' + p.client + ' · ' + pairLabel(p.pair) }), h('h1', { html: 'Keyfiyyət <em>yoxlaması</em>' }), subP),
+      h('div', null, h('h1', { text: 'Keyfiyyət yoxlaması' }), subP),
       h('div', { class: 'actions' }, againBtn, deepBtn)));
     var host = h('div', { class: 'stack-lg' });
     page.appendChild(host);
 
+    function sk(w, hgt) { return h('span', { class: 'pj-sk', style: 'width:' + (w || '100%') + (hgt ? ';height:' + hgt : '') }); }
     function skeleton() {
       host.textContent = '';
       host.appendChild(h('div', { class: 'qa-loading', 'aria-busy': 'true', 'aria-label': 'Yoxlanılır' },
-        h('div', { class: 'grid-2' },
-          h('div', { class: 'card qa-score' }, h('span', { class: 'skeleton circle', style: 'width:132px;height:132px' }), h('div', { class: 'sk-stack' }, h('span', { class: 'skeleton title' }), h('span', { class: 'skeleton text' }), h('span', { class: 'skeleton text', style: 'width:70%' }), h('span', { class: 'skeleton block', style: 'height:56px' }))),
-          h('div', { class: 'card sk-stack' }, h('span', { class: 'skeleton title', style: 'width:40%' }), [1, 2, 3, 4, 5, 6].map(function () { return h('span', { class: 'skeleton text' }); }))),
-        h('span', { class: 'skeleton block', style: 'height:260px' })));
+        h('div', { class: 'qa-sum' },
+          h('div', { class: 'pj-sk-stack' }, sk('40%'), sk('72px', '28px'), sk('60%')),
+          h('div', { class: 'pj-sk-stack' }, sk('40%'), sk('80%', '20px'), sk('90%')),
+          h('div', { class: 'pj-sk-stack' }, sk('30%'), sk('100%'), sk('100%'), sk('70%'))),
+        h('div', { class: 'qa-table' }, h('div', { class: 'qa-tr qa-th' }, sk('60%'), sk('50%'), sk('50%'), sk('40%'), sk('50%'), sk('60%'), sk('40%')),
+          [0, 1, 2, 3, 4].map(function () { return h('div', { class: 'qa-tr qa-skrow' }, sk('32px', '20px'), sk('80%'), sk('70%'), sk('95%'), sk('60%'), sk('80%'), sk('60px', '24px')); }))));
     }
     function liveIssue(q, st, mine) {
       var t = String(st.t || ''), was = q.was && q.was !== '—' ? String(q.was) : '';
@@ -2106,85 +2676,96 @@
         var live = !!(App.isLive && App.isLive());
         aiIss = live && r && r.ok !== false && Array.isArray(r.issues) ? r.issues : [];
         segs = loadSegs(p); M = model(); build();
-        var note = !live ? '' : !r || r.ok === false ? 'Mirzələrin dərin yoxlaması alınmadı — yalnız yerli yoxlamalar (rəqəm, termin, türk forması, durğu) göstərilir. Bir az sonra «Yenidən yoxla»ya basın.'
+        var note = !live ? '' : !r || r.ok === false ? 'Dərin yoxlama tamamlanmadı — yalnız yerli yoxlamalar (rəqəm, termin, türk forması, durğu) göstərilir. Bağlantını yoxlayın və «Yenidən yoxla»ya basın.'
           : r.checked != null && r.segments != null && r.checked < r.segments ? (r.segments - r.checked) + ' seqment dərin yoxlamadan keçmədi — «Yenidən yoxla»ya basın.' : '';
         if (note) host.insertBefore(h('div', { class: 'callout', role: 'note' }, ie('alert'), h('div', { text: note })), host.firstChild);
         /* an untranslated project has nothing to score — keep it out of «orta QA balı» */
         if (segs.some(function (x) { return x && String(x.t || '').trim(); })) setMap('pj:qa', p.id, M.score);
         nz(M.score >= 85 ? 'success' : 'worried', M.score >= 85 ? M.score + ' bal — təhvilə az qalıb.' : M.score + ' bal. Kritik qeydlərdən başlayaq.', 2800);
+      }, function () {
+        if (S.dead) return;
+        againBtn.removeAttribute('aria-busy');
+        segs = loadSegs(p); M = model(); build();
+        host.insertBefore(h('div', { class: 'callout', role: 'note' }, ie('alert'), h('div', { text: 'Yoxlama tamamlanmadı — bağlantını yoxlayın və yenidən cəhd edin. Aşağıda yerli yoxlamaların nəticəsi var.' })), host.firstChild);
       });
     }
 
     /* sections */
-    var secScore, secCats, secIssues, secTurk, secTerms, secReqs, secDeliv, ringSub, scoreH, scoreP, sevRow, sealHost, issList, issTabs = {}, fixAllBtn, delivTiles = {};
+    var scoreN, gradeEl, sealEl, meter, sevEls = {}, sumNote, deepEl, catBox, secIssues, issHost, sevBtns = {}, typeSel, fixAllBtn, secTurk, secTerms, secReqs, secDeliv, delivRows = {};
+    var SEVS = [['high', 'Kritik'], ['mid', 'Əsas'], ['low', 'Kiçik']];
+    function scrollToIssues() { try { secIssues.scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' }); } catch (e) { /* ignore */ } }
     function build() {
       host.textContent = '';
-      ring = App.ring(M.score, 'bal', sealOf(M.score), { size: 'lg' });
-      ringSub = ring.querySelector('.ring-sub');
-      scoreH = h('h2'); scoreP = h('p', { class: 'muted small' }); sevRow = h('div', { class: 'qa-sev' }); sealHost = h('div');
-      secScore = h('section', { class: 'card pad-lg qa-score', 'aria-label': 'Ümumi bal' }, ring, h('div', { class: 'qa-score-tx' }, scoreH, scoreP, sevRow, sealHost));
-      secCats = h('section', { class: 'card' }, h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow', text: 'Kateqoriyalar' }), h('h2', { text: 'Qeydlər harada?' }))), h('div', { class: 'qa-cats' }));
-      host.appendChild(h('div', { class: 'grid-2' }, secScore, secCats));
+      scoreN = h('b', { class: 'qa-score-n' }); gradeEl = h('span', { class: 'qa-grade' }); sealEl = h('span', { class: 'qa-seal' });
+      meter = h('span', { class: 'pj-track qa-meter', role: 'img' }, h('i'));
+      deepEl = h('div', { class: 'qa-deep', hidden: true });
+      sumNote = h('p', { class: 'qa-sum-note' });
+      catBox = h('div', { class: 'qa-cats' });
+      host.appendChild(h('section', { class: 'qa-sum', 'aria-label': 'Ümumi nəticə' },
+        h('div', null, h('span', { class: 'pj-cap', text: 'Keyfiyyət balı' }), h('div', { class: 'qa-score-line' }, scoreN, h('span', { class: 'qa-score-of pj-mono', text: '/100' }), gradeEl), meter, sealEl, deepEl),
+        h('div', null, h('span', { class: 'pj-cap', text: 'Açıq qeydlər' }),
+          h('div', { class: 'qa-sevs' }, SEVS.map(function (s) {
+            var b = h('b'); sevEls[s[0]] = b;
+            return h('button', { class: 'qa-sevs-i', type: 'button', title: s[1] + ' qeydləri göstər', onclick: function () { sevF = s[0]; typeF = null; drawIssues(); scrollToIssues(); } }, h('i', { class: 'qa-sdot ' + s[0], 'aria-hidden': 'true' }), b, h('span', { text: s[1] }));
+          })), sumNote),
+        h('div', null, h('span', { class: 'pj-cap', text: 'Kateqoriyalar' }), catBox)));
 
-      issList = h('div', { class: 'qa-list' });
-      var tabs = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Ciddilik' }, [['all', 'Hamısı'], ['high', 'Kritik'], ['mid', 'Orta'], ['low', 'Kiçik']].map(function (t) {
-        var c = h('span', { class: 'badge' });
-        var b = h('button', { type: 'button', role: 'tab', 'aria-selected': sevF === t[0] ? 'true' : 'false', onclick: function () { sevF = t[0]; drawIssues(); } }, t[1], c);
-        issTabs[t[0]] = { b: b, c: c }; return b;
+      issHost = h('div');
+      var sevSeg = h('div', { class: 'seg sm', role: 'group', 'aria-label': 'Ciddilik' }, [['all', 'Hamısı']].concat(SEVS).map(function (t) {
+        var c = h('span', { class: 'c' });
+        var b = h('button', { type: 'button', 'aria-pressed': sevF === t[0] ? 'true' : 'false', onclick: function () { sevF = t[0]; drawIssues(); } }, t[1], c);
+        sevBtns[t[0]] = { b: b, c: c }; return b;
       }));
-      fixAllBtn = h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: fixAll }, ie('wand'), 'Hamısını düzəlt');
-      secIssues = h('section', { class: 'card', id: 'qa-issues' },
-        h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow', text: 'Qeydlər' }), h('h2', { text: 'Seqment üzrə' })), fixAllBtn),
-        tabs, issList);
+      typeSel = h('select', { class: 'select', 'aria-label': 'Növ' });
+      typeSel.addEventListener('change', function () { typeF = typeSel.value || null; drawIssues(); drawCats(); });
+      fixAllBtn = h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: fixAll }, ie('check'), h('span', { text: 'Hamısını düzəlt' }));
+      secIssues = h('section', { class: 'qa-issues', id: 'qa-issues', 'aria-label': 'Qeydlər' },
+        h('div', { class: 'qa-sec-h' }, h('div', null, h('h2', { text: 'Qeydlər' }), h('small', { text: 'Seqment nömrəsinə basın — redaktorda açılacaq.' }))),
+        h('div', { class: 'qa-bar' }, sevSeg, typeSel, h('span', { class: 'sp' }), fixAllBtn),
+        issHost);
       host.appendChild(secIssues);
 
-      secTurk = h('section', { class: 'card' });
-      secTerms = h('section', { class: 'card' });
-      host.appendChild(h('div', { class: 'grid-2' }, secTurk, secTerms));
-      secReqs = h('section', { class: 'card' });
-      secDeliv = h('section', { class: 'card framed qa-deliv' });
-      host.appendChild(h('div', { class: 'grid-2' }, secReqs, secDeliv));
+      secReqs = h('section', { class: 'qa-sec' });
+      secTerms = h('section', { class: 'qa-sec' });
+      host.appendChild(h('div', { class: 'qa-grid' }, secReqs, secTerms));
+      secTurk = h('section', { class: 'qa-sec' });
+      secDeliv = h('section', { class: 'qa-sec' });
+      host.appendChild(h('div', { class: 'qa-grid' }, secTurk, secDeliv));
       buildDeliv();
       built = true;
       drawAll();
     }
     function drawAll() {
       M = model();
-      if (ring && ring.setValue) ring.setValue(M.score);
-      if (ringSub) ringSub.textContent = sealOf(M.score);
+      var tone = qaCls(M.score);
+      scoreN.textContent = String(M.score);
+      gradeEl.textContent = gradeOf(M.score);
+      sealEl.textContent = sealOf(M.score); sealEl.className = 'qa-seal ' + tone;
+      meter.className = 'pj-track qa-meter ' + tone; meter.firstChild.style.width = M.score + '%'; meter.setAttribute('aria-label', 'Bal: ' + M.score + ' / 100');
       if (segs.some(function (x) { return x && String(x.t || '').trim(); })) setMap('pj:qa', p.id, M.score);
       subP.textContent = p.name + ' — ' + num(p.segs) + ' seqment yoxlanıldı · ' + set.title.split(' · ')[0] + ' ətraflı · ' + hm(new Date());
-      scoreH.innerHTML = esc(gradeOf(M.score)) + ' — <em>' + M.act.length + ' qeyd</em>';
-      scoreP.textContent = M.sev.high ? M.sev.high + ' kritik qeyd təhvildən əvvəl bağlanmalıdır. Seqment nömrəsinə toxunun — redaktorda açılacaq.' : M.act.length ? 'Kritik səhv yoxdur. Qalan qeydlər üslub və durğu ilə bağlıdır.' : 'Bütün yoxlamalar keçdi. Təhvil paketini hazırlaya bilərsiniz.';
-      sevRow.textContent = '';
-      [['high', 'Kritik'], ['mid', 'Orta'], ['low', 'Kiçik']].forEach(function (s) {
-        sevRow.appendChild(h('div', { class: 'qa-sevbox ' + s[0] }, h('b', { text: String(M.sev[s[0]]) }), h('span', { text: s[1] })));
-      });
+      SEVS.forEach(function (s) { sevEls[s[0]].textContent = String(M.sev[s[0]]); });
+      sumNote.textContent = M.sev.high ? M.sev.high + ' kritik qeyd təhvildən əvvəl bağlanmalıdır.' : M.act.length ? 'Kritik səhv yoxdur. Qalan qeydlər üslub və durğu ilə bağlıdır.' : 'Bütün yoxlamalar keçdi. Təhvil fayllarını hazırlaya bilərsiniz.';
       var deep = sget('pj:deep:' + p.id, null);
-      sealHost.textContent = '';
-      if (deep && deep.score != null) sealHost.appendChild(h('span', { class: 'qa-seal' }, h('span', { class: 'medal', 'aria-hidden': 'true' }, h('b', { text: 'M' })), 'Məclis möhürü · ' + deep.score + ' bal · ' + (App.fmt ? App.fmt.rel(deep.at) : '')));
+      deepEl.textContent = '';
+      deepEl.hidden = !(deep && deep.score != null);
+      if (!deepEl.hidden) put(deepEl, ie('stamp'), 'Məclis möhürü · ' + deep.score + ' bal' + (App.fmt ? ' · ' + App.fmt.rel(deep.at) : ''));
       drawCats(); drawIssues(); drawTurk(); drawTerms(); drawReqs(); drawDelivBadges();
     }
     function drawCats() {
-      var box = secCats.querySelector('.qa-cats'); box.textContent = '';
-      var max = 1;
-      var data = CATS.map(function (c) {
+      catBox.textContent = '';
+      CATS.forEach(function (c) {
         var l = M.act.filter(function (x) { return c.types.indexOf(x.type) >= 0; });
-        max = Math.max(max, l.length);
-        var worst = l.some(function (x) { return x.sev === 'high'; }) ? 'high' : l.some(function (x) { return x.sev === 'mid'; }) ? 'mid' : l.length ? 'low' : null;
-        return { c: c, n: l.length, worst: worst };
-      });
-      data.forEach(function (x) {
-        var b = h('button', { class: 'qa-cat', type: 'button', title: x.n ? x.c.label + ': ' + x.n + ' qeyd — siyahıda göstər' : x.c.label + ': təmiz' },
-          h('span', { class: 'qa-cat-l', text: x.c.label }),
-          h('div', { class: 'progress' + (x.worst === 'mid' ? ' gold' : x.worst === 'low' ? ' navy' : '') }, h('i', { style: 'width:' + (x.n ? Math.max(8, Math.round(x.n / max * 100)) : 0) + '%' })),
-          x.n ? h('span', { class: 'qa-cat-n', text: x.n + ' qeyd' }) : h('span', { class: 'qa-cat-n ok', html: App.icon('check') + ' ' }, 'Təmiz'));
+        var worst = l.some(function (x) { return x.sev === 'high'; }) ? 'high' : l.some(function (x) { return x.sev === 'mid'; }) ? 'mid' : '';
+        var b = h('button', { class: 'qa-cat', type: 'button', 'aria-pressed': typeF === c.key ? 'true' : 'false', title: l.length ? c.label + ': ' + l.length + ' qeyd — siyahıda göstər' : c.label + ': təmiz' },
+          h('span', { text: c.label }),
+          l.length ? h('span', { class: 'n ' + worst, text: String(l.length) }) : h('span', { class: 'ok', html: App.icon('check') }, 'Təmiz'));
         b.addEventListener('click', function () {
-          if (!x.n) { toast(x.c.label + ': təmiz', 'ok', { sub: 'Bu kateqoriyada qeyd yoxdur', ms: 1800 }); return; }
-          sevF = 'all'; drawIssues(x.c.types);
-          try { secIssues.scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' }); } catch (e) { /* ignore */ }
+          if (!l.length) { toast(c.label + ': təmiz', 'ok', { sub: 'Bu kateqoriyada qeyd yoxdur', ms: 1800 }); return; }
+          typeF = typeF === c.key ? null : c.key; sevF = 'all'; drawIssues(); drawCats();
+          if (typeF) scrollToIssues();
         });
-        box.appendChild(b);
+        catBox.appendChild(b);
       });
     }
     function goSeg(n) { App.go('editor', { project: p.id, seg: n }); }
@@ -2196,13 +2777,13 @@
       if (!silent) {
         if (btn) burstAt(btn, iss.type === 'Türk forması' ? 'ink' : 'stars');
         var go = function () { drawAll(); celebrateMaybe(); };
-        if (row && !reduced()) { row.classList.add('is-done'); S.later(go, 220); } else go();
-        toast('Düzəldildi', 'ok', { sub: '#' + iss.n + ' · ' + (iss.was ? iss.was + ' → ' : '') + (iss.fix === 'fill' ? 'avtomatik qaralama' : iss.now) + ' · ' + iss.elder, ms: 2600 });
+        if (row && !reduced()) { row.classList.add('is-done'); S.later(go, 170); } else go();
+        toast('Düzəldildi', 'ok', { sub: 'Seqment ' + pad3(iss.n) + ' · ' + (iss.was ? iss.was + ' → ' : '') + (iss.fix === 'fill' ? 'qaralama' : iss.now) + ' · ' + iss.elder, ms: 2600 });
       }
       return true;
     }
     function celebrateMaybe() {
-      if (!M.act.length) { burstAt(secScore, 'confetti'); nz('celebrate', 'Bir dənə də qeyd qalmadı! Təhvil paketi hazırlansın?', 3200); }
+      if (!M.act.length) nz('celebrate', 'Bir dənə də qeyd qalmadı! Təhvil faylları hazırlansın?', 3200);
       else if (!M.sev.high) nz('success', 'Kritik qeyd qalmadı — ' + M.score + ' bal.', 2200);
     }
     function fixAll() {
@@ -2211,75 +2792,95 @@
       var n = 0;
       list.forEach(function (x) { if (fixIssue(x, null, null, true)) n++; });
       drawAll();
-      burstAt(fixAllBtn, 'stars');
-      toast(n + ' düzəliş tətbiq edildi', 'ok', { sub: 'Yeni bal: ' + M.score + (M.act.length ? ' · ' + M.act.length + ' qeyd sizin qərarınızı gözləyir' : ''), icon: 'wand' });
+      toast(n + ' düzəliş tətbiq edildi', 'ok', { sub: 'Yeni bal: ' + M.score + (M.act.length ? ' · ' + M.act.length + ' qeyd sizin qərarınızı gözləyir' : '') });
       celebrateMaybe();
     }
-    function drawIssues(onlyTypes) {
-      var cnt = { all: M.issues.length, high: 0, mid: 0, low: 0 };
-      M.issues.forEach(function (x) { cnt[x.sev]++; });
-      Object.keys(issTabs).forEach(function (k) { issTabs[k].b.setAttribute('aria-selected', k === sevF ? 'true' : 'false'); issTabs[k].c.textContent = String(cnt[k]); });
+    function cell(cls, kid, label) { return h('div', { class: cls, role: 'cell' }, label ? h('span', { class: 'qa-mlab', text: label }) : null, kid); }
+    function issueRow(x) {
+      var d = set.segs[x.n - 1];
+      var row = h('div', { class: 'qa-tr qa-row' + (x.ign ? ' is-ign' : ''), role: 'row' });
+      var seg = h('button', { class: 'qa-segno', type: 'button', title: 'Redaktorda aç: ' + d.s, 'aria-label': 'Seqment ' + x.n + ' — redaktorda aç', onclick: function () { goSeg(x.n); } }, pad3(x.n));
+      var frag = x.term || x.src || '';
+      var srcK = frag ? h('span', { class: 'qa-frag', lang: set.src, text: frag }) : h('span', { class: 'qa-ctx', lang: set.src, title: d.s, text: d.s });
+      var missing = !!x.src && x.was === x.src && !x.now; /* a source number that is absent from the target */
+      var tgtK = x.was && !missing ? h('span', { class: 'qa-was', text: x.was }) : h('span', { class: 'qa-none', text: x.type === 'Boş seqment' || missing ? 'tərcümədə yoxdur' : '—' });
+      var fixK = x.now ? h('span', { class: 'qa-now' + (x.now.length > 60 ? ' long' : ''), title: x.now.length > 60 ? x.now : null, text: x.now })
+        : h('span', { class: 'qa-none', text: x.fix === 'ask' ? 'Cavabınız lazımdır' : '—' });
+      var acts = h('div', { class: 'qa-act' });
+      if (x.ign) acts.appendChild(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: function () { delete ignored[x.key]; sset('pj:qaign:' + p.id, ignored); drawAll(); } }, 'Qaytar'));
+      else {
+        if (x.fix === 'word' || x.fix === 'raw' || x.fix === 'fill') {
+          var fb = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', title: x.fix === 'fill' ? 'Boş seqmenti qaralama ilə doldur' : 'Düzəlişi tətbiq et' }, x.fix === 'fill' ? 'Doldur' : 'Düzəlt');
+          fb.addEventListener('click', function () { fixIssue(x, row, fb); });
+          acts.appendChild(fb);
+        } else if (x.fix === 'ask') acts.appendChild(h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { goSeg(x.n); } }, 'Cavabla'));
+        else acts.appendChild(h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { goSeg(x.n); } }, 'Redaktə'));
+        acts.appendChild(h('button', { class: 'icon-btn ghost sm', type: 'button', title: 'Rədd et — qeyd qəbul edilir', 'aria-label': 'Qeydi rədd et', html: App.icon('x'), onclick: function () {
+          ignored[x.key] = true; sset('pj:qaign:' + p.id, ignored);
+          toast('Qeyd rədd edildi', 'info', { sub: 'Seqment ' + pad3(x.n) + ' · bal hesabından çıxarıldı', ms: 2200 }); drawAll();
+        } }));
+      }
+      put(row,
+        cell('qa-c-seg', seg),
+        h('div', { class: 'qa-frags' }, cell('qa-c-src', srcK, 'Mənbə'), cell('qa-c-tgt', tgtK, 'Tərcümə'), cell('qa-c-fix', fixK, 'Düzəliş')),
+        cell('qa-c-prob qa-prob', [h('b', null, h('i', { class: 'qa-sdot ' + x.sev, 'aria-hidden': 'true' }), x.type), h('span', { text: x.text })]),
+        cell('qa-c-who qa-who', [monoAv(x.elder), h('span', { class: 'qa-who-n', text: x.elder })]),
+        cell('qa-c-act', acts));
+      row.querySelector('.qa-c-who').title = x.elder;
+      return row;
+    }
+    function drawIssues() {
+      var types = typeF ? catTypes(typeF) : null;
+      var base = M.issues.filter(function (x) { return !types || types.indexOf(x.type) >= 0; });
+      var cnt = { all: base.length, high: 0, mid: 0, low: 0 };
+      base.forEach(function (x) { cnt[x.sev]++; });
+      Object.keys(sevBtns).forEach(function (k) { sevBtns[k].b.setAttribute('aria-pressed', k === sevF ? 'true' : 'false'); sevBtns[k].c.textContent = String(cnt[k]); });
+      typeSel.textContent = '';
+      typeSel.appendChild(h('option', { value: '', text: 'Bütün növlər' }));
+      CATS.forEach(function (c) {
+        var n = M.issues.filter(function (x) { return c.types.indexOf(x.type) >= 0; }).length;
+        if (n || typeF === c.key) typeSel.appendChild(h('option', { value: c.key, text: c.label + ' · ' + n }));
+      });
+      typeSel.value = typeF || '';
       var autoN = M.act.filter(function (x) { return x.fix === 'word' || x.fix === 'raw' || x.fix === 'fill'; }).length;
       fixAllBtn.disabled = !autoN;
-      fixAllBtn.lastChild.textContent = autoN ? 'Hamısını düzəlt (' + autoN + ')' : 'Hamısını düzəlt';
-      issList.textContent = '';
-      var list = M.issues.filter(function (x) { return (sevF === 'all' || x.sev === sevF) && (!onlyTypes || onlyTypes.indexOf(x.type) >= 0); });
-      if (onlyTypes) issList.appendChild(h('div', { class: 'row', style: 'padding:6px 0 4px' }, badge('Filtr: ' + onlyTypes.join(', '), 'navy'), h('button', { class: 'link small', type: 'button', onclick: function () { drawIssues(); } }, 'Hamısını göstər')));
+      fixAllBtn.lastChild.textContent = autoN ? 'Hamısını düzəlt · ' + autoN : 'Hamısını düzəlt';
+      issHost.textContent = '';
+      var list = base.filter(function (x) { return sevF === 'all' || x.sev === sevF; });
+      var tbl = h('div', { class: 'qa-table', role: 'table', 'aria-label': 'Qeydlər' },
+        h('div', { class: 'qa-tr qa-th', role: 'row' }, ['Seq.', 'Mənbə', 'Tərcümə', 'Düzəliş', 'Problem', 'Yoxlayan', ''].map(function (t) { return h('span', { role: 'columnheader', text: t }); })));
+      issHost.appendChild(tbl);
       if (!list.length) {
-        issList.appendChild(emptyBox(S, M.act.length ? { title: 'Bu səviyyədə qeyd yoxdur', text: 'Başqa tabı seçin.', state: 'idle' }
-          : { title: 'Qeyd qalmadı', text: 'Bütün yoxlamalar keçdi. Möhür üçün Mirzə Məclisini çağırın.', state: 'celebrate', actions: [h('button', { class: 'btn btn-secondary', type: 'button', onclick: deepQA }, ie('stamp'), 'Dərin QA')] }));
+        tbl.appendChild(emptyBox(S, M.act.length || typeF || sevF !== 'all'
+          ? { icon: 'filter', title: 'Bu filtrdə qeyd yoxdur', text: 'Başqa ciddilik və ya növ seçin.', actions: [h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: function () { sevF = 'all'; typeF = null; drawIssues(); drawCats(); } }, 'Filtri sıfırla')] }
+          : { icon: 'check', title: 'Qeyd qalmadı', text: 'Bütün yoxlamalar keçdi. Möhür üçün Mirzə Məclisinin dərin yoxlamasını işə salın.', actions: [h('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: deepQA }, ie('stamp'), 'Dərin yoxlama')] }));
         return;
       }
-      list.forEach(function (x) {
-        var sv = SEV_L[x.sev], ea = ELDER_AV[x.elder] || ['N', 'av-nar'];
-        var row = h('div', { class: 'qa-issue' + (x.ign ? ' is-ign' : '') });
-        var seg = h('button', { class: 'qa-segno', type: 'button', title: 'Redaktorda #' + x.n + ' seqmentini aç', 'aria-label': 'Seqment ' + x.n + ' — redaktorda aç', onclick: function () { goSeg(x.n); } }, '#' + x.n);
-        var diff = x.was && x.now ? h('div', { class: 'qa-diff' }, h('s', { text: x.was }), ' → ', h('ins', { text: x.now }))
-          : x.fix === 'fill' ? h('div', { class: 'qa-diff' }, h('ins', { text: x.now })) : x.was ? h('div', { class: 'qa-diff' }, h('s', { text: x.was })) : null;
-        var acts = h('div', { class: 'qa-issue-act' });
-        if (x.ign) acts.appendChild(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: function () { delete ignored[x.key]; sset('pj:qaign:' + p.id, ignored); drawAll(); } }, ie('refresh'), 'Qaytar'));
-        else {
-          if (x.fix === 'word' || x.fix === 'raw' || x.fix === 'fill') {
-            var fb = h('button', { class: 'btn btn-sm', type: 'button' }, ie('wand'), x.fix === 'fill' ? 'Avtomatik doldur' : 'Düzəlt');
-            fb.addEventListener('click', function () { fixIssue(x, row, fb); });
-            acts.appendChild(fb);
-          } else if (x.fix === 'ask') acts.appendChild(h('button', { class: 'btn btn-sm btn-secondary', type: 'button', onclick: function () { goSeg(x.n); } }, ie('help'), 'Cavabla'));
-          else acts.appendChild(h('button', { class: 'btn btn-sm', type: 'button', onclick: function () { goSeg(x.n); } }, ie('edit'), 'Redaktə'));
-          acts.appendChild(h('button', { class: 'icon-btn ghost sm', type: 'button', title: 'Rədd et — qəbul edilir', 'aria-label': 'Qeydi rədd et', html: App.icon('x'), onclick: function () {
-            ignored[x.key] = true; sset('pj:qaign:' + p.id, ignored);
-            toast('Qeyd rədd edildi', 'info', { sub: '#' + x.n + ' · bal hesabından çıxarıldı', ms: 2200 }); drawAll();
-          } }));
-        }
-        row.appendChild(seg);
-        row.appendChild(h('div', { class: 'qa-issue-b' },
-          h('div', { class: 'qa-issue-h' }, badge(sv[0], sv[1]), h('span', { text: x.type }), (App.elderFace && App.elderFace(x.elder, 'sm')) || h('span', { class: 'avatar sm ' + ea[1], 'aria-hidden': 'true', text: ea[0] }), h('small', { text: x.elder })),
-          diff, h('p', { text: x.text })));
-        row.appendChild(acts);
-        issList.appendChild(row);
+      SEVS.forEach(function (sv) {
+        var g = list.filter(function (x) { return x.sev === sv[0]; }); if (!g.length) return;
+        tbl.appendChild(h('div', { class: 'qa-grp', role: 'row' }, h('span', { role: 'cell', class: 'editor-row' }, h('i', { class: 'qa-sdot ' + sv[0], 'aria-hidden': 'true' }), h('span', { class: 'pj-cap', text: sv[1] }), h('span', { class: 'pj-mono', text: String(g.length) }))));
+        g.forEach(function (x) { tbl.appendChild(issueRow(x)); });
       });
     }
     function drawTurk() {
       secTurk.textContent = '';
       var list = M.act.filter(function (x) { return x.type === 'Türk forması'; });
-      var fixBtn = list.length ? h('button', { class: 'btn btn-sm', type: 'button' }, ie('wand'), 'Hamısını düzəlt') : null;
+      var fixBtn = list.length ? h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, 'Hamısını düzəlt') : null;
       if (fixBtn) fixBtn.addEventListener('click', function () {
         list.forEach(function (x) { fixIssue(x, null, null, true); });
-        burstAt(fixBtn, 'ink'); drawAll();
+        drawAll();
         toast(list.length + ' türk forması düzəldildi', 'ok', { sub: 'Dilçi Nənə: mətn ədəbi normaya uyğundur' });
         nz('success', 'Dilçi Nənə razıdır!', 2000);
       });
-      secTurk.appendChild(h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow', text: 'Dilçi Nənə' }), h('h2', { text: 'Türk formaları' })), fixBtn));
-      if (!list.length) { secTurk.appendChild(h('div', { class: 'callout green' }, ie('check'), h('div', null, h('b', { text: 'Tapılmadı. ' }), 'Mətn Azərbaycan ədəbi normasına uyğundur — «için», «değil», «tarafından» kimi formalar yoxdur.'))); return; }
-      secTurk.appendChild(h('p', { class: 'small muted', style: 'margin-bottom:10px', text: 'Türk dilindən keçən formalar Azərbaycan oxucusuna dərhal «yad» görünür.' }));
-      secTurk.appendChild(h('div', { class: 'qa-turk' }, list.map(function (x) {
-        var row = h('div', { class: 'qa-turk-row' });
+      secTurk.appendChild(h('div', { class: 'qa-sec-h' }, h('div', { class: 'stack-sm' }, h('h2', { text: 'Türk formaları' }), h('span', { class: 'who' }, monoAv('Dilçi Nənə'), 'Dilçi Nənə')), fixBtn));
+      if (!list.length) { secTurk.appendChild(h('div', { class: 'qa-clean' }, ie('check'), h('span', { text: 'Tapılmadı — mətn Azərbaycan ədəbi normasına uyğundur; «için», «değil», «tarafından» kimi formalar yoxdur.' }))); return; }
+      list.forEach(function (x) {
         var fb = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'aria-label': 'Düzəlt: ' + x.was + ' → ' + x.now }, 'Düzəlt');
         fb.addEventListener('click', function () { fixIssue(x, null, fb); });
-        row.appendChild(h('button', { class: 'qa-segno', type: 'button', 'aria-label': 'Seqment ' + x.n + ' — redaktorda aç', onclick: function () { goSeg(x.n); } }, '#' + x.n));
-        row.appendChild(h('span', { class: 'qa-diff' }, h('s', { text: x.was }), ' → ', h('ins', { text: x.now })));
-        row.appendChild(fb);
-        return row;
-      })));
+        secTurk.appendChild(h('div', { class: 'qa-line' },
+          h('button', { class: 'qa-segno', type: 'button', 'aria-label': 'Seqment ' + x.n + ' — redaktorda aç', onclick: function () { goSeg(x.n); } }, pad3(x.n)),
+          h('span', { class: 'grow' }, h('s', { text: x.was }), ' → ', h('ins', { text: x.now })), fb));
+      });
     }
     function drawTerms() {
       secTerms.textContent = '';
@@ -2296,27 +2897,27 @@
         if (src || bad) rowsT.push({ g: g, src: Math.max(src, ok + bad), ok: ok, bad: bad, badSeg: badSeg });
       });
       var badTotal = rowsT.reduce(function (s, x) { return s + x.bad; }, 0);
-      secTerms.appendChild(h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow', text: 'Lüğətçi Mirzə' }), h('h2', { text: 'Termin ardıcıllığı' })),
-        badTotal ? badge(badTotal + ' uyğunsuzluq', 'red') : badge('Ardıcıl', 'green', 'check')));
-      if (!rowsT.length) { secTerms.appendChild(h('p', { class: 'muted small', text: 'Bu bölmədə lüğət terminlərinə rast gəlinmədi.' })); return; }
-      secTerms.appendChild(h('div', null, rowsT.slice(0, 7).map(function (x) {
+      secTerms.appendChild(h('div', { class: 'qa-sec-h' }, h('div', { class: 'stack-sm' }, h('h2', { text: 'Termin ardıcıllığı' }), h('span', { class: 'who' }, monoAv('Lüğətçi Mirzə'), 'Lüğətçi Mirzə')),
+        badTotal ? h('span', { class: 'pj-tag', style: 'color:var(--danger)', text: badTotal + ' uyğunsuzluq' }) : h('span', { class: 'pj-tag', text: 'Ardıcıl' })));
+      if (!rowsT.length) { secTerms.appendChild(h('p', { class: 'qa-sum-note', text: 'Bu bölmədə lüğət terminlərinə rast gəlinmədi.' })); return; }
+      rowsT.slice(0, 7).forEach(function (x) {
         var end = h('div', { class: 'qa-term-end' });
         if (x.bad) {
-          end.appendChild(h('button', { class: 'link small', type: 'button', onclick: function () { goSeg(x.badSeg[0]); } }, '#' + x.badSeg.join(', #')));
-          var eb = h('button', { class: 'btn btn-sm', type: 'button' }, 'Eyniləşdir');
+          end.appendChild(h('button', { class: 'link small pj-mono', type: 'button', onclick: function () { goSeg(x.badSeg[0]); } }, x.badSeg.map(pad3).join(', ')));
+          var eb = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, 'Eyniləşdir');
           eb.addEventListener('click', function () {
             var n = 0;
             M.act.forEach(function (iss) { if (iss.type === 'Termin' && iss.term === x.g.a && fixIssue(iss, null, null, true)) n++; });
-            burstAt(eb, 'stars'); drawAll();
+            drawAll();
             toast(n + ' seqment eyniləşdirildi', 'ok', { sub: '«' + x.g.a + '» → «' + x.g.b + '» · Lüğətçi Mirzə' });
           });
           end.appendChild(eb);
-        } else end.appendChild(h('span', { class: 'small muted tnum', text: x.ok + '/' + x.src }));
-        return h('div', { class: 'qa-term' },
-          h('div', { class: 'qa-term-t' }, h('b', { text: x.g.a }), h('span', { text: '→' }), x.g.b),
+        } else end.appendChild(h('span', { class: 'pj-mono qa-score-of', text: x.ok + '/' + x.src }));
+        secTerms.appendChild(h('div', { class: 'qa-term' },
+          h('div', { class: 'qa-term-t' }, h('b', { lang: set.src, text: x.g.a }), h('span', { text: '→' }), x.g.b),
           end,
-          h('div', { class: 'qa-term-bar', role: 'img', 'aria-label': x.ok + ' düzgün, ' + x.bad + ' uyğunsuz, cəmi ' + x.src }, h('i', { style: 'width:' + (x.ok / x.src * 100) + '%' }), h('i', { class: 'bad', style: 'width:' + (x.bad / x.src * 100) + '%' })));
-      })));
+          h('div', { class: 'qa-term-bar', role: 'img', 'aria-label': x.ok + ' düzgün, ' + x.bad + ' uyğunsuz, cəmi ' + x.src }, h('i', { style: 'width:' + (x.ok / x.src * 100) + '%' }), h('i', { class: 'bad', style: 'width:' + (x.bad / x.src * 100) + '%' }))));
+      });
     }
     function drawReqs() {
       secReqs.textContent = '';
@@ -2329,55 +2930,63 @@
         var b = h('button', { class: 'qa-req' + (ok ? ' ok' : auto ? ' fail' : ''), type: 'button', 'aria-pressed': ok ? 'true' : 'false' },
           h('span', { class: 'qa-box', html: ok ? App.icon('check') : auto ? App.icon('alert') : '' }),
           h('span', { class: 'qa-req-t', text: rq[0] }),
-          auto ? badge('Avto', ok ? 'green' : 'gold') : badge('Əl ilə'));
+          h('span', { class: 'k', text: auto ? 'avtomatik' : 'əl ilə' }));
         b.addEventListener('click', function () {
           if (auto) {
             if (ok) { toast('Avtomatik yoxlandı', 'ok', { sub: rq[0], ms: 2000 }); return; }
-            sevF = 'all'; drawIssues(catTypes(rq[1]));
-            try { secIssues.scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' }); } catch (e) { /* ignore */ }
+            sevF = 'all'; typeF = rq[1]; drawIssues(); drawCats(); scrollToIssues();
             return;
           }
           reqManual[i] = !reqManual[i]; sset('pj:req:' + p.id, reqManual); drawReqs();
-          if (reqManual[i]) burstAt(secReqs, 'stars');
         });
         return b;
       });
-      secReqs.appendChild(h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow', text: 'Müştəri' }), h('h2', { text: 'Tələblər' })), badge(okN + ' / ' + reqs.length, okN === reqs.length ? 'green' : 'gold')));
-      secReqs.appendChild(h('div', { class: 'progress thin' + (okN === reqs.length ? ' green' : ' gold'), style: 'margin-bottom:6px' }, h('i', { style: 'width:' + Math.round(okN / reqs.length * 100) + '%' })));
-      secReqs.appendChild(h('div', null, list));
+      secReqs.appendChild(h('div', { class: 'qa-sec-h' }, h('div', { class: 'stack-sm' }, h('h2', { text: 'Müştəri tələbləri' }), h('span', { class: 'who', text: 'Avtomatik bəndlər yoxlamaya görə işarələnir' })),
+        h('span', { class: 'pj-mono qa-score-of', text: okN + ' / ' + reqs.length })));
+      put(secReqs, list);
     }
     var DELIV = [
-      { id: 'mono', ic: 'file', cls: 'projects-fir', b: 'Word: yalnız tərcümə', s: 'DOCX · format qorunur', ext: 'AZ.docx' },
-      { id: 'bi', ic: 'layers', cls: 'gold', b: 'Word: iki dilli', s: 'Cədvəl: mənbə | tərcümə', ext: upper(set.src) + '-AZ_ikidilli.docx' },
-      { id: 'rep', ic: 'shield', cls: 'green', b: 'QA hesabatı', s: 'PDF · Məclis möhürü ilə', ext: 'QA_hesabati.pdf' }
+      { id: 'mono', ic: 'file', b: 'Word: yalnız tərcümə', s: 'DOCX · format qorunur', ext: 'AZ.docx' },
+      { id: 'bi', ic: 'layers', b: 'Word: iki dilli', s: 'Cədvəl: mənbə | tərcümə', ext: upper(set.src) + '-AZ_ikidilli.docx' },
+      { id: 'rep', ic: 'shield', b: 'Yoxlama hesabatı', s: 'PDF · Məclis möhürü ilə', ext: 'QA_hesabati.pdf' }
     ];
+    function fnameOf(dv) { return slug(p.client) + '_' + slug(p.name) + '_' + dv.ext; }
     function buildDeliv() {
       secDeliv.textContent = '';
-      secDeliv.appendChild(h('div', { class: 'card-h' }, h('div', null, h('span', { class: 'eyebrow', text: 'Təhvil' }), h('h2', { text: 'Təhvil faylları' }))));
-      secDeliv.appendChild(h('p', { class: 'small muted', style: 'margin-bottom:12px', text: 'Fayl seçin — format və tərcümə yaddaşı qorunur.' }));
-      secDeliv.appendChild(h('div', { class: 'tiles' }, DELIV.map(function (dv) {
-        var bd = h('span', { class: 'badge green', hidden: true }, ie('check'), 'Hazır');
-        var t = h('button', { class: 'tile qa-tile', type: 'button' }, icTile(dv.ic, dv.cls), h('span', null, h('b', { text: dv.b }), h('small', { text: dv.s })), bd);
-        delivTiles[dv.id] = { t: t, bd: bd };
-        t.addEventListener('click', function () { makeDeliv(dv, t, bd); });
-        return t;
-      })));
+      secDeliv.appendChild(h('div', { class: 'qa-sec-h' }, h('div', { class: 'stack-sm' }, h('h2', { text: 'Təhvil faylları' }), h('span', { class: 'who', text: 'Format və tərcümə yaddaşı qorunur' }))));
+      DELIV.forEach(function (dv) {
+        var stEl = h('small');
+        var mk = h('button', { class: 'btn btn-secondary btn-sm', type: 'button' }, 'Hazırla');
+        var pv = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', hidden: true }, 'Önizlə');
+        var o = { btn: mk, st: stEl, pv: pv };
+        delivRows[dv.id] = o;
+        mk.addEventListener('click', function () { makeDeliv(dv, o); });
+        pv.addEventListener('click', function () { preview(dv, fnameOf(dv)); });
+        secDeliv.appendChild(h('div', { class: 'qa-dv' }, ie(dv.ic), h('div', { class: 'qa-dv-tx' }, h('b', { text: dv.b }), stEl), h('div', { class: 'qa-dv-act' }, pv, mk)));
+      });
     }
     function drawDelivBadges() {
       var made = getMap('pj:deliv:' + p.id);
-      Object.keys(delivTiles).forEach(function (k) { delivTiles[k].bd.hidden = !made[k]; });
+      DELIV.forEach(function (dv) {
+        var o = delivRows[dv.id]; if (!o) return;
+        o.st.textContent = '';
+        if (made[dv.id]) { put(o.st, h('span', { class: 'st', text: 'Hazırdır' }), ' · ' + (App.fmt ? App.fmt.rel(made[dv.id]) : '') + ' · ', h('span', { class: 'pj-mono', text: fnameOf(dv) })); o.st.title = fnameOf(dv); }
+        else o.st.textContent = dv.s;
+        o.pv.hidden = !made[dv.id];
+        o.btn.lastChild.textContent = made[dv.id] ? 'Yenilə' : 'Hazırla';
+      });
     }
-    function makeDeliv(dv, t, bd) {
-      if (t.getAttribute('aria-busy') === 'true') return;
-      t.setAttribute('aria-busy', 'true');
+    function makeDeliv(dv, o) {
+      if (o.btn.getAttribute('aria-busy') === 'true') return;
+      o.btn.setAttribute('aria-busy', 'true');
       nz('write', 'Faylı hazırlayıram…', 1400);
       S.later(function () {
-        t.removeAttribute('aria-busy'); bd.hidden = false;
+        o.btn.removeAttribute('aria-busy');
         var made = getMap('pj:deliv:' + p.id); made[dv.id] = Date.now(); sset('pj:deliv:' + p.id, made);
-        var fname = slug(p.client) + '_' + slug(p.name) + '_' + dv.ext;
+        drawDelivBadges();
+        var fname = fnameOf(dv);
         var warn = M.sev.high ? ' · ' + M.sev.high + ' kritik qeyd açıqdır' : '';
         toast('Hazırdır', M.sev.high ? 'warn' : 'ok', { sub: fname + warn, icon: dv.ic, action: { label: 'Önizlə', onClick: function () { preview(dv, fname); } } });
-        burstAt(t, 'stars');
         nz(M.sev.high ? 'worried' : 'success', M.sev.high ? 'Hazırdır, amma kritik qeydləri bağlamağı unutmayın.' : 'Təhvil faylı hazırdır.', 2400);
       }, 1100 + Math.round(Math.random() * 500));
     }
@@ -2385,21 +2994,22 @@
       var body;
       if (dv.id === 'rep') {
         body = h('div', { class: 'qa-paper' }, h('h3', { text: 'KEYFİYYƏT YOXLAMASI HESABATI' }), h('p', { class: 'muted', style: 'text-align:center', text: p.client + ' — ' + p.name + ' · ' + (App.fmt ? App.fmt.date(new Date()) : '') }),
-          h('div', { class: 'editor-check' }, App.ring(M.score, 'bal', null, { size: 'sm' }), h('dl', { class: 'kv', style: 'flex:1' },
+          h('dl', { class: 'kv' },
+            h('dt', { text: 'Bal' }), h('dd', { class: 'pj-mono', text: M.score + ' / 100' }),
             h('dt', { text: 'Qiymət' }), h('dd', { text: gradeOf(M.score) }),
-            h('dt', { text: 'Kritik / orta / kiçik' }), h('dd', { text: M.sev.high + ' / ' + M.sev.mid + ' / ' + M.sev.low }),
-            h('dt', { text: 'Möhür' }), h('dd', { text: sealOf(M.score) }))),
-          h('div', { class: 'divider orn' }),
+            h('dt', { text: 'Kritik / əsas / kiçik' }), h('dd', { class: 'pj-mono', text: M.sev.high + ' / ' + M.sev.mid + ' / ' + M.sev.low }),
+            h('dt', { text: 'Möhür' }), h('dd', { text: sealOf(M.score) })),
+          h('div', { class: 'divider' }),
           CATS.map(function (c) { var n = M.act.filter(function (x) { return c.types.indexOf(x.type) >= 0; }).length; return h('div', { class: 'row between small' }, h('span', { text: c.label }), h('b', { text: n ? n + ' qeyd' : 'təmiz' })); }));
       } else if (dv.id === 'bi') {
         body = h('div', { class: 'table-wrap' }, h('table', { class: 'table compact' },
           h('thead', null, h('tr', null, h('th', { text: '#' }), h('th', { text: upper(set.src) }), h('th', { text: 'AZ' }))),
-          h('tbody', null, set.segs.slice(0, 6).map(function (d, i) { return h('tr', null, h('td', { class: 'muted', text: String(i + 1) }), h('td', { text: d.s }), h('td', { text: segs[i].t || '—' })); }))));
+          h('tbody', null, set.segs.slice(0, 6).map(function (d, i) { return h('tr', null, h('td', { class: 'muted pj-mono', text: pad3(i + 1) }), h('td', { text: d.s }), h('td', { text: segs[i].t || '—' })); }))));
       } else {
         body = h('div', { class: 'qa-paper' }, segs.slice(0, 7).map(function (st, i) { return h('p', { text: st.t || '[' + (i + 1) + ' — tərcümə edilməyib]', style: i === 0 ? 'text-align:center;font-weight:600' : null }); }),
           h('p', { class: 'muted', text: '… və daha ' + num(Math.max(0, p.segs - 7)) + ' seqment' }));
       }
-      App.sheet({ title: fname, wide: true, body: h('div', { class: 'stack' }, h('div', { class: 'row' }, badge('Önizləmə', 'navy', 'eye'), badge(dv.b)), body),
+      App.sheet({ title: fname, wide: true, body: h('div', { class: 'stack' }, h('div', { class: 'row' }, h('span', { class: 'pj-tag', text: 'Önizləmə' }), h('span', { class: 'pj-tag', text: dv.b })), body),
         actions: [{ label: 'Bağla', kind: 'ghost' }, { label: 'Müştəriyə göndər', kind: 'primary', icon: 'send', onClick: function () {
           toast('Göndərildi', 'ok', { sub: fname + ' · ' + p.client + ' · Telegram və e-poçt', icon: 'send' });
           nz('celebrate', 'Göndərildi! Müştəri təsdiqləyəndə xəbər verəcəyəm.', 2800);
@@ -2410,18 +3020,17 @@
       if (!M) { toast('Yoxlama hələ gedir', 'info', { ms: 1800 }); return; }
       deepBtn.setAttribute('aria-busy', 'true');
       var cnt = function (t) { return M.act.filter(function (x) { return x.type === t; }).length; };
-      var hi = M.sev.high, turk = cnt('Türk forması'), terms = cnt('Termin'), numsN = cnt('Rəqəm');
+      var hi = M.sev.high, turk = cnt('Türk forması'), termsN = cnt('Termin'), numsN = cnt('Rəqəm');
       var text = (hi ? 'Məclis ' + hi + ' kritik qeyd tapdı' + (numsN ? ' (rəqəm uyğunsuzluğu daxil)' : '') + '. Təhvildən əvvəl bağlayın. ' : 'Məna mənbə ilə üst-üstə düşür, rəqəmlər və tarixlər möhürləndi. ') +
-        (terms ? 'Lüğətçi Mirzə ' + terms + ' termin uyğunsuzluğu qeyd etdi. ' : 'Terminlər lüğətə uyğundur. ') +
+        (termsN ? 'Lüğətçi Mirzə ' + termsN + ' termin uyğunsuzluğu qeyd etdi. ' : 'Terminlər lüğətə uyğundur. ') +
         (turk ? 'Dilçi Nənə ' + turk + ' türk forması tapdı.' : 'Dilçi Nənə türk formasına rast gəlmədi.');
       var v = { score: M.score, text: text, seal: sealOf(M.score) };
-      Promise.resolve(App.bigJob('Dərin QA — ' + p.name, v)).then(function () {
+      Promise.resolve(App.bigJob('Dərin yoxlama — ' + p.name, v)).then(function () {
         if (S.dead) return;
         deepBtn.removeAttribute('aria-busy');
         sset('pj:deep:' + p.id, { score: v.score, at: Date.now() });
         setMap('pj:qa', p.id, v.score);
         drawAll();
-        burstAt(sealHost, 'stars');
       }, function () { deepBtn.removeAttribute('aria-busy'); });
     }
     deepBtn.addEventListener('click', deepQA);
@@ -2429,6 +3038,7 @@
     run(true);
     S.finals.push(function () { if (built) saveSegs(p, segs); });
   }
+
 
   /* ------------------------------------------------------------------
      10. REGISTER
