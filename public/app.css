@@ -285,6 +285,7 @@ button.avatar:hover,a.avatar:hover{opacity:.88}
 .av-nar{--av:var(--av-nar)} .av-lacquer{--av:var(--av-lacquer)} .av-zafaran{--av:var(--av-zafaran)}
 .av-firuze{--av:var(--av-firuze)} .av-benovse{--av:var(--av-benovse)} .av-zeytun{--av:var(--av-zeytun)}
 .avatar > svg.av-ic{width:56%;height:56%}
+.avatar.mono{background:var(--surface2);color:var(--soft);box-shadow:inset 0 0 0 1px var(--line-2);font-weight:600}
 
 /* scrim (drawer: .scrim ; sheets/dialogs: .scrim.top) */
 .scrim{position:fixed;inset:0;z-index:var(--z-scrim);background:var(--scrim);opacity:0;pointer-events:none;transition:opacity var(--t-slow) var(--ease-out)}
@@ -382,8 +383,8 @@ button.avatar:hover,a.avatar:hover{opacity:.88}
 .companion{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + var(--bnav-h) + env(safe-area-inset-bottom,0px));z-index:var(--z-dock)}
 /* phones: no floating dock over content — Nuanza lives in «Daha çox» (drawer footer) */
 @media (max-width:767px){.companion{display:none!important}}
-.dr-nz{display:none}
-@media (max-width:767px){.dr-nz{display:inline-grid}}
+.dr-foot .dr-nz{display:none}
+@media (max-width:767px){.dr-foot .dr-nz{display:inline-grid}}
 .fx-layer{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:var(--z-fx)}
 
 /* tablet: icon rail */
@@ -413,14 +414,15 @@ button.avatar:hover,a.avatar:hover{opacity:.88}
   .dr-link svg{width:18px;height:18px}
   .dr-link .dr-n,.dr-link .badge{position:absolute;top:2px;right:0;min-width:15px;height:15px;padding:0 3px;font-size:.5625rem}
   .dr-link[aria-current="page"]::before{left:-8px}
-  .dr-link::after{content:attr(data-tip);position:absolute;left:calc(100% + 10px);top:50%;z-index:5;padding:5px 8px;border-radius:var(--r-sm);white-space:nowrap;pointer-events:none;
-    background:var(--inv-bg);color:var(--inv-ink);font:500 var(--t-caption)/1.2 var(--f-body);box-shadow:var(--sh-2);
-    opacity:0;transform:translate(-4px,-50%);transition:opacity var(--t-fast),transform var(--t-fast)}
-  .dr-link:hover::after,.dr-link:focus-visible::after{opacity:1;transform:translate(0,-50%)}
   .dr-foot{flex-direction:column;gap:4px;padding:8px 0}
   .dr-profile{flex:none;padding:4px}
   .dr-profile .who{display:none}
 }
+/* icon-rail tooltip (positioned by app.js, outside the scrolling rail) */
+.rail-tip{position:fixed;left:0;top:0;z-index:var(--z-sheet);padding:5px 8px;border-radius:var(--r-sm);white-space:nowrap;pointer-events:none;
+  background:var(--inv-bg);color:var(--inv-ink);font:500 var(--t-caption)/1.2 var(--f-body);box-shadow:var(--sh-2);opacity:0;transform:translateX(-4px);transition:opacity var(--t-fast),transform var(--t-fast)}
+.rail-tip.on{opacity:1;transform:none}
+@media (max-width:767px),(min-width:1200px){.rail-tip{display:none}}
 /* desktop: full sidebar */
 @media (min-width:1200px){
   .drawer{width:var(--sidebar-w)}

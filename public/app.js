@@ -1985,6 +1985,30 @@
     if (returnFocus) restoreFocus(els.bnavMore && els.bnavMore.offsetParent ? els.bnavMore : els.burger);
   }
   function toggleDrawer() { if (drawerOpen) closeDrawer(true); else openDrawer(); }
+  /* icon rail (768–1199px): a small label next to the hovered or focused item */
+  function enableRailTips() {
+    if (!els.drawer) return;
+    var tip = h('div', { class: 'rail-tip', role: 'tooltip', 'aria-hidden': 'true' });
+    D.body.appendChild(tip);
+    function show(e) {
+      var a = e.target && e.target.closest ? e.target.closest('.dr-link,.dr-search,.dr-profile,.theme-toggle') : null;
+      if (!a || !els.drawer.contains(a) || !navPersistent() || W.innerWidth >= 1200) { tip.classList.remove('on'); return; }
+      var label = a.getAttribute('data-tip') || a.getAttribute('title') || a.getAttribute('aria-label') || '';
+      if (!label) return;
+      tip.textContent = label;
+      var r = a.getBoundingClientRect();
+      tip.style.left = Math.round(r.right + 10) + 'px';
+      tip.style.top = Math.round(r.top + r.height / 2 - 12) + 'px';
+      tip.classList.add('on');
+    }
+    function hide() { tip.classList.remove('on'); }
+    els.drawer.addEventListener('mouseover', show);
+    els.drawer.addEventListener('focusin', show);
+    els.drawer.addEventListener('mouseleave', hide);
+    els.drawer.addEventListener('focusout', hide);
+    els.drawer.addEventListener('click', hide);
+    W.addEventListener('scroll', hide, { passive: true });
+  }
   function enableDrawerSwipe() {
     var dr = els.drawer; if (!dr) return;
     var x0 = null, y0 = 0, dx = 0, active = false;
@@ -2171,7 +2195,9 @@
       var bar = h('div', { class: 'progress', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0' }, h('i', { style: 'width:0%' }));
       var rows = ELDERS.map(function (e) {
         var st = h('span', { class: 'seg-st', 'aria-hidden': 'true' }), sm = h('small', { text: e.role });
-        var row = h('div', { class: 'list-row' }, h('span', { class: 'avatar sm ' + e.av, 'aria-hidden': 'true', text: e.short }), h('span', { class: 'tx' }, h('b', { text: e.name }), sm), st);
+        var face = null;
+        try { face = App.elderFace ? App.elderFace(e.name, 'sm') : null; } catch (x) { face = null; }
+        var row = h('div', { class: 'list-row' }, face || h('span', { class: 'avatar sm mono', 'aria-hidden': 'true', text: e.short }), h('span', { class: 'tx' }, h('b', { text: e.name }), sm), st);
         row._st = st; row._sm = sm; return row;
       });
       var res = h('div', { class: 'sheet-job-res', hidden: true });
@@ -2503,6 +2529,7 @@
     var skipLink = $('.skip-link');
     if (skipLink) skipLink.addEventListener('click', function (e) { e.preventDefault(); var s = current && current.el; if (s) { try { s.focus(); } catch (x) { /* ignore */ } } });
     enableDrawerSwipe();
+    enableRailTips();
 
     D.addEventListener('keydown', onKey);
     D.addEventListener('click', function (e) {
