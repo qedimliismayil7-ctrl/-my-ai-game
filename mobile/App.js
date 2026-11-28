@@ -1,10 +1,10 @@
 // Mirzə — mobil tətbiq (Expo). Saytı tam ekran WebView-də açır: AI, layihələr, Akademiya, Kitabxana — hamısı saytdan gəlir.
-// SITE_URL-i öz saytınızın ünvanı ilə əvəz edin (Netlify və ya Cloudflare linki, sonunda / olmadan).
+// SITE_URL — Cloudflare-dəki saytın ünvanı (sonunda / olmadan). Öz domeniniz olanda onu yazın.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, BackHandler, Linking, Platform, Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-const SITE_URL = 'https://SAYTINIZ.netlify.app';
+const SITE_URL = 'https://nuanza-d7c7.ismayilqedimli03.workers.dev';
 
 // Mirzə workstation palette: ivory canvas, charcoal text, one olive/green-blue accent
 const C = { bg: '#F7F5F0', text: '#1D1F21', text2: '#62676C', accent: '#2F5A55', white: '#FFFFFF' };
